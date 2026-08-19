@@ -60,19 +60,33 @@ Do not mix unrelated work into the milestone branch.
 
 ---
 
+### Working tree safety
+
+Never discard, reset, overwrite, or stash existing uncommitted work unless
+explicitly instructed.
+
+If the working tree is not clean before starting a milestone:
+
+1. Inspect the existing changes.
+2. Determine whether they belong to current work.
+3. Report the situation before switching branches or modifying those changes.
+
+Never use destructive Git commands to obtain a clean working tree.
+
+---
+
 ## Commits
 
 Use focused and descriptive commits.
 
 Do not commit:
 
-- dependencies
-- build artifacts
-- secrets
-- temporary files
-- editor-specific files unless required by the project
+- `node_modules/`
+- generated build artifacts
+- vendored third-party dependencies unless explicitly required
 
-Avoid large unrelated commits.
+When intentionally adding or updating dependencies, commit the corresponding
+`package.json` and lockfile changes.
 
 ---
 
