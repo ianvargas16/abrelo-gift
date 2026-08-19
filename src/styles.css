@@ -68,13 +68,16 @@ button { cursor: pointer; }
 .interaction-copy button, .reveal-button, .primary-button { border: 0; border-radius: 999px; padding: 12px 20px; color: white; background: var(--accent, #7f3656); box-shadow: 0 10px 24px color-mix(in srgb, var(--accent, #7f3656) 24%, transparent); }
 
 .letter-stage { width: min(610px, 100%); display: grid; place-items: center; align-self: start; padding-top: 60px; position: relative; z-index: 3; }
-.birthday-letter { width: min(520px, 92vw); padding: 54px 58px 48px; border: 1px solid rgba(76,54,63,.09); background: rgba(255,253,250,.9); box-shadow: 0 28px 70px rgba(65,44,54,.12); transform: rotate(-.4deg); text-align: center; }
+.gift-letter { width: min(520px, 92vw); padding: 54px 58px 48px; border: 1px solid rgba(76,54,63,.09); background: rgba(255,253,250,.9); box-shadow: 0 28px 70px rgba(65,44,54,.12); transform: rotate(-.4deg); text-align: center; }
 .letter-mark { color: var(--accent); font-size: 26px; margin-bottom: 22px; }
-.birthday-letter p { font-family: 'Playfair Display', serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.55; margin: 0; }
+.gift-letter p { font-family: 'Playfair Display', serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.55; margin: 0; }
 .letter-signature { margin: 30px 0; font-size: 13px; color: var(--accent); }
 .reveal-button { font-weight: 700; padding: 14px 24px; }
 
-.editor-shortcut { position: fixed; right: 18px; bottom: 18px; z-index: 20; border: 1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.66); backdrop-filter: blur(10px); border-radius: 999px; padding: 9px 13px; font-size: 11px; color: #40333a; opacity: .58; }
+.preview-chrome { position: fixed; top: 18px; left: 18px; right: 18px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; }
+.preview-back-button, .preview-badge { pointer-events: auto; }
+.preview-back-button { backdrop-filter: blur(10px); }
+.preview-badge { border: 1px solid rgba(0,0,0,.08); background: rgba(255,255,255,.72); backdrop-filter: blur(10px); border-radius: 999px; padding: 9px 13px; font-size: 11px; color: #40333a; letter-spacing: .08em; text-transform: uppercase; }
 
 .ticket-stage { min-height: calc(100vh - 80px); width: min(980px, 100%); display: grid; place-items: center; align-content: center; gap: 30px; position: relative; z-index: 4; }
 .ticket-glow { position: absolute; width: 560px; height: 260px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 13%, transparent); filter: blur(70px); }
@@ -128,7 +131,7 @@ button { cursor: pointer; }
 @media (max-width: 720px) {
   .experience { padding-top: 42px; }
   .envelope-zone { min-height: 420px; gap: 40px; }
-  .birthday-letter { padding: 40px 28px; }
+  .gift-letter { padding: 40px 28px; }
   .ticket { grid-template-columns: 1fr; }
   .ticket-main { padding: 38px 30px 30px; }
   .ticket-stub { min-height: 96px; border-left: 0; border-top: 2px dashed #ded4d0; flex-direction: row; padding: 20px; }
@@ -140,6 +143,7 @@ button { cursor: pointer; }
   .editor-grid { grid-template-columns: 1fr; }
   .editor-card-wide { grid-column: auto; }
   .two-columns, .theme-picker { grid-template-columns: 1fr; }
+  .preview-chrome { top: 12px; left: 12px; right: 12px; align-items: flex-start; flex-direction: column; }
 }
 
 .file-button { display: inline-flex; align-items: center; cursor: pointer; }

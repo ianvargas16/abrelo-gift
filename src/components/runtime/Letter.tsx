@@ -6,7 +6,7 @@ interface LetterProps {
 
 export function Letter({ message, senderName, onReveal }: LetterProps) {
   return (
-    <article className="birthday-letter">
+    <article className="gift-letter">
       <div className="letter-mark">✦</div>
       <p>{message}</p>
       <div className="letter-signature">— {senderName}</div>

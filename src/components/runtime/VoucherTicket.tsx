@@ -25,10 +25,10 @@ export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
           <p className="ticket-fineprint">{gift.gift.finePrint}</p>
         </div>
         <aside className="ticket-stub">
-          <span className="ticket-stub-label">CUMPLEAÑOS</span>
+          <span className="ticket-stub-label">REGALO</span>
           <strong>{gift.gift.code}</strong>
           <div className="ticket-barcode" aria-hidden="true" />
-          <span className="ticket-stub-small">ADMIT ONE</span>
+          <span className="ticket-stub-small">ÁBRELO</span>
         </aside>
       </article>
       <button className="ghost-button" onClick={onRestart}>Volver a verlo</button>

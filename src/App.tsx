@@ -4,6 +4,7 @@ import { loadGiftDraft, saveGiftDraft } from './lib/giftDraftStore';
 import { createGiftDownloadName, createGiftFile, parseGiftFile } from './models/giftConfig';
 import { getCurrentRoute, navigateToRoute } from './lib/routes';
 import { CreatorView } from './views/CreatorView';
+import { PreviewView } from './views/PreviewView';
 import { RuntimeView } from './views/RuntimeView';
 import type { GiftConfig } from './models/giftConfig';
 
@@ -34,7 +35,7 @@ export default function App() {
   const importGift = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
-      setGift(parseGiftFile(parsed, defaultGift));
+      setGift(parseGiftFile(parsed));
     } catch {
       window.alert('No pude importar ese archivo. Usa un .gift.json exportado por Ábrelo.');
     }
@@ -44,11 +45,13 @@ export default function App() {
     <CreatorView
       gift={gift}
       onChange={setGift}
-      onPreview={() => navigateToRoute('runtime')}
+      onPreview={() => navigateToRoute('preview')}
       onReset={() => setGift(defaultGift)}
       onExport={exportGift}
       onImport={importGift}
     />
+  ) : route === 'preview' ? (
+    <PreviewView gift={gift} onBackToCreator={() => navigateToRoute('creator')} />
   ) : (
     <RuntimeView gift={gift} />
   );
