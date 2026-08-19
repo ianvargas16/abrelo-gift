@@ -23,8 +23,8 @@ npm run dev
 
 Abre `http://localhost:1420`.
 
-- Vista regalo: `/`
-- Editor: `/?editor=1`
+- Runtime: `/` o `/#/runtime`
+- Creator: `/#/creator`
 
 ## Ejecutar con Tauri
 
