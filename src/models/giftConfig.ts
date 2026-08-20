@@ -68,11 +68,21 @@ function assertRecord(value: unknown, message: string): Record<string, unknown> 
 }
 
 function assertString(value: unknown, fieldName: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
+  if (typeof value !== 'string') {
     throw new Error(`Campo inválido: ${fieldName}`);
   }
 
   return value;
+}
+
+function assertNonEmptyString(value: unknown, fieldName: string): string {
+  const parsed = assertString(value, fieldName);
+
+  if (parsed.trim().length === 0) {
+    throw new Error(`Campo inválido: ${fieldName}`);
+  }
+
+  return parsed;
 }
 
 function assertTheme(value: unknown): ThemeId {
@@ -91,6 +101,14 @@ function assertGiftType(value: unknown): GiftType {
   throw new Error('Tipo de regalo no soportado');
 }
 
+function assertGiftConfigVersion(value: unknown, fieldName: string): typeof GIFT_FILE_VERSION {
+  if (value === undefined || value === GIFT_FILE_VERSION) {
+    return GIFT_FILE_VERSION;
+  }
+
+  throw new Error(`Versión de regalo no soportada: ${fieldName}`);
+}
+
 export function createGiftFile(gift: GiftConfig): GiftFile {
   return {
     schema: GIFT_FILE_SCHEMA,
@@ -106,7 +124,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
   const gift = assertRecord(source.gift, 'Regalo inválido');
 
   return {
-    version: GIFT_FILE_VERSION,
+    version: assertGiftConfigVersion(source.version, 'gift.version'),
     recipientName: assertString(source.recipientName, 'recipientName'),
     senderName: assertString(source.senderName, 'senderName'),
     theme: assertTheme(source.theme),

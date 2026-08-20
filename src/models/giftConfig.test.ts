@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
-import { GIFT_FILE_SCHEMA, GIFT_FILE_VERSION, parseGiftFile } from './giftConfig';
+import { createGiftFile, GIFT_FILE_SCHEMA, GIFT_FILE_VERSION, parseGiftFile } from './giftConfig';
 
 describe('parseGiftFile', () => {
   it('parses a current exported GiftFile', () => {
@@ -35,12 +35,47 @@ describe('parseGiftFile', () => {
     expect(parsed.recipientName).toBe('Sofía');
   });
 
+  it('round-trips exported gift files with empty editor fields', () => {
+    const giftWithEmptyFields = {
+      ...defaultGift,
+      recipientName: '',
+      senderName: '',
+      intro: {
+        eyebrow: '',
+        title: '',
+        envelopeHint: '',
+      },
+      letter: {
+        title: '',
+        message: '',
+      },
+      gift: {
+        ...defaultGift.gift,
+        title: '',
+        description: '',
+        finePrint: '',
+        code: '',
+      },
+    };
+
+    expect(parseGiftFile(createGiftFile(giftWithEmptyFields))).toEqual(giftWithEmptyFields);
+  });
+
   it('rejects unsupported future file versions', () => {
     expect(() =>
       parseGiftFile({
         schema: GIFT_FILE_SCHEMA,
         version: 99,
         gift: {},
+      }),
+    ).toThrow(/Versión de regalo no soportada/);
+  });
+
+  it('rejects bare structured GiftConfig files with unsupported versions', () => {
+    expect(() =>
+      parseGiftFile({
+        ...defaultGift,
+        version: 99,
       }),
     ).toThrow(/Versión de regalo no soportada/);
   });
@@ -59,6 +94,32 @@ describe('parseGiftFile', () => {
 
   it('parses bare structured GiftConfig files', () => {
     expect(parseGiftFile(defaultGift)).toEqual(defaultGift);
+  });
+
+  it('preserves draft-compatible GiftConfig values through createGiftFile and parseGiftFile', () => {
+    const creatorCompatibleGift = {
+      ...defaultGift,
+      recipientName: '',
+      senderName: '   ',
+      intro: {
+        eyebrow: '',
+        title: '  ',
+        envelopeHint: '',
+      },
+      letter: {
+        title: '',
+        message: '',
+      },
+      gift: {
+        ...defaultGift.gift,
+        title: '',
+        description: '   ',
+        finePrint: '',
+        code: '',
+      },
+    };
+
+    expect(parseGiftFile(createGiftFile(creatorCompatibleGift))).toEqual(creatorCompatibleGift);
   });
 
   it('parses the legacy flat GiftConfig shape', () => {
