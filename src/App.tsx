@@ -1,35 +1,33 @@
 import { useEffect, useState } from 'react';
 import { defaultGift } from './config/defaultGift';
-import { EnvelopeExperience } from './components/EnvelopeExperience';
-import { GiftEditor } from './components/GiftEditor';
-import type { GiftConfig } from './types/gift';
-
-type Mode = 'gift' | 'editor';
-const STORAGE_KEY = 'abrelo.gift.v1';
-
-function loadGift(): GiftConfig {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? { ...defaultGift, ...JSON.parse(saved) } : defaultGift;
-  } catch {
-    return defaultGift;
-  }
-}
+import { loadGiftDraft, saveGiftDraft } from './lib/giftDraftStore';
+import { createGiftDownloadName, createGiftFile, parseGiftFile } from './models/giftConfig';
+import { getCurrentRoute, navigateToRoute } from './lib/routes';
+import { CreatorView } from './views/CreatorView';
+import { PreviewView } from './views/PreviewView';
+import { RuntimeView } from './views/RuntimeView';
+import type { GiftConfig } from './models/giftConfig';
 
 export default function App() {
-  const [gift, setGift] = useState<GiftConfig>(loadGift);
-  const [mode, setMode] = useState<Mode>(() => new URLSearchParams(location.search).get('editor') === '1' ? 'editor' : 'gift');
+  const [gift, setGift] = useState<GiftConfig>(() => loadGiftDraft(defaultGift));
+  const [route, setRoute] = useState(() => getCurrentRoute(window.location.hash));
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(gift));
+    saveGiftDraft(gift);
   }, [gift]);
 
+  useEffect(() => {
+    const syncRoute = () => setRoute(getCurrentRoute(window.location.hash));
+    window.addEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('hashchange', syncRoute);
+  }, []);
+
   const exportGift = () => {
-    const payload = JSON.stringify({ schema: 'abrelo.gift', version: 1, gift }, null, 2);
+    const payload = JSON.stringify(createGiftFile(gift), null, 2);
     const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `${gift.recipientName.trim().toLowerCase().replace(/[^a-z0-9áéíóúñ]+/gi, '-') || 'regalo'}.gift.json`;
+    anchor.download = createGiftDownloadName(gift);
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -37,17 +35,24 @@ export default function App() {
   const importGift = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
-      const imported = parsed?.schema === 'abrelo.gift' ? parsed.gift : parsed;
-      if (!imported || typeof imported !== 'object') throw new Error('Formato inválido');
-      setGift({ ...defaultGift, ...imported });
+      setGift(parseGiftFile(parsed));
     } catch {
       window.alert('No pude importar ese archivo. Usa un .gift.json exportado por Ábrelo.');
     }
   };
 
-  return mode === 'editor' ? (
-    <GiftEditor gift={gift} onChange={setGift} onPreview={() => setMode('gift')} onReset={() => setGift(defaultGift)} onExport={exportGift} onImport={importGift} />
+  return route === 'creator' ? (
+    <CreatorView
+      gift={gift}
+      onChange={setGift}
+      onPreview={() => navigateToRoute('preview')}
+      onReset={() => setGift(defaultGift)}
+      onExport={exportGift}
+      onImport={importGift}
+    />
+  ) : route === 'preview' ? (
+    <PreviewView gift={gift} onBackToCreator={() => navigateToRoute('creator')} />
   ) : (
-    <EnvelopeExperience gift={gift} onOpenEditor={() => setMode('editor')} />
+    <RuntimeView gift={gift} />
   );
 }

@@ -213,6 +213,116 @@ Avoid:
 
 ---
 
+## Distribution principles
+
+The recipient Runtime must be web-first and mobile-first.
+
+A gift must eventually be shareable through a URL and open directly in a
+mobile browser without requiring installation.
+
+The web Runtime is the primary recipient experience.
+
+Native desktop builds are optional secondary distribution formats.
+
+Do not architect Runtime around Tauri-specific APIs.
+
+Runtime components should remain portable to a normal web deployment.
+
+Tauri is an optional native distribution layer, not a requirement for
+experiencing a gift.
+
+Recipient interactions must support touch devices and must not rely on hover.
+
+All Runtime UI must be responsive and designed mobile-first.
+
+The recipient should be able to open a shared gift from common messaging
+channels such as WhatsApp, Telegram, Messages, email, or a QR code with minimal
+friction.
+
+Opening a gift must not require:
+- installing an application
+- downloading an executable
+- creating an account
+- understanding technical file formats
+
+The intended recipient flow is:
+
+Creator
+→ Publish gift
+→ Shareable URL
+→ Recipient opens URL
+→ Gift Runtime starts
+
+Example:
+
+`https://abrelo.app/g/<gift-id>`
+
+Gift URLs should use non-predictable identifiers rather than exposing personal
+information such as recipient names, occasions, or gift contents in the URL.
+
+The Runtime should feel like an immersive gift experience rather than a normal
+website.
+
+Avoid unnecessary recipient-facing elements such as:
+- application navigation
+- dashboards
+- configuration controls
+- account UI
+- visible editor controls
+- traditional website chrome when it is not needed
+
+The Runtime should make good use of the available viewport and support mobile
+safe areas.
+
+Important Runtime interactions must work with:
+- touch
+- pointer/mouse
+- keyboard where reasonable
+
+Do not make core interactions depend on:
+- hover
+- right click
+- desktop-only gestures
+- precise mouse movement
+
+Touch interactions should tolerate:
+- interrupted touches
+- accidental movement
+- pointer cancellation
+- different screen sizes
+- portrait orientation
+- landscape orientation when practical
+
+The first user interaction may be used intentionally to unlock browser-restricted
+capabilities such as audio playback.
+
+For example, a recipient may first see a simple entry state such as:
+
+"Te llegó algo."
+
+followed by:
+
+"Abrir regalo"
+
+After that interaction, the immersive Runtime experience can begin.
+
+Future publishing capabilities may include:
+- copy shareable link
+- native Web Share API integration
+- QR code generation
+- optional PIN protection
+- expiration dates
+- limited availability
+- optional opening limits
+
+Do not implement these future capabilities unless they belong to the current
+milestone.
+
+Design current architecture so they can be added later without coupling the
+Runtime to a specific backend or native platform.
+
+---
+
 ## Current scope
 
 The first supported gift experience is:

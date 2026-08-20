@@ -1,17 +1,24 @@
-import type { GiftConfig } from '../types/gift';
+import type { GiftConfig } from '../models/giftConfig';
 
 export const defaultGift: GiftConfig = {
+  version: 1,
   recipientName: 'Sofía',
   senderName: 'Jean',
-  introEyebrow: '19 · 08 · 2026',
-  introTitle: 'Hay algo para ti',
-  envelopeHint: 'Mantén presionado el sello',
-  letterTitle: 'Feliz cumpleaños ✦',
-  letterMessage: 'Quería darte algo de una forma un poco menos normal. Así que antes del regalo… te toca abrirlo de verdad.',
-  giftType: 'voucher',
-  voucherTitle: 'Una cena donde tú elijas',
-  voucherDescription: 'Lugar, día y antojo quedan completamente a tu elección. Yo invito.',
-  voucherFinePrint: 'Canjeable cuando quieras · Sin fecha de vencimiento · Incluye postre',
-  voucherCode: 'BDAY-001',
   theme: 'rose',
+  intro: {
+    eyebrow: '19 · 08 · 2026',
+    title: 'Hay algo para ti',
+    envelopeHint: 'Mantén presionado el sello',
+  },
+  letter: {
+    title: 'Feliz cumpleaños ✦',
+    message: 'Quería darte algo de una forma un poco menos normal. Así que antes del regalo… te toca abrirlo de verdad.',
+  },
+  gift: {
+    type: 'voucher',
+    title: 'Una cena donde tú elijas',
+    description: 'Lugar, día y antojo quedan completamente a tu elección. Yo invito.',
+    finePrint: 'Canjeable cuando quieras · Sin fecha de vencimiento · Incluye postre',
+    code: 'BDAY-001',
+  },
 };
