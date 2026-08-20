@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "abrelo-publish",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-08-20",
+  "assets": {
+    "directory": "./dist-runtime",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/g/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "abrelo-published-gifts",
+      "database_id": "local",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "PUBLIC_BASE_URL": "http://127.0.0.1:8787",
+    "ALLOWED_ORIGINS": "http://localhost:1420,http://127.0.0.1:1420,tauri://localhost,http://tauri.localhost"
+  }
+}

@@ -1,5 +1,10 @@
 node_modules/
 dist/
 dist-runtime/
+dist-worker/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env.local
 src-tauri/target/
 src-tauri/gen/

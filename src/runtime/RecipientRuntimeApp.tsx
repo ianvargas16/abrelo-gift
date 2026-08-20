@@ -15,7 +15,7 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
       <section className="runtime-failure-card" role="alert">
         <span className="runtime-failure-mark" aria-hidden="true">✦</span>
         <h1>Este regalo no está disponible.</h1>
-        <p>Puede que el enlace haya vencido o que el regalo aún no esté listo.</p>
+        <p>Revisa el enlace o inténtalo de nuevo más tarde.</p>
       </section>
     </main>
   );

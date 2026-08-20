@@ -33,16 +33,16 @@ A Publisher must serialize this script safely. In particular, literal `<` charac
 
 During Vite development only, a missing payload displays `defaultGift` for convenience. Malformed or unsupported payloads still fail. In a production Runtime build, missing, malformed, and unsupported data all render the same recipient-safe unavailable state. Production never substitutes the demo birthday gift.
 
-## Future public routes
+## Published public routes
 
-The future hosting layer will map `/g/<opaque-gift-id>` to the recipient shell and inject the matching GiftFile. IDs must be non-predictable and must not contain names, occasions, messages, or other GiftConfig data. Runtime components do not inspect the URL and do not depend on Creator hash routing.
+The Publish Worker maps `/g/<opaque-gift-id>` to the recipient shell and injects the matching immutable GiftFile snapshot. IDs are generated from 128 bits of server-side randomness and contain no names, occasions, messages, or other GiftConfig data. Runtime components do not inspect the URL and do not depend on Creator hash routing.
 
-The future Publisher must provide:
+The Publisher provides:
 
 - the recipient Runtime shell and static assets;
 - a safely serialized, validated GiftFile payload;
 - an opaque gift identifier and route mapping;
-- access, expiration, and availability decisions before serving the shell;
+- exact-ID availability decisions before serving the shell;
 - gift-specific metadata and preview images when those features are introduced.
 
 ## Privacy and metadata
@@ -55,4 +55,4 @@ Messaging and social crawlers usually do not execute client JavaScript reliably.
 
 The recipient Runtime is the primary distribution surface and must remain normal browser code. Tauri remains an optional wrapper for the Creator application only. Do not import `@tauri-apps/api`, draft persistence, publishing clients, or editing controls into the recipient graph.
 
-Fonts are bundled from Fontsource packages into the build. The recipient experience does not need Google Fonts, `fonts.gstatic.com`, or another font CDN. PWA caching, publishing services, authentication, QR codes, and share UI are intentionally outside this milestone.
+Fonts are bundled from Fontsource packages into the build. The recipient experience does not need Google Fonts, `fonts.gstatic.com`, or another font CDN. Publishing, QR, and sharing controls exist only in Creator and the Worker boundary; PWA caching and authentication remain outside the recipient Runtime.

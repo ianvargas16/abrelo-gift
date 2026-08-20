@@ -59,6 +59,7 @@ describe('recipient Runtime bootstrap', () => {
 
     expect(markup).toContain('Este regalo no está disponible');
     expect(markup).not.toMatch(/Creator|GiftConfig|JSON|schema|versión/i);
+    expect(markup).not.toMatch(/vencido|eliminado|nunca existió/i);
     expect(markup).not.toContain('button');
   });
 });

@@ -7,9 +7,11 @@ import { CreatorView } from './views/CreatorView';
 import { PreviewView } from './views/PreviewView';
 import { RuntimeView } from './views/RuntimeView';
 import type { GiftConfig } from './models/giftConfig';
+import type { CreatorPublication } from './publishing/creatorPublication';
 
 export default function App() {
   const [gift, setGift] = useState<GiftConfig>(() => loadGiftDraft(defaultGift));
+  const [publication, setPublication] = useState<CreatorPublication | null>(null);
   const [route, setRoute] = useState(() => getCurrentRoute(window.location.hash));
 
   useEffect(() => {
@@ -49,6 +51,8 @@ export default function App() {
       onReset={() => setGift(defaultGift)}
       onExport={exportGift}
       onImport={importGift}
+      publication={publication}
+      onPublicationChange={setPublication}
     />
   ) : route === 'preview' ? (
     <PreviewView gift={gift} onBackToCreator={() => navigateToRoute('creator')} />

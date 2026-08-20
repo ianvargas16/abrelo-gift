@@ -3,6 +3,8 @@ import { extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const outputDirectory = fileURLToPath(new URL('../dist-runtime/', import.meta.url));
+const runtimeHtmlPath = join(outputDirectory, 'runtime.html');
+const bootstrapPlaceholder = '<script id="abrelo-gift-data" type="application/json"></script>';
 const textExtensions = new Set(['.css', '.html', '.js', '.json', '.map']);
 const forbiddenMarkers = [
   'studio-',
@@ -41,6 +43,17 @@ try {
 }
 
 const violations = [];
+
+try {
+  const runtimeHtml = await readFile(runtimeHtmlPath, 'utf8');
+  const placeholderCount = runtimeHtml.split(bootstrapPlaceholder).length - 1;
+
+  if (placeholderCount !== 1) {
+    violations.push(`runtime.html must contain the gift bootstrap placeholder exactly once (found ${placeholderCount})`);
+  }
+} catch (error) {
+  violations.push(`runtime.html could not be read: ${error instanceof Error ? error.message : error}`);
+}
 
 for (const file of files) {
   const contents = await readFile(file, 'utf8');
