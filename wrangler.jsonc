@@ -33,14 +33,14 @@
         {
           "binding": "DB",
           "database_name": "abrelo-published-gifts-staging",
-          "database_id": "REPLACE_WITH_STAGING_D1_DATABASE_ID",
+          "database_id": "c1c0189c-13e7-41de-907b-9ccfc7e4e669",
           "migrations_dir": "migrations"
         }
       ],
       "vars": {
         "ENVIRONMENT": "staging",
-        "PUBLIC_BASE_URL": "https://staging.example.invalid",
-        "ALLOWED_ORIGINS": "https://creator-staging.example.invalid"
+        "PUBLIC_BASE_URL": "https://abrelo-publish-staging.ianvargas16.workers.dev",
+        "ALLOWED_ORIGINS": "https://abrelo-creator-staging.pages.dev"
       }
     },
     "production": {
