@@ -160,6 +160,224 @@ textarea:focus-visible {
   align-content: start;
 }
 
+.project-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-sm);
+}
+
+.project-trigger {
+  min-width: min(100%, 17rem);
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.78rem 1rem;
+  border: 1px solid rgba(81, 54, 64, 0.12);
+  border-radius: var(--radius-medium);
+  background: rgba(255, 255, 255, 0.54);
+  color: var(--color-ink);
+  text-align: left;
+  box-shadow: var(--shadow-subtle-ui);
+}
+
+.project-trigger:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+}
+
+.project-trigger-label {
+  color: var(--color-ink-subtle);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.project-trigger strong,
+.project-trigger small,
+.project-list-item strong,
+.project-list-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-trigger strong {
+  font-family: var(--font-editorial);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.project-trigger small,
+.project-list-item small {
+  color: var(--color-ink-muted);
+  font-size: 0.74rem;
+}
+
+.project-create-button {
+  align-self: stretch;
+}
+
+.project-dialog-backdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  padding: var(--space-md);
+  background: rgba(35, 27, 29, 0.34);
+  backdrop-filter: blur(7px);
+}
+
+.project-dialog {
+  width: min(100%, 34rem);
+  max-height: min(48rem, calc(100dvh - (var(--space-md) * 2)));
+  overflow: auto;
+  display: grid;
+  gap: var(--space-md);
+  padding: clamp(1.2rem, 4vw, 1.8rem);
+  border: 1px solid rgba(73, 57, 54, 0.12);
+  border-radius: var(--radius-large);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 34%),
+    color-mix(in srgb, var(--color-surface-elevated) 94%, white);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-strong-reveal);
+}
+
+.project-dialog-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.project-dialog-heading h2 {
+  margin: var(--space-xs) 0 0;
+  font-family: var(--font-editorial);
+  font-size: clamp(1.9rem, 7vw, 2.5rem);
+  line-height: 1;
+}
+
+.icon-button {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--color-ink);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.project-list {
+  display: grid;
+  gap: var(--space-xs);
+  max-height: 17rem;
+  overflow: auto;
+  padding: var(--space-xs);
+  border: 1px solid rgba(73, 57, 54, 0.09);
+  border-radius: var(--radius-medium);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.project-list-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: center;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.project-list-item > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.project-list-item strong {
+  font-size: 0.96rem;
+}
+
+.project-list-item time {
+  color: var(--color-ink-subtle);
+  font-family: var(--font-label);
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.project-list-item:hover,
+.project-list-item.selected {
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--color-paper) 78%, white);
+}
+
+.project-list-item.selected::after {
+  content: 'Actual';
+  grid-column: 1 / -1;
+  color: var(--color-accent-strong);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.project-name-field {
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(73, 57, 54, 0.09);
+}
+
+.project-name-control {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.project-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.danger-button {
+  min-height: 2.75rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 44%, var(--color-border));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-danger) 8%, white);
+  color: var(--color-danger);
+}
+
+.project-delete-confirmation {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 32%, var(--color-border));
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-danger) 6%, white);
+}
+
+.project-delete-confirmation p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .studio-status {
   display: inline-flex;
   align-items: center;
@@ -170,6 +388,14 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.54);
   color: var(--color-ink-muted);
   font-size: 0.67rem;
+}
+
+.studio-status.is-error {
+  border-color: color-mix(in srgb, var(--color-danger) 34%, var(--color-border));
+  background: color-mix(in srgb, var(--color-danger) 8%, white);
+  color: var(--color-danger);
+  letter-spacing: 0.06em;
+  text-transform: none;
 }
 
 .studio-layout {
@@ -778,6 +1004,14 @@ textarea:focus-visible {
 }
 
 @media (min-width: 720px) {
+  .project-dialog-backdrop {
+    place-items: center;
+  }
+
+  .project-name-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -843,6 +1077,33 @@ textarea:focus-visible {
 }
 
 @media (max-width: 719px) {
+  .project-switcher {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .project-trigger {
+    min-width: 0;
+  }
+
+  .project-dialog-backdrop {
+    padding: var(--space-sm);
+  }
+
+  .project-dialog {
+    border-radius: var(--radius-large) var(--radius-large) var(--radius-small) var(--radius-small);
+  }
+
+  .project-name-control,
+  .project-dialog-actions {
+    display: grid;
+  }
+
+  .project-dialog-actions > *,
+  .project-delete-confirmation > * {
+    width: 100%;
+  }
+
   .preview-chrome {
     flex-direction: column;
   }

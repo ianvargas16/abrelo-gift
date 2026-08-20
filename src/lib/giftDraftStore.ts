@@ -1,17 +1,21 @@
 import { createGiftFile, parseGiftFile } from '../models/giftConfig';
 import type { GiftConfig } from '../models/giftConfig';
 
-const STORAGE_KEY = 'abrelo.gift.v1';
+export const LEGACY_GIFT_DRAFT_STORAGE_KEY = 'abrelo.gift.v1';
 
-export function loadGiftDraft(fallback: GiftConfig): GiftConfig {
+export function readLegacyGiftDraft(storage: Storage): GiftConfig | null {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return saved ? parseGiftFile(JSON.parse(saved)) : fallback;
+    const saved = storage.getItem(LEGACY_GIFT_DRAFT_STORAGE_KEY);
+    return saved ? parseGiftFile(JSON.parse(saved)) : null;
   } catch {
-    return fallback;
+    return null;
   }
 }
 
+export function loadGiftDraft(fallback: GiftConfig): GiftConfig {
+  return readLegacyGiftDraft(window.localStorage) ?? fallback;
+}
+
 export function saveGiftDraft(gift: GiftConfig): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(createGiftFile(gift)));
+  window.localStorage.setItem(LEGACY_GIFT_DRAFT_STORAGE_KEY, JSON.stringify(createGiftFile(gift)));
 }
