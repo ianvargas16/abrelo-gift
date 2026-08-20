@@ -7,7 +7,9 @@ import {
   MAX_GIFT_FILE_BYTES,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
+import type { OperationalErrorCategory } from './operationalLogging';
 import type { PublishedGiftRepository, PublishedGiftSnapshot } from './publishedGiftRepository';
+import { parseRuntimeConfig } from './runtimeConfig.js';
 
 const runtimeHtml = `<!doctype html>
 <html><body><div id="root"></div><script id="abrelo-gift-data" type="application/json"></script><script type="module" src="/assets/runtime.js"></script></body></html>`;
@@ -34,8 +36,12 @@ function createTestContext(overrides: { publicBaseUrl?: string; allowedOrigins?:
         return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
       },
     },
-    publicBaseUrl: overrides.publicBaseUrl ?? 'https://gifts.example',
-    allowedOrigins: overrides.allowedOrigins ?? 'http://localhost:1420',
+    runtimeConfig: parseRuntimeConfig({
+      ENVIRONMENT: 'development',
+      PUBLIC_BASE_URL: overrides.publicBaseUrl ?? 'https://gifts.example',
+      ALLOWED_ORIGINS: overrides.allowedOrigins ?? 'http://localhost:1420',
+    }),
+    requestIdFactory: () => 'request-test',
     now: () => new Date('2026-08-20T12:00:00.000Z'),
   });
 
@@ -66,6 +72,7 @@ describe('publish Worker', () => {
 
     expect(response.status).toBe(201);
     expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:1420');
+    expect(response.headers.get('X-Request-Id')).toBe('request-test');
     expect(GIFT_ID_PATTERN.test(result.id)).toBe(true);
     expect((await repository.getById(result.id))?.giftFile).toEqual(createGiftFile(defaultGift));
   });
@@ -139,6 +146,7 @@ describe('publish Worker', () => {
   });
 
   it('returns the safe Runtime shell with 503 when the repository fails', async () => {
+    const events: Array<{ category: OperationalErrorCategory; requestId: string }> = [];
     const repository: PublishedGiftRepository = {
       async create() {},
       async getById() {
@@ -152,8 +160,17 @@ describe('publish Worker', () => {
           return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
         },
       },
-      publicBaseUrl: 'https://gifts.example',
-      allowedOrigins: 'http://localhost:1420',
+      runtimeConfig: parseRuntimeConfig({
+        ENVIRONMENT: 'development',
+        PUBLIC_BASE_URL: 'https://gifts.example',
+        ALLOWED_ORIGINS: 'http://localhost:1420',
+      }),
+      requestIdFactory: () => 'request-storage',
+      logger: {
+        error(category, requestId) {
+          events.push({ category, requestId });
+        },
+      },
     });
     const response = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}`));
     const html = await response.text();
@@ -161,6 +178,8 @@ describe('publish Worker', () => {
     expect(response.status).toBe(503);
     expect(html).toContain('<script id="abrelo-gift-data" type="application/json"></script>');
     expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
+    expect(response.headers.get('X-Request-Id')).toBe('request-storage');
+    expect(events).toEqual([{ category: 'repository_read_failed', requestId: 'request-storage' }]);
   });
 
   it('returns a controlled 503 when the Runtime shell cannot be loaded', async () => {
@@ -172,8 +191,11 @@ describe('publish Worker', () => {
           throw new Error('asset service unavailable');
         },
       },
-      publicBaseUrl: 'https://gifts.example',
-      allowedOrigins: 'http://localhost:1420',
+      runtimeConfig: parseRuntimeConfig({
+        ENVIRONMENT: 'development',
+        PUBLIC_BASE_URL: 'https://gifts.example',
+        ALLOWED_ORIGINS: 'http://localhost:1420',
+      }),
     });
     const response = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}`));
 
@@ -191,8 +213,11 @@ describe('publish Worker', () => {
           return new Response('<!doctype html><html><body><div id="root"></div></body></html>');
         },
       },
-      publicBaseUrl: 'https://gifts.example',
-      allowedOrigins: 'http://localhost:1420',
+      runtimeConfig: parseRuntimeConfig({
+        ENVIRONMENT: 'development',
+        PUBLIC_BASE_URL: 'https://gifts.example',
+        ALLOWED_ORIGINS: 'http://localhost:1420',
+      }),
     });
     const snapshot: PublishedGiftSnapshot = {
       id: 'A'.repeat(22),
@@ -259,5 +284,44 @@ describe('publish Worker', () => {
     expect(rejected.headers.has('Access-Control-Allow-Origin')).toBe(false);
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:1420');
+  });
+
+  it('logs persistence failures without passing gift content to the logger', async () => {
+    const events: Array<{ category: OperationalErrorCategory; requestId: string }> = [];
+    const repository: PublishedGiftRepository = {
+      async create() {
+        throw new Error('database write failed');
+      },
+      async getById() {
+        return null;
+      },
+    };
+    const app = createPublishApp({
+      repository,
+      assets: {
+        async fetch() {
+          return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
+        },
+      },
+      runtimeConfig: parseRuntimeConfig({
+        ENVIRONMENT: 'development',
+        PUBLIC_BASE_URL: 'https://gifts.example',
+        ALLOWED_ORIGINS: 'http://localhost:1420',
+      }),
+      requestIdFactory: () => 'request-publish',
+      logger: {
+        error(category, requestId) {
+          events.push({ category, requestId });
+        },
+      },
+    });
+    const response = await app(publishRequest(createGiftFile({
+      ...defaultGift,
+      recipientName: 'Sensitive recipient',
+    })));
+
+    expect(response.status).toBe(500);
+    expect(events).toEqual([{ category: 'publish_persistence_failed', requestId: 'request-publish' }]);
+    expect(JSON.stringify(events)).not.toContain('Sensitive recipient');
   });
 });
