@@ -4,6 +4,11 @@ export const WORKER_ENVIRONMENTS = ['development', 'staging', 'production'];
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]', 'tauri.localhost']);
 
+/** @param {string} hostname */
+function isReservedPlaceholderHostname(hostname) {
+  return hostname === 'invalid' || hostname.endsWith('.invalid');
+}
+
 export class RuntimeConfigError extends Error {
   /** @param {string} message */
   constructor(message) {
@@ -139,7 +144,7 @@ export function normalizeAllowedOrigins(value, environment) {
 }
 
 /** @param {{ ENVIRONMENT?: unknown, PUBLIC_BASE_URL?: unknown, ALLOWED_ORIGINS?: unknown }} rawConfig */
-export function parseRuntimeConfig(rawConfig) {
+export function normalizeRuntimeConfig(rawConfig) {
   const environment = parseEnvironment(rawConfig.ENVIRONMENT);
 
   return {
@@ -147,6 +152,26 @@ export function parseRuntimeConfig(rawConfig) {
     publicBaseUrl: normalizePublicBaseUrl(rawConfig.PUBLIC_BASE_URL, environment),
     allowedOrigins: normalizeAllowedOrigins(rawConfig.ALLOWED_ORIGINS, environment),
   };
+}
+
+/** @param {{ environment: string, publicBaseUrl: string, allowedOrigins: readonly string[] }} config */
+export function assertRuntimeConfigReady(config) {
+  if (config.environment === 'development') {
+    return;
+  }
+
+  const configuredOrigins = [config.publicBaseUrl, ...config.allowedOrigins];
+
+  if (configuredOrigins.some((origin) => isReservedPlaceholderHostname(new URL(origin).hostname))) {
+    throw new RuntimeConfigError('Remote runtime configuration contains a reserved placeholder origin');
+  }
+}
+
+/** @param {{ ENVIRONMENT?: unknown, PUBLIC_BASE_URL?: unknown, ALLOWED_ORIGINS?: unknown }} rawConfig */
+export function parseRuntimeConfig(rawConfig) {
+  const config = normalizeRuntimeConfig(rawConfig);
+  assertRuntimeConfigReady(config);
+  return config;
 }
 
 /**

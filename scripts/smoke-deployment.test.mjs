@@ -34,9 +34,9 @@ describe('deployment smoke test', () => {
       });
 
     expect(fetcher.mock.calls).toEqual([
-      ['https://worker.example.com/g/AAAAAAAAAAAAAAAAAAAAAA'],
-      ['https://worker.example.com/api/gifts'],
-      ['https://worker.example.com/runtime.html'],
+      ['https://worker.example.com/g/AAAAAAAAAAAAAAAAAAAAAA', { redirect: 'manual' }],
+      ['https://worker.example.com/api/gifts', { redirect: 'manual' }],
+      ['https://worker.example.com/runtime', { redirect: 'manual' }],
     ]);
     expect(write).toHaveBeenCalledWith('Deployment smoke test passed for https://worker.example.com.');
   });
@@ -61,5 +61,33 @@ describe('deployment smoke test', () => {
   it('allows HTTP only for localhost smoke targets', async () => {
     await expect(runDeploymentSmokeTest('http://worker.example.com', { fetcher: vi.fn() }))
       .rejects.toThrow(/HTTPS/u);
+  });
+
+  it.each([
+    ['recipient route', 0],
+    ['API route', 1],
+    ['Runtime shell', 2],
+  ])('rejects redirects from the %s without following them', async (_surface, redirectIndex) => {
+    const responses = [
+      createResponse(runtimeHtml, 404, {
+        'Content-Type': 'text/html',
+        'X-Robots-Tag': 'noindex',
+        'Referrer-Policy': 'no-referrer',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Request-Id': 'request-gift',
+      }),
+      createResponse('{}', 405, { 'X-Request-Id': 'request-api' }),
+      createResponse(runtimeHtml, 200, { 'Content-Type': 'text/html' }),
+    ];
+    responses[redirectIndex] = createResponse('', 302, { Location: 'https://production.example.com' });
+    const fetcher = vi.fn();
+
+    for (const response of responses) {
+      fetcher.mockResolvedValueOnce(response);
+    }
+
+    await expect(runDeploymentSmokeTest('https://staging.example.com', { fetcher, write: vi.fn() }))
+      .rejects.toThrow(/redirected with status 302/u);
+    expect(fetcher.mock.calls.every(([, options]) => options.redirect === 'manual')).toBe(true);
   });
 });

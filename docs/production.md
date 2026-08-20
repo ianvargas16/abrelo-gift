@@ -85,7 +85,7 @@ npm run smoke:deployment -- https://actual-staging-worker.example
 npm run smoke:deployment -- https://actual-production-worker.example
 ```
 
-The smoke test is non-mutating. It checks an unknown opaque gift (`404` recipient HTML and security headers), confirms `GET /api/gifts` remains `405` with no listing, and validates that `runtime.html` contains exactly one bootstrap placeholder. It never publishes a gift.
+The smoke test is non-mutating. It checks an unknown opaque gift (`404` recipient HTML and security headers), confirms `GET /api/gifts` remains `405` with no listing, and validates that the canonical `/runtime` response contains exactly one bootstrap placeholder. Every request disables redirect following so a staging check cannot pass against another deployment. It never publishes a gift.
 
 ## Staging-first release
 

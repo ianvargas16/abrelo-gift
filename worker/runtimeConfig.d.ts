@@ -26,5 +26,7 @@ export function normalizeAllowedOrigins(
   environment: WorkerEnvironment,
 ): readonly string[];
 
+export function normalizeRuntimeConfig(rawConfig: RawRuntimeConfig): RuntimeConfig;
+export function assertRuntimeConfigReady(config: RuntimeConfig): void;
 export function parseRuntimeConfig(rawConfig: RawRuntimeConfig): RuntimeConfig;
 export function createPublicGiftUrl(config: RuntimeConfig, id: string): string;

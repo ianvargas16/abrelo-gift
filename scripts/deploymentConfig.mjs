@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { parseRuntimeConfig } from '../worker/runtimeConfig.js';
+import { normalizeRuntimeConfig, parseRuntimeConfig } from '../worker/runtimeConfig.js';
 
 export const defaultWranglerConfigPath = fileURLToPath(new URL('../wrangler.jsonc', import.meta.url));
 const remoteEnvironments = ['staging', 'production'];
@@ -74,7 +74,9 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
   let runtimeConfig;
 
   try {
-    runtimeConfig = parseRuntimeConfig(target.vars ?? {});
+    runtimeConfig = requireProvisionedResources
+      ? parseRuntimeConfig(target.vars ?? {})
+      : normalizeRuntimeConfig(target.vars ?? {});
 
     if (runtimeConfig.environment !== environment) {
       issues.push(`${environment} ENVIRONMENT must equal ${environment}`);
@@ -165,10 +167,10 @@ export function validateWranglerStructure(config) {
     issues.push('staging and production must not share PUBLIC_BASE_URL');
   }
 
-  if (
-    JSON.stringify(staging?.runtimeConfig?.allowedOrigins)
-    === JSON.stringify(production?.runtimeConfig?.allowedOrigins)
-  ) {
+  const stagingAllowedOrigins = [...(staging?.runtimeConfig?.allowedOrigins ?? [])].sort();
+  const productionAllowedOrigins = [...(production?.runtimeConfig?.allowedOrigins ?? [])].sort();
+
+  if (JSON.stringify(stagingAllowedOrigins) === JSON.stringify(productionAllowedOrigins)) {
     issues.push('staging and production must not share the same ALLOWED_ORIGINS set');
   }
 

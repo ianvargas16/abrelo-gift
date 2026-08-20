@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createPublicGiftUrl,
+  normalizeRuntimeConfig,
   parseRuntimeConfig,
   RuntimeConfigError,
 } from './runtimeConfig.js';
@@ -86,6 +87,32 @@ describe('Worker runtime configuration', () => {
     expect(staging.environment).toBe('staging');
     expect(production.environment).toBe('production');
     expect(staging.publicBaseUrl).not.toBe(production.publicBaseUrl);
+  });
+
+  it('keeps structure normalization separate from remote placeholder readiness', () => {
+    expect(normalizeRuntimeConfig({
+      ENVIRONMENT: 'production',
+      PUBLIC_BASE_URL: 'https://production.example.invalid',
+      ALLOWED_ORIGINS: 'https://creator-production.example.invalid',
+    })).toEqual({
+      environment: 'production',
+      publicBaseUrl: 'https://production.example.invalid',
+      allowedOrigins: ['https://creator-production.example.invalid'],
+    });
+  });
+
+  it('rejects reserved placeholder origins for remote runtime configuration', () => {
+    expect(() => parseRuntimeConfig({
+      ENVIRONMENT: 'production',
+      PUBLIC_BASE_URL: 'https://production.example.invalid',
+      ALLOWED_ORIGINS: 'https://creator.example.com',
+    })).toThrow(/reserved placeholder origin/u);
+
+    expect(() => parseRuntimeConfig({
+      ENVIRONMENT: 'staging',
+      PUBLIC_BASE_URL: 'https://staging.example.com',
+      ALLOWED_ORIGINS: 'https://creator-staging.example.invalid',
+    })).toThrow(/reserved placeholder origin/u);
   });
 
   it('generates canonical gift URLs from normalized server configuration', () => {

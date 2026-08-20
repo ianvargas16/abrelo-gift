@@ -42,12 +42,23 @@ function requireCondition(condition, message) {
   }
 }
 
+async function fetchWithoutRedirect(fetcher, url) {
+  const response = await fetcher(url, { redirect: 'manual' });
+
+  requireCondition(
+    response.status < 300 || response.status >= 400,
+    `Request to ${new URL(url).pathname} redirected with status ${response.status}`,
+  );
+
+  return response;
+}
+
 export async function runDeploymentSmokeTest(baseUrl, options = {}) {
   const origin = normalizeDeploymentBaseUrl(baseUrl);
   const fetcher = options.fetcher ?? fetch;
   const write = options.write ?? console.log;
 
-  const giftResponse = await fetcher(`${origin}/g/${unknownGiftId}`);
+  const giftResponse = await fetchWithoutRedirect(fetcher, `${origin}/g/${unknownGiftId}`);
   const giftHtml = await giftResponse.text();
 
   requireCondition(giftResponse.status === 404, `Unknown gift returned ${giftResponse.status}, expected 404`);
@@ -62,14 +73,14 @@ export async function runDeploymentSmokeTest(baseUrl, options = {}) {
     requireCondition(!giftHtml.includes(marker), `Recipient shell contains forbidden Creator marker: ${marker}`);
   }
 
-  const listResponse = await fetcher(`${origin}/api/gifts`);
+  const listResponse = await fetchWithoutRedirect(fetcher, `${origin}/api/gifts`);
   const listBody = await listResponse.text();
 
   requireCondition(listResponse.status === 405, `Gift list route returned ${listResponse.status}, expected 405`);
   requireCondition(listResponse.headers.has('x-request-id'), 'Gift list route must include X-Request-Id');
   requireCondition(!/"gift"\s*:/iu.test(listBody), 'Gift list route exposed gift data');
 
-  const shellResponse = await fetcher(`${origin}/runtime.html`);
+  const shellResponse = await fetchWithoutRedirect(fetcher, `${origin}/runtime`);
   const shellHtml = await shellResponse.text();
   const placeholderCount = shellHtml.split(bootstrapPlaceholder).length - 1;
 

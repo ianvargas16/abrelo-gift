@@ -94,6 +94,14 @@ describe('deployment configuration preflight', () => {
     expect(() => validateWranglerStructure(config)).toThrow(/must not share the same ALLOWED_ORIGINS set/u);
   });
 
+  it('compares normalized remote Creator origin sets without depending on order', () => {
+    const config = createReadyConfig();
+    config.env.staging.vars.ALLOWED_ORIGINS = 'https://a.example.com, https://b.example.com';
+    config.env.production.vars.ALLOWED_ORIGINS = 'https://b.example.com/, https://a.example.com';
+
+    expect(() => validateWranglerStructure(config)).toThrow(/must not share the same ALLOWED_ORIGINS set/u);
+  });
+
   it('rejects dangerous production runtime values through the shared parser', () => {
     const config = createReadyConfig();
     config.env.production.vars.PUBLIC_BASE_URL = 'http://127.0.0.1:8787';
