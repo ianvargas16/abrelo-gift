@@ -1,4 +1,5 @@
 import type { GiftConfig, ThemeId } from '../../models/giftConfig';
+import type { CreatorPublication } from '../../publishing/creatorPublication';
 import { PublishPanel } from './PublishPanel';
 
 interface GiftEditorProps {
@@ -8,6 +9,8 @@ interface GiftEditorProps {
   onReset: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
+  publication: CreatorPublication | null;
+  onPublicationChange: (publication: CreatorPublication) => void;
 }
 
 const themes: Array<{ id: ThemeId; label: string; personality: string }> = [
@@ -17,7 +20,16 @@ const themes: Array<{ id: ThemeId; label: string; personality: string }> = [
   { id: 'sunset', label: 'Atardecer', personality: 'Cálido' },
 ];
 
-export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImport }: GiftEditorProps) {
+export function GiftEditor({
+  gift,
+  onChange,
+  onPreview,
+  onReset,
+  onExport,
+  onImport,
+  publication,
+  onPublicationChange,
+}: GiftEditorProps) {
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
   const setLetter = <K extends keyof GiftConfig['letter']>(key: K, value: GiftConfig['letter'][K]) => onChange({ ...gift, letter: { ...gift.letter, [key]: value } });
@@ -241,7 +253,11 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
           </aside>
         </section>
 
-        <PublishPanel gift={gift} />
+        <PublishPanel
+          gift={gift}
+          publication={publication}
+          onPublicationChange={onPublicationChange}
+        />
 
         <footer className="studio-footer">
           <div className="studio-secondary-actions">

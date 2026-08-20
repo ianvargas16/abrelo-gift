@@ -8,7 +8,7 @@
 
 1. **La apertura es parte del regalo.** Debe existir expectativa, respuesta visual y una pequeña resistencia juguetona.
 2. **Cero instalación compleja para quien recibe.** Abrir y disfrutar.
-3. **Offline por defecto.** Un regalo privado no debería necesitar una cuenta ni enviar contenido a servidores.
+3. **Offline por defecto cuando aplique.** Un regalo personal no debería necesitar una cuenta para abrirse.
 4. **Reutilizable para quien crea.** Cambiar persona, mensaje y regalo sin tocar código.
 5. **El regalo no se spoilea.** El Runtime no muestra configuraciones ni nombres internos del premio antes del reveal.
 6. **Emocional antes que gamificado.** Las interacciones deben sentirse bonitas, no como un minijuego frustrante.
@@ -60,7 +60,7 @@ Esto permite reemplazar el sobre por otras experiencias futuras sin cambiar el m
 - Regalo físico con foto/reveal.
 - Dinero / transferencia simbólica.
 - Código o QR.
-- Link privado.
+- Enlace no listado.
 - Pista para encontrar un regalo físico.
 - Mensaje final personalizado.
 

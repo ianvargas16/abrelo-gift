@@ -86,16 +86,28 @@ async function renderRecipientPage(
   id: string,
 ): Promise<Response> {
   let giftFile = null;
+  let status: 200 | 404 | 503 = 404;
 
   if (GIFT_ID_PATTERN.test(id)) {
     try {
-      giftFile = (await options.repository.getById(id))?.giftFile ?? null;
+      const snapshot = await options.repository.getById(id);
+      giftFile = snapshot?.giftFile ?? null;
+      status = snapshot ? 200 : 404;
     } catch {
-      giftFile = null;
+      status = 503;
     }
   }
 
-  const shell = await loadRuntimeShell(request, options.assets);
+  let shell: Response;
+
+  try {
+    shell = await loadRuntimeShell(request, options.assets);
+  } catch {
+    return new Response('Este regalo no está disponible.', {
+      status: 503,
+      headers: SECURITY_HEADERS,
+    });
+  }
 
   if (!shell.ok) {
     return new Response('Este regalo no está disponible.', {
@@ -104,8 +116,27 @@ async function renderRecipientPage(
     });
   }
 
-  const runtimeHtml = await shell.text();
-  const body = giftFile ? injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile) : runtimeHtml;
+  let runtimeHtml: string;
+
+  try {
+    runtimeHtml = await shell.text();
+  } catch {
+    return new Response('Este regalo no está disponible.', {
+      status: 503,
+      headers: SECURITY_HEADERS,
+    });
+  }
+
+  let body = runtimeHtml;
+
+  if (giftFile) {
+    try {
+      body = injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile);
+    } catch {
+      status = 503;
+    }
+  }
+
   const headers = new Headers(shell.headers);
 
   headers.delete('Content-Length');
@@ -117,7 +148,7 @@ async function renderRecipientPage(
   }
 
   return new Response(body, {
-    status: giftFile ? 200 : 404,
+    status,
     headers,
   });
 }

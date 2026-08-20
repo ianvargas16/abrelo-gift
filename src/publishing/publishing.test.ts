@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
 import { createGiftFile } from '../models/giftConfig';
+import {
+  createCreatorPublication,
+  hasUnpublishedChanges,
+} from './creatorPublication';
 import { PublishGiftError, publishGift } from './publishGift';
 import {
   copyPublishedGiftUrl,
@@ -33,6 +37,25 @@ describe('Creator publishing client', () => {
     await expect(publishGift(defaultGift, {
       fetcher: async () => Response.json({ id: '1', url: 'javascript:alert(1)' }),
     })).rejects.toBeInstanceOf(PublishGiftError);
+  });
+});
+
+describe('Creator publication state', () => {
+  it('retains the published URL and snapshot independently from the mounted panel', () => {
+    const publication = createCreatorPublication({ id: publishedId, url: publishedUrl }, defaultGift);
+
+    expect(publication.gift).toEqual({ id: publishedId, url: publishedUrl });
+    expect(publication.snapshot).toBe(JSON.stringify(createGiftFile(defaultGift)));
+    expect(hasUnpublishedChanges(publication, defaultGift)).toBe(false);
+  });
+
+  it('detects draft edits without mutating the earlier publication', () => {
+    const publication = createCreatorPublication({ id: publishedId, url: publishedUrl }, defaultGift);
+    const editedGift = { ...defaultGift, recipientName: 'Otro destinatario' };
+
+    expect(hasUnpublishedChanges(publication, editedGift)).toBe(true);
+    expect(publication.gift.url).toBe(publishedUrl);
+    expect(JSON.parse(publication.snapshot).gift.recipientName).toBe(defaultGift.recipientName);
   });
 });
 

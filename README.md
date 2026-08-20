@@ -54,7 +54,7 @@ La versión de producto separará:
 1. **Creator**: configura el regalo.
 2. **Gift Runtime**: reproduce la experiencia sin mostrar el editor.
 3. **GiftConfig**: archivo de datos serializable con destinatario, mensajes, tema, interacción y contenido del regalo.
-4. **Publisher**: publica snapshots privados en la experiencia web recipient-only.
+4. **Publisher**: publica snapshots no listados en la experiencia web recipient-only.
 5. **Exporter**: generará paquetes nativos en una fase posterior.
 
 Creator, Preview, Runtime web y publicación mantienen entry points y responsabilidades separados.

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { createGiftFile, type GiftConfig } from '../../models/giftConfig';
-import { publishGift, type PublishedGift } from '../../publishing/publishGift';
+import type { GiftConfig } from '../../models/giftConfig';
+import {
+  createCreatorPublication,
+  hasUnpublishedChanges as checkUnpublishedChanges,
+  type CreatorPublication,
+} from '../../publishing/creatorPublication';
+import { publishGift } from '../../publishing/publishGift';
 import {
   copyPublishedGiftUrl,
   createPublishedGiftQrDataUrl,
@@ -10,22 +15,17 @@ import {
 
 interface PublishPanelProps {
   gift: GiftConfig;
+  publication: CreatorPublication | null;
+  onPublicationChange: (publication: CreatorPublication) => void;
 }
 
-interface Publication {
-  gift: PublishedGift;
-  snapshot: string;
-}
-
-export function PublishPanel({ gift }: PublishPanelProps) {
-  const [publication, setPublication] = useState<Publication | null>(null);
+export function PublishPanel({ gift, publication, onPublicationChange }: PublishPanelProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
   const [qrDataUrl, setQrDataUrl] = useState('');
   const publishingLock = useRef(false);
-  const currentSnapshot = JSON.stringify(createGiftFile(gift));
-  const hasUnpublishedChanges = publication !== null && publication.snapshot !== currentSnapshot;
+  const hasUnpublishedChanges = checkUnpublishedChanges(publication, gift);
 
   useEffect(() => {
     if (copyStatus === 'idle') {
@@ -70,11 +70,10 @@ export function PublishPanel({ gift }: PublishPanelProps) {
     setIsPublishing(true);
     setError('');
     setCopyStatus('idle');
-    const snapshot = currentSnapshot;
 
     try {
       const publishedGift = await publishGift(gift);
-      setPublication({ gift: publishedGift, snapshot });
+      onPublicationChange(createCreatorPublication(publishedGift, gift));
     } catch {
       setError('No pudimos publicar el regalo. Inténtalo de nuevo.');
     } finally {
@@ -108,7 +107,7 @@ export function PublishPanel({ gift }: PublishPanelProps) {
     <section className="studio-publish-panel" aria-labelledby="publish-title">
       <div className="publish-intro">
         <p className="section-kicker">Entrega</p>
-        <h2 id="publish-title">Convierte este borrador en un enlace privado.</h2>
+        <h2 id="publish-title">Convierte este borrador en un enlace único para compartir.</h2>
         <p>Cada publicación guarda una versión independiente. Tus próximos cambios no alterarán un enlace ya compartido.</p>
       </div>
 

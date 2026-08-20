@@ -138,6 +138,75 @@ describe('publish Worker', () => {
     expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
   });
 
+  it('returns the safe Runtime shell with 503 when the repository fails', async () => {
+    const repository: PublishedGiftRepository = {
+      async create() {},
+      async getById() {
+        throw new Error('storage unavailable');
+      },
+    };
+    const app = createPublishApp({
+      repository,
+      assets: {
+        async fetch() {
+          return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
+        },
+      },
+      publicBaseUrl: 'https://gifts.example',
+      allowedOrigins: 'http://localhost:1420',
+    });
+    const response = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}`));
+    const html = await response.text();
+
+    expect(response.status).toBe(503);
+    expect(html).toContain('<script id="abrelo-gift-data" type="application/json"></script>');
+    expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
+  });
+
+  it('returns a controlled 503 when the Runtime shell cannot be loaded', async () => {
+    const repository = new MemoryPublishedGiftRepository();
+    const app = createPublishApp({
+      repository,
+      assets: {
+        async fetch() {
+          throw new Error('asset service unavailable');
+        },
+      },
+      publicBaseUrl: 'https://gifts.example',
+      allowedOrigins: 'http://localhost:1420',
+    });
+    const response = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}`));
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toBe('Este regalo no está disponible.');
+    expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
+  });
+
+  it('returns a controlled 503 when an existing gift cannot be injected', async () => {
+    const repository = new MemoryPublishedGiftRepository();
+    const app = createPublishApp({
+      repository,
+      assets: {
+        async fetch() {
+          return new Response('<!doctype html><html><body><div id="root"></div></body></html>');
+        },
+      },
+      publicBaseUrl: 'https://gifts.example',
+      allowedOrigins: 'http://localhost:1420',
+    });
+    const snapshot: PublishedGiftSnapshot = {
+      id: 'A'.repeat(22),
+      giftFile: createGiftFile(defaultGift),
+      createdAt: '2026-08-20T12:00:00.000Z',
+    };
+    await repository.create(snapshot);
+    const response = await app(new Request(`https://gifts.example/g/${snapshot.id}`));
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain('<div id="root"></div>');
+    expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
+  });
+
   it('does not expose a list endpoint', async () => {
     const { app } = createTestContext();
     await publish(app);
