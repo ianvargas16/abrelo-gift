@@ -47,7 +47,9 @@
 
   --motion-fast: 160ms;
   --motion-standard: 320ms;
+  --motion-paper: 680ms;
   --motion-deliberate: 840ms;
+  --motion-reveal: 1100ms;
   --ease-standard: cubic-bezier(0.2, 0.75, 0.2, 1);
   --ease-deliberate: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -198,6 +200,15 @@ button:focus-visible {
   --color-accent-strong: #874730;
   --color-focus: #cf8a69;
   --theme-glow: rgba(179, 98, 68, 0.14);
+}
+
+.theme-rose,
+.theme-midnight,
+.theme-sage,
+.theme-sunset {
+  --color-ink: var(--color-page-ink);
+  --color-ink-muted: var(--color-page-ink-muted);
+  --color-ink-subtle: var(--color-page-ink-subtle);
 }
 
 .ghost-button,
@@ -839,7 +850,8 @@ button:focus-visible {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: clip;
+  overflow-x: clip;
+  overflow-y: auto;
   padding:
     calc(env(safe-area-inset-top) + clamp(1.5rem, 4vh, 3rem))
     var(--space-md)
@@ -910,6 +922,19 @@ button:focus-visible {
   margin: 0 auto;
   display: grid;
   gap: var(--space-xl);
+  animation: experience-arrive var(--motion-deliberate) var(--ease-deliberate) both;
+}
+
+@keyframes experience-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.8rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .experience-heading {
@@ -917,6 +942,12 @@ button:focus-visible {
   gap: 0.5rem;
   justify-items: center;
   text-align: center;
+  transition: opacity var(--motion-standard) var(--ease-standard), transform var(--motion-standard) var(--ease-standard);
+}
+
+.experience-heading.is-extracting {
+  opacity: 0;
+  transform: translateY(-0.5rem);
 }
 
 .experience-heading p {
@@ -951,13 +982,39 @@ button:focus-visible {
 
 .envelope-zone {
   gap: var(--space-lg);
+  animation: envelope-zone-arrive var(--motion-deliberate) 120ms var(--ease-deliberate) both;
+}
+
+@keyframes envelope-zone-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .envelope {
+  --envelope-rotate-x: 0deg;
+  --envelope-rotate-y: 0deg;
   position: relative;
   width: min(100%, 24rem);
   aspect-ratio: 1.52;
   perspective: 1100px;
+  transform: rotateX(var(--envelope-rotate-x)) rotateY(var(--envelope-rotate-y));
+  transform-style: preserve-3d;
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-standard) var(--ease-standard);
+  will-change: transform;
+}
+
+.envelope.state-extracting {
+  opacity: 0;
+  transform: translateY(3.5rem) scale(0.9);
 }
 
 .envelope-shadow {
@@ -967,6 +1024,20 @@ button:focus-visible {
   border-radius: 50%;
   background: color-mix(in srgb, var(--theme-glow, rgba(127, 54, 86, 0.12)) 86%, transparent);
   filter: blur(14px);
+  animation: envelope-shadow-rest 5.5s 1.2s ease-in-out infinite;
+}
+
+@keyframes envelope-shadow-rest {
+  0%,
+  100% {
+    opacity: 0.76;
+    transform: scaleX(0.98);
+  }
+
+  50% {
+    opacity: 0.58;
+    transform: scaleX(1.035);
+  }
 }
 
 .envelope-back,
@@ -1053,11 +1124,12 @@ button:focus-visible {
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top center;
   z-index: 5;
-  transition: transform var(--motion-deliberate) var(--ease-deliberate), z-index var(--motion-fast) linear;
+  transition: transform var(--motion-paper) var(--ease-deliberate), z-index var(--motion-fast) linear;
   backface-visibility: hidden;
 }
 
-.envelope.is-open .envelope-flap {
+.envelope.state-opened .envelope-flap,
+.envelope.state-extracting .envelope-flap {
   transform: rotateX(180deg);
   z-index: 1;
 }
@@ -1075,50 +1147,126 @@ button:focus-visible {
   justify-items: center;
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 92%, white), var(--color-paper));
   box-shadow: var(--shadow-paper);
-  transition: transform var(--motion-deliberate) 220ms var(--ease-deliberate);
+  transition:
+    transform var(--motion-paper) 180ms var(--ease-deliberate),
+    opacity var(--motion-standard) var(--ease-standard);
   z-index: 2;
 }
 
-.envelope.is-open .letter-peek {
+.envelope.state-opened .letter-peek {
   transform: translateY(-4.5rem);
+}
+
+.envelope.state-extracting .letter-peek {
+  opacity: 0;
+  transform: translateY(-12rem) scale(1.055);
 }
 
 .wax-seal {
   --progress: 0deg;
+  --seal-scale: 1;
+  --mark-scale: 1;
+  --crack-opacity: 0;
+  --hold-ring: 0rem;
   position: absolute;
-  width: 4.7rem;
-  height: 4.7rem;
+  width: 4.9rem;
+  height: 4.9rem;
   left: 50%;
   top: 50%;
   z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: 0.24rem;
   border: 0;
   border-radius: 50%;
   transform: translate(-50%, -28%);
-  background: conic-gradient(color-mix(in srgb, var(--color-paper-secondary) 72%, white) var(--progress), var(--color-accent) 0);
+  background: conic-gradient(
+    var(--color-accent-strong) var(--progress),
+    color-mix(in srgb, var(--color-accent) 38%, var(--color-paper-secondary)) 0
+  );
   color: #f8ddd6;
   box-shadow:
     0 16px 24px color-mix(in srgb, var(--color-accent) 28%, transparent),
     inset 0 0 0 0.35rem rgba(255, 255, 255, 0.08);
   touch-action: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--motion-fast) var(--ease-spring),
+    filter var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
-.wax-seal::before {
-  content: '';
-  position: absolute;
-  inset: 0.45rem;
-  border-radius: inherit;
+.wax-seal-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
   background: radial-gradient(circle at 35% 25%, color-mix(in srgb, var(--color-accent) 76%, white), var(--color-accent));
+  box-shadow:
+    inset 0.18rem 0.2rem 0.45rem rgba(255, 255, 255, 0.12),
+    inset -0.2rem -0.25rem 0.5rem rgba(53, 19, 34, 0.18);
 }
 
-.wax-seal span {
+.wax-seal-face > span {
   position: relative;
   z-index: 1;
   font-size: 1.55rem;
+  transform: scale(var(--mark-scale));
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
-.wax-seal:active {
-  transform: translate(-50%, -28%) scale(0.97);
+.wax-seal-crack {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 0.12rem;
+  height: 2.2rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent-strong) 84%, black);
+  opacity: var(--crack-opacity);
+  transform-origin: top;
+}
+
+.wax-seal-crack-one {
+  transform: rotate(28deg) translateY(0.15rem);
+}
+
+.wax-seal-crack-two {
+  transform: rotate(-42deg) translateY(0.25rem) scaleY(0.72);
+}
+
+.wax-seal.is-holding {
+  filter: saturate(1.12);
+  transform: translate(-50%, -28%) scale(var(--seal-scale));
+  box-shadow:
+    0 10px 18px color-mix(in srgb, var(--color-accent) 32%, transparent),
+    0 0 0 var(--hold-ring) color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.wax-seal.is-released {
+  pointer-events: none;
+  animation: seal-release 520ms var(--ease-deliberate) both;
+}
+
+@keyframes seal-release {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -28%) scale(1);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translate(-50%, -22%) scale(1.06) rotate(2deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 8%) scale(0.82) rotate(-8deg);
+  }
 }
 
 .shake {
@@ -1158,6 +1306,12 @@ button:focus-visible {
   border-radius: calc(var(--radius-medium) - 0.1rem);
   background: color-mix(in srgb, var(--color-surface-elevated) 86%, white);
   box-shadow: var(--shadow-subtle-ui);
+  transition: opacity var(--motion-standard) var(--ease-standard), transform var(--motion-standard) var(--ease-standard);
+}
+
+.interaction-copy.is-extracting {
+  opacity: 0;
+  transform: translateY(0.75rem);
 }
 
 .interaction-copy strong {
@@ -1176,6 +1330,20 @@ button:focus-visible {
 
 .letter-stage {
   padding-top: var(--space-sm);
+  align-content: start;
+  animation: letter-stage-arrive var(--motion-paper) var(--ease-deliberate) both;
+}
+
+@keyframes letter-stage-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(2.5rem) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .gift-letter {
@@ -1190,6 +1358,13 @@ button:focus-visible {
   box-shadow: var(--shadow-paper);
   color: var(--color-paper-ink);
   text-align: center;
+  transform-origin: center 18%;
+  transition: opacity var(--motion-standard) var(--ease-standard), transform var(--motion-paper) var(--ease-deliberate);
+}
+
+.gift-letter.is-revealing {
+  opacity: 0;
+  transform: translateY(-1.5rem) scale(1.025);
 }
 
 .gift-letter::before {
@@ -1224,6 +1399,8 @@ button:focus-visible {
   font-family: var(--font-editorial);
   font-size: clamp(1.3rem, 4.8vw, 2rem);
   line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .letter-signature {
@@ -1241,6 +1418,22 @@ button:focus-visible {
   min-height: calc(100dvh - 10rem);
   align-content: center;
   gap: var(--space-lg);
+}
+
+.gift-reveal {
+  width: 100%;
+  min-height: inherit;
+  animation: reveal-background var(--motion-reveal) var(--ease-deliberate) both;
+}
+
+@keyframes reveal-background {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .ticket-glow {
@@ -1261,7 +1454,7 @@ button:focus-visible {
   border: 1px solid rgba(72, 53, 48, 0.1);
   box-shadow: var(--shadow-strong-reveal);
   color: var(--color-paper-ink);
-  animation: ticket-in var(--motion-deliberate) var(--ease-deliberate) both;
+  animation: ticket-in var(--motion-reveal) 120ms var(--ease-deliberate) both;
 }
 
 @keyframes ticket-in {
@@ -1293,6 +1486,7 @@ button:focus-visible {
   font-size: clamp(2rem, 7vw, 3.7rem);
   line-height: 0.98;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 .ticket-description {
@@ -1371,6 +1565,7 @@ button:focus-visible {
   color: var(--color-accent-strong);
   font-size: 0.88rem;
   letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
 }
 
 .ticket-barcode {
@@ -1394,21 +1589,34 @@ button:focus-visible {
 }
 
 .confetti i {
-  --x: calc((var(--i) * 47) % 100);
   position: absolute;
-  left: calc(var(--x) * 1%);
+  left: var(--confetti-x);
   top: -1.5rem;
   width: 0.45rem;
   height: 0.95rem;
-  background: hsl(calc((var(--i) * 37) + 320) 55% 60%);
-  transform: rotate(calc(var(--i) * 19deg));
-  opacity: 0.85;
-  animation: fall calc(3.2s + ((var(--i) % 7) * 0.24s)) calc((var(--i) % 11) * 0.08s) ease-in forwards;
+  background: var(--confetti-color);
+  transform: rotate(var(--confetti-rotation));
+  opacity: 0;
+  animation: fall var(--confetti-duration) var(--confetti-delay) ease-in forwards;
 }
 
 @keyframes fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-1rem) rotate(var(--confetti-rotation));
+  }
+
+  12% {
+    opacity: 0.78;
+  }
+
+  85% {
+    opacity: 0.68;
+  }
+
   to {
-    transform: translate3d(calc((var(--i) % 5 - 2) * 2rem), 108vh, 0) rotate(760deg);
+    opacity: 0;
+    transform: translate3d(var(--confetti-drift), 108vh, 0) rotate(760deg);
   }
 }
 
@@ -1559,6 +1767,44 @@ button:focus-visible {
     padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
     background: rgba(255, 250, 245, 0.94);
   }
+
+  .experience {
+    padding-inline: clamp(0.85rem, 4vw, 1.15rem);
+  }
+
+  .experience-frame {
+    gap: clamp(1.25rem, 5vh, 2rem);
+  }
+
+  .experience-heading h1 {
+    font-size: clamp(2.25rem, 12vw, 3.5rem);
+  }
+
+  .gift-letter {
+    padding: clamp(1.4rem, 6vw, 2rem);
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .experience {
+    padding-block: calc(env(safe-area-inset-top) + var(--space-md)) calc(env(safe-area-inset-bottom) + var(--space-md));
+  }
+
+  .experience-frame {
+    gap: var(--space-md);
+  }
+
+  .experience-heading h1 {
+    font-size: clamp(2rem, 8vh, 3rem);
+  }
+
+  .envelope {
+    width: min(58vh, 24rem);
+  }
+
+  .envelope-zone {
+    gap: var(--space-md);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1579,10 +1825,32 @@ button:focus-visible {
     animation: none;
   }
 
+  .experience-frame,
+  .envelope-zone,
+  .envelope-shadow,
+  .letter-stage,
+  .gift-reveal,
   .ticket,
   .envelope-flap,
   .letter-peek {
     animation: none;
     transition: none;
+  }
+
+  .envelope {
+    transform: none;
+    transition: none;
+  }
+
+  .wax-seal.is-released {
+    opacity: 0;
+    animation: none;
+  }
+
+  .gift-letter.is-revealing,
+  .interaction-copy.is-extracting,
+  .experience-heading.is-extracting {
+    opacity: 1;
+    transform: none;
   }
 }
