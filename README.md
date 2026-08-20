@@ -29,6 +29,7 @@ Abre `http://localhost:1420`.
 - Creator: `/#/creator`
 
 Para probar publicación local con D1, consulta [`docs/publishing.md`](docs/publishing.md).
+Para preparar staging o producción, consulta [`docs/production.md`](docs/production.md); los deploys remotos permanecen bloqueados hasta configurar recursos reales.
 
 ## Ejecutar con Tauri
 
