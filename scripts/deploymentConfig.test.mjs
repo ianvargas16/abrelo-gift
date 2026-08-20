@@ -65,12 +65,21 @@ describe('deployment configuration preflight', () => {
     expect(validateDeploymentTarget(config, 'production')).toBe(true);
   });
 
-  it('accepts repository configuration structure while blocking unresolved resources', async () => {
+  it('accepts provisioned repository staging while production remains blocked', async () => {
     const config = await loadWranglerConfig();
 
     expect(validateWranglerStructure(config)).toBe(true);
+    expect(validateDeploymentTarget(config, 'staging')).toBe(true);
+    expect(() => validateDeploymentTarget(config, 'production')).toThrow(DeploymentConfigError);
+  });
+
+  it('rejects unresolved staging resources in a synthetic configuration', () => {
+    const config = createReadyConfig();
+    config.env.staging.d1_databases[0].database_id = 'REPLACE_WITH_STAGING_D1_DATABASE_ID';
+    config.env.staging.vars.PUBLIC_BASE_URL = 'https://staging.example.invalid';
+    config.env.staging.vars.ALLOWED_ORIGINS = 'https://creator-staging.example.invalid';
+
     expect(() => validateDeploymentTarget(config, 'staging')).toThrow(DeploymentConfigError);
-    expect(() => validateDeploymentTarget(config, 'production')).toThrow(/placeholder/u);
   });
 
   it('rejects an inherited or missing remote binding', () => {
