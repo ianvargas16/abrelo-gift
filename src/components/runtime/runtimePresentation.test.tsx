@@ -48,5 +48,18 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).not.toContain('ticket-meta');
     expect(markup).not.toContain('ticket-fineprint');
     expect(markup).not.toContain('Creator');
+    expect(markup).toContain('ticket-perforation');
+    expect(markup).toContain('ticket-barcode');
+  });
+
+  it('renders the physical ticket anatomy for configured vouchers', () => {
+    const markup = renderToStaticMarkup(
+      <VoucherTicket gift={defaultGift} onRestart={vi.fn()} />,
+    );
+
+    expect(markup).toContain('ticket-perforation');
+    expect(markup).toContain('ticket-stub-code');
+    expect(markup).toContain('ticket-barcode');
+    expect(markup).toContain('Volver a verlo');
   });
 });

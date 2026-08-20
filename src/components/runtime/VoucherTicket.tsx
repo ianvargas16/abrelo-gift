@@ -35,9 +35,10 @@ export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
           )}
           {ticketFinePrint && <p className="ticket-fineprint">{ticketFinePrint}</p>}
         </div>
+        <span className="ticket-perforation" aria-hidden="true" />
         <aside className="ticket-stub">
           <span className="ticket-stub-label">REGALO</span>
-          {ticketCode && <strong>{ticketCode}</strong>}
+          {ticketCode && <strong className="ticket-stub-code">{ticketCode}</strong>}
           <div className="ticket-barcode" aria-hidden="true" />
           <span className="ticket-stub-small">ÁBRELO</span>
         </aside>
