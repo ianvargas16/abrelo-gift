@@ -19,6 +19,12 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [failedAttempt, setFailedAttempt] = useState(false);
   const holdStartedAt = useRef<number | null>(null);
   const animationFrame = useRef<number | null>(null);
+  const recipientLabel = gift.recipientName.trim() || 'Para ti';
+  const senderLabel = gift.senderName.trim() || 'Alguien que te quiere';
+  const introEyebrow = gift.intro.eyebrow.trim() || 'ÁBRELO';
+  const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
+  const letterTitle = gift.letter.title.trim() || 'Carta';
+  const sealHint = gift.intro.envelopeHint.trim() || 'Mantén presionado el sello';
 
   const stopHold = () => {
     if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
@@ -68,42 +74,47 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   if (stage === 'revealed') {
     return (
-      <main className={`experience theme-${gift.theme}`}>
+      <main className={`experience theme-${gift.theme} stage-${stage}`}>
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
   }
 
   return (
-    <main className={`experience theme-${gift.theme}`}>
+    <main className={`experience theme-${gift.theme} stage-${stage}`}>
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
-      <header className="experience-heading">
-        <p>{gift.intro.eyebrow}</p>
-        <h1>{stage === 'letter' ? gift.letter.title : gift.intro.title}</h1>
-        <span>{stage === 'letter' ? `Para ${gift.recipientName}` : `Para ${gift.recipientName}, con cariño.`}</span>
-      </header>
+      <div className="experience-grain" aria-hidden="true" />
+      <div className="experience-halo" aria-hidden="true" />
 
-      {stage !== 'letter' ? (
-        <section className="envelope-zone">
-          <Envelope
-            recipientName={gift.recipientName}
-            isOpen={stage === 'opened'}
-            isShaking={failedAttempt}
-            seal={stage === 'sealed' ? <WaxSeal progress={progress} onStart={startHold} onRelease={releaseHold} /> : undefined}
-          />
+      <div className="experience-frame">
+        <header className="experience-heading">
+          <p>{introEyebrow}</p>
+          <h1>{stage === 'letter' ? letterTitle : introTitle}</h1>
+          <span>{stage === 'letter' ? `Para ${recipientLabel}` : `Para ${recipientLabel}, de ${senderLabel}.`}</span>
+        </header>
 
-          <div className="interaction-copy">
-            {stage === 'sealed' && <><strong>{gift.intro.envelopeHint}</strong><span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : 'El sello necesita un poquito de paciencia.'}</span></>}
-            {stage === 'unsealed' && <><strong>El sello cedió.</strong><button onClick={() => setStage('opened')}>Abrir el sobre</button></>}
-            {stage === 'opened' && <><strong>Ahora sí.</strong><button onClick={() => setStage('letter')}>Sacar la tarjeta ↑</button></>}
-          </div>
-        </section>
-      ) : (
-        <section className="letter-stage">
-          <Letter message={gift.letter.message} senderName={gift.senderName} onReveal={() => setStage('revealed')} />
-        </section>
-      )}
+        {stage !== 'letter' ? (
+          <section className="envelope-zone">
+            <Envelope
+              recipientName={recipientLabel}
+              isOpen={stage === 'opened'}
+              isShaking={failedAttempt}
+              seal={stage === 'sealed' ? <WaxSeal progress={progress} onStart={startHold} onRelease={releaseHold} /> : undefined}
+            />
+
+            <div className="interaction-copy">
+              {stage === 'sealed' && <><strong>{sealHint}</strong><span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : 'El sello necesita una presión continua y tranquila.'}</span></>}
+              {stage === 'unsealed' && <><strong>El sello cedió.</strong><button onClick={() => setStage('opened')}>Abrir el sobre</button></>}
+              {stage === 'opened' && <><strong>Ahora sí.</strong><button onClick={() => setStage('letter')}>Sacar la carta</button></>}
+            </div>
+          </section>
+        ) : (
+          <section className="letter-stage">
+            <Letter title={letterTitle} message={gift.letter.message} senderName={senderLabel} onReveal={() => setStage('revealed')} />
+          </section>
+        )}
+      </div>
     </main>
   );
 }

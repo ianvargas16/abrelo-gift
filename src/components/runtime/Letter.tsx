@@ -1,15 +1,24 @@
 interface LetterProps {
+  title: string;
   message: string;
   senderName: string;
   onReveal: () => void;
 }
 
-export function Letter({ message, senderName, onReveal }: LetterProps) {
+export function Letter({ title, message, senderName, onReveal }: LetterProps) {
+  const heading = title.trim() || 'Carta';
+  const body = message.trim() || ' ';
+  const signature = senderName.trim() || 'Con cariño';
+
   return (
     <article className="gift-letter">
       <div className="letter-mark">✦</div>
-      <p>{message}</p>
-      <div className="letter-signature">— {senderName}</div>
+      <div className="letter-header">
+        <span className="letter-label">Carta</span>
+        <h2>{heading}</h2>
+      </div>
+      <p>{body}</p>
+      <div className="letter-signature">— {signature}</div>
       <button className="reveal-button" onClick={onReveal}>Descubrir mi regalo</button>
     </article>
   );

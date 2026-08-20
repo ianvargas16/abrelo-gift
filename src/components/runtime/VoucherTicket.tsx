@@ -6,27 +6,34 @@ interface VoucherTicketProps {
 }
 
 export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
+  const recipientLabel = gift.recipientName.trim() || 'Para ti';
+  const senderLabel = gift.senderName.trim() || 'Alguien que te aprecia';
+  const ticketTitle = gift.gift.title.trim() || 'Un gesto pensado para ti';
+  const ticketDescription = gift.gift.description.trim() || 'Aquí aparecerá la descripción del regalo una vez que el Creator la configure.';
+  const ticketFinePrint = gift.gift.finePrint.trim() || 'Sin condiciones adicionales.';
+  const ticketCode = gift.gift.code.trim() || 'ABRELO-001';
+
   return (
     <section className="ticket-stage" aria-live="polite">
       <div className="ticket-glow" />
       <article className="ticket">
         <div className="ticket-main">
           <p className="ticket-kicker">VALE POR</p>
-          <h2>{gift.gift.title}</h2>
-          <p className="ticket-description">{gift.gift.description}</p>
+          <h2>{ticketTitle}</h2>
+          <p className="ticket-description">{ticketDescription}</p>
           <div className="ticket-meta">
             <span>PARA</span>
-            <strong>{gift.recipientName}</strong>
+            <strong>{recipientLabel}</strong>
           </div>
           <div className="ticket-meta">
             <span>DE</span>
-            <strong>{gift.senderName}</strong>
+            <strong>{senderLabel}</strong>
           </div>
-          <p className="ticket-fineprint">{gift.gift.finePrint}</p>
+          <p className="ticket-fineprint">{ticketFinePrint}</p>
         </div>
         <aside className="ticket-stub">
           <span className="ticket-stub-label">REGALO</span>
-          <strong>{gift.gift.code}</strong>
+          <strong>{ticketCode}</strong>
           <div className="ticket-barcode" aria-hidden="true" />
           <span className="ticket-stub-small">ÁBRELO</span>
         </aside>
