@@ -10,9 +10,15 @@
   --color-surface-elevated: rgba(255, 252, 248, 0.88);
   --color-paper: #fbf5ee;
   --color-paper-secondary: #efe2d3;
-  --color-ink: #241d21;
-  --color-ink-muted: #665d62;
-  --color-ink-subtle: #958b90;
+  --color-page-ink: #241d21;
+  --color-page-ink-muted: #665d62;
+  --color-page-ink-subtle: #958b90;
+  --color-paper-ink: #241d21;
+  --color-paper-ink-muted: #665d62;
+  --color-paper-ink-subtle: #75686d;
+  --color-ink: var(--color-page-ink);
+  --color-ink-muted: var(--color-page-ink-muted);
+  --color-ink-subtle: var(--color-page-ink-subtle);
   --color-border: rgba(53, 41, 46, 0.12);
   --color-accent: #7f3656;
   --color-accent-strong: #5b203b;
@@ -124,9 +130,12 @@ button:focus-visible {
   --color-surface-elevated: rgba(255, 251, 247, 0.88);
   --color-paper: #f8f1ea;
   --color-paper-secondary: #ead8cc;
-  --color-ink: #261d21;
-  --color-ink-muted: #675c61;
-  --color-ink-subtle: #9a8d91;
+  --color-page-ink: #261d21;
+  --color-page-ink-muted: #675c61;
+  --color-page-ink-subtle: #9a8d91;
+  --color-paper-ink: #261d21;
+  --color-paper-ink-muted: #675c61;
+  --color-paper-ink-subtle: #75686d;
   --color-border: rgba(68, 45, 55, 0.14);
   --color-accent: #7f3656;
   --color-accent-strong: #5d243f;
@@ -140,9 +149,12 @@ button:focus-visible {
   --color-surface-elevated: rgba(37, 42, 58, 0.9);
   --color-paper: #eff1f5;
   --color-paper-secondary: #d4d8e4;
-  --color-ink: #eff2fb;
-  --color-ink-muted: #bcc4da;
-  --color-ink-subtle: #8b93a8;
+  --color-page-ink: #eff2fb;
+  --color-page-ink-muted: #bcc4da;
+  --color-page-ink-subtle: #8b93a8;
+  --color-paper-ink: #202536;
+  --color-paper-ink-muted: #596174;
+  --color-paper-ink-subtle: #656d80;
   --color-border: rgba(214, 223, 242, 0.12);
   --color-accent: #8091d7;
   --color-accent-strong: #5667af;
@@ -156,9 +168,12 @@ button:focus-visible {
   --color-surface-elevated: rgba(250, 249, 244, 0.88);
   --color-paper: #f7f4ec;
   --color-paper-secondary: #dce0d1;
-  --color-ink: #242a24;
-  --color-ink-muted: #5f655e;
-  --color-ink-subtle: #8f968e;
+  --color-page-ink: #242a24;
+  --color-page-ink-muted: #5f655e;
+  --color-page-ink-subtle: #8f968e;
+  --color-paper-ink: #242a24;
+  --color-paper-ink-muted: #5f655e;
+  --color-paper-ink-subtle: #697068;
   --color-border: rgba(55, 65, 56, 0.13);
   --color-accent: #6d7f66;
   --color-accent-strong: #495641;
@@ -172,9 +187,12 @@ button:focus-visible {
   --color-surface-elevated: rgba(255, 250, 243, 0.9);
   --color-paper: #fcf3e9;
   --color-paper-secondary: #eccfb2;
-  --color-ink: #2b211e;
-  --color-ink-muted: #66554c;
-  --color-ink-subtle: #9b8778;
+  --color-page-ink: #2b211e;
+  --color-page-ink-muted: #66554c;
+  --color-page-ink-subtle: #9b8778;
+  --color-paper-ink: #2b211e;
+  --color-paper-ink-muted: #66554c;
+  --color-paper-ink-subtle: #786458;
   --color-border: rgba(74, 52, 40, 0.12);
   --color-accent: #b36244;
   --color-accent-strong: #874730;
@@ -188,6 +206,7 @@ button:focus-visible {
 .interaction-copy button,
 .theme-choice,
 .file-button {
+  min-height: 2.75rem;
   transition:
     transform var(--motion-fast) var(--ease-standard),
     box-shadow var(--motion-standard) var(--ease-standard),
@@ -241,8 +260,9 @@ button:focus-visible {
 
 .studio-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
   padding:
     calc(env(safe-area-inset-top) + var(--space-lg))
     var(--space-md)
@@ -488,6 +508,7 @@ button:focus-visible {
 
 .theme-choice {
   min-width: 0;
+  min-height: 4.5rem;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -528,6 +549,11 @@ button:focus-visible {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-accent) 14%, transparent),
     var(--shadow-floating-surface);
+}
+
+.theme-choice.selected small {
+  color: var(--color-accent-strong);
+  font-weight: 700;
 }
 
 .theme-swatch-rose {
@@ -637,6 +663,7 @@ button:focus-visible {
   gap: 0.45rem;
   background: linear-gradient(180deg, rgba(255, 254, 252, 0.98), rgba(249, 245, 239, 0.98));
   box-shadow: var(--shadow-paper);
+  color: var(--color-paper-ink);
   transform: translateY(-0.65rem);
 }
 
@@ -768,6 +795,11 @@ button:focus-visible {
   pointer-events: none;
 }
 
+.preview-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .preview-status,
 .preview-back-button {
   pointer-events: auto;
@@ -806,15 +838,20 @@ button:focus-visible {
 .experience {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: clip;
   padding:
-    calc(env(safe-area-inset-top) + 6.5rem)
+    calc(env(safe-area-inset-top) + clamp(1.5rem, 4vh, 3rem))
     var(--space-md)
     calc(env(safe-area-inset-bottom) + var(--space-xl));
   color: var(--color-ink);
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.38), transparent 32%),
     linear-gradient(180deg, color-mix(in srgb, var(--color-page) 82%, white) 0%, var(--color-page) 100%);
+}
+
+.preview-shell .experience {
+  padding-top: calc(env(safe-area-inset-top) + 8.5rem);
 }
 
 .ambient,
@@ -995,7 +1032,7 @@ button:focus-visible {
 
 .envelope-address small,
 .letter-peek small {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   font-size: 0.68rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1003,6 +1040,7 @@ button:focus-visible {
 
 .envelope-address span,
 .letter-peek span {
+  color: var(--color-paper-ink);
   font-family: var(--font-editorial);
   font-size: clamp(1.2rem, 4.5vw, 1.9rem);
   line-height: 1.05;
@@ -1035,9 +1073,8 @@ button:focus-visible {
   align-content: start;
   gap: 0.35rem;
   justify-items: center;
-  background: linear-gradient(180deg, rgba(255, 254, 252, 0.99), rgba(248, 243, 236, 0.99));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 92%, white), var(--color-paper));
   box-shadow: var(--shadow-paper);
-  color: var(--color-accent-strong);
   transition: transform var(--motion-deliberate) 220ms var(--ease-deliberate);
   z-index: 2;
 }
@@ -1149,9 +1186,9 @@ button:focus-visible {
   padding: clamp(1.6rem, 5vw, 3rem);
   border-radius: 0.4rem;
   border: 1px solid rgba(72, 53, 48, 0.12);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 252, 0.96), rgba(248, 243, 236, 0.96));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 92%, white), var(--color-paper));
   box-shadow: var(--shadow-paper);
+  color: var(--color-paper-ink);
   text-align: center;
 }
 
@@ -1164,7 +1201,7 @@ button:focus-visible {
 }
 
 .letter-mark {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   font-size: 1.6rem;
 }
 
@@ -1177,6 +1214,11 @@ button:focus-visible {
   font-size: clamp(2rem, 7vw, 3.2rem);
 }
 
+.gift-letter .letter-label,
+.ticket .ticket-kicker {
+  color: var(--color-accent-strong);
+}
+
 .gift-letter p {
   margin: 0;
   font-family: var(--font-editorial);
@@ -1185,7 +1227,7 @@ button:focus-visible {
 }
 
 .letter-signature {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   font-size: 0.84rem;
 }
 
@@ -1196,6 +1238,7 @@ button:focus-visible {
 .ticket-stage {
   position: relative;
   min-height: calc(100vh - 10rem);
+  min-height: calc(100dvh - 10rem);
   align-content: center;
   gap: var(--space-lg);
 }
@@ -1214,9 +1257,10 @@ button:focus-visible {
   width: min(100%, 24rem);
   display: grid;
   gap: 0;
-  background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(248, 241, 235, 0.98));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 92%, white), var(--color-paper));
   border: 1px solid rgba(72, 53, 48, 0.1);
   box-shadow: var(--shadow-strong-reveal);
+  color: var(--color-paper-ink);
   animation: ticket-in var(--motion-deliberate) var(--ease-deliberate) both;
 }
 
@@ -1253,6 +1297,7 @@ button:focus-visible {
 
 .ticket-description {
   margin: 0 0 var(--space-lg);
+  color: var(--color-paper-ink-muted);
   font-size: 0.95rem;
 }
 
@@ -1263,7 +1308,7 @@ button:focus-visible {
 }
 
 .ticket-meta span {
-  color: var(--color-ink-subtle);
+  color: var(--color-paper-ink-subtle);
   font-size: 0.6rem;
   font-weight: 700;
 }
@@ -1279,7 +1324,7 @@ button:focus-visible {
   margin: var(--space-lg) 0 0;
   padding-top: var(--space-md);
   border-top: 1px solid rgba(72, 53, 48, 0.1);
-  color: var(--color-ink-subtle);
+  color: var(--color-paper-ink-subtle);
   font-size: 0.7rem;
   letter-spacing: 0.04em;
 }
@@ -1317,13 +1362,13 @@ button:focus-visible {
 
 .ticket-stub-label,
 .ticket-stub-small {
-  color: var(--color-ink-subtle);
+  color: var(--color-paper-ink-subtle);
   font-size: 0.62rem;
   font-weight: 700;
 }
 
 .ticket-stub strong {
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   font-size: 0.88rem;
   letter-spacing: 0.12em;
 }
@@ -1333,9 +1378,9 @@ button:focus-visible {
   height: 2.4rem;
   background: repeating-linear-gradient(
     90deg,
-    #2d2528 0 2px,
+    var(--color-paper-ink) 0 2px,
     transparent 2px 5px,
-    #2d2528 5px 6px,
+    var(--color-paper-ink) 5px 6px,
     transparent 6px 9px
   );
 }
@@ -1402,6 +1447,10 @@ button:focus-visible {
   .preview-chrome {
     left: var(--space-lg);
     right: var(--space-lg);
+  }
+
+  .preview-shell .experience {
+    padding-top: calc(env(safe-area-inset-top) + 6.5rem);
   }
 
   .preview-back-button {
@@ -1472,16 +1521,13 @@ button:focus-visible {
     width: min(24rem, 92%);
   }
 
-  .experience {
-    padding-top: calc(env(safe-area-inset-top) + 7rem);
-  }
-
   .experience-frame {
     gap: var(--space-2xl);
   }
 
   .ticket-stage {
     min-height: calc(100vh - 8rem);
+    min-height: calc(100dvh - 8rem);
   }
 }
 

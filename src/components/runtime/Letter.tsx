@@ -7,8 +7,8 @@ interface LetterProps {
 
 export function Letter({ title, message, senderName, onReveal }: LetterProps) {
   const heading = title.trim() || 'Carta';
-  const body = message.trim() || ' ';
-  const signature = senderName.trim() || 'Con cariño';
+  const body = message.trim();
+  const signature = senderName.trim();
 
   return (
     <article className="gift-letter">
@@ -17,8 +17,8 @@ export function Letter({ title, message, senderName, onReveal }: LetterProps) {
         <span className="letter-label">Carta</span>
         <h2>{heading}</h2>
       </div>
-      <p>{body}</p>
-      <div className="letter-signature">— {signature}</div>
+      {body && <p>{body}</p>}
+      {signature && <div className="letter-signature">— {signature}</div>}
       <button className="reveal-button" onClick={onReveal}>Descubrir mi regalo</button>
     </article>
   );

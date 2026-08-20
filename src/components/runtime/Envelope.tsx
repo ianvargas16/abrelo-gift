@@ -8,7 +8,7 @@ interface EnvelopeProps {
 }
 
 export function Envelope({ recipientName, isOpen, isShaking, seal }: EnvelopeProps) {
-  const label = recipientName.trim() || 'Para ti';
+  const label = recipientName.trim();
 
   return (
     <div className={`envelope ${isOpen ? 'is-open' : ''} ${isShaking ? 'shake' : ''}`}>
@@ -17,13 +17,13 @@ export function Envelope({ recipientName, isOpen, isShaking, seal }: EnvelopePro
         <div className="envelope-lining" aria-hidden="true" />
       </div>
       <div className="letter-peek">
-        <small>Para</small>
-        <span>{label}</span>
+        {label && <small>Para</small>}
+        <span>{label || 'Para ti'}</span>
       </div>
       <div className="envelope-front">
         <div className="envelope-address">
           <small>Ábrelo</small>
-          <span>{label}</span>
+          <span>{label || 'Para ti'}</span>
         </div>
       </div>
       <div className="envelope-flap" />

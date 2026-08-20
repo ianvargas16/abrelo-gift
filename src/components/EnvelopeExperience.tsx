@@ -19,12 +19,19 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [failedAttempt, setFailedAttempt] = useState(false);
   const holdStartedAt = useRef<number | null>(null);
   const animationFrame = useRef<number | null>(null);
-  const recipientLabel = gift.recipientName.trim() || 'Para ti';
-  const senderLabel = gift.senderName.trim() || 'Alguien que te quiere';
+  const recipientName = gift.recipientName.trim();
+  const senderName = gift.senderName.trim();
   const introEyebrow = gift.intro.eyebrow.trim() || 'ÁBRELO';
   const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
   const letterTitle = gift.letter.title.trim() || 'Carta';
   const sealHint = gift.intro.envelopeHint.trim() || 'Mantén presionado el sello';
+  const recipientLine = recipientName && senderName
+    ? `Para ${recipientName}, de ${senderName}.`
+    : recipientName
+      ? `Para ${recipientName}.`
+      : senderName
+        ? `De ${senderName}.`
+        : 'Un regalo pensado para ti.';
 
   const stopHold = () => {
     if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
@@ -89,15 +96,14 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
       <div className="experience-frame">
         <header className="experience-heading">
-          <p>{introEyebrow}</p>
-          <h1>{stage === 'letter' ? letterTitle : introTitle}</h1>
-          <span>{stage === 'letter' ? `Para ${recipientLabel}` : `Para ${recipientLabel}, de ${senderLabel}.`}</span>
+          {stage !== 'letter' && <><p>{introEyebrow}</p><h1>{introTitle}</h1></>}
+          <span>{recipientLine}</span>
         </header>
 
         {stage !== 'letter' ? (
           <section className="envelope-zone">
             <Envelope
-              recipientName={recipientLabel}
+              recipientName={recipientName}
               isOpen={stage === 'opened'}
               isShaking={failedAttempt}
               seal={stage === 'sealed' ? <WaxSeal progress={progress} onStart={startHold} onRelease={releaseHold} /> : undefined}
@@ -111,7 +117,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
           </section>
         ) : (
           <section className="letter-stage">
-            <Letter title={letterTitle} message={gift.letter.message} senderName={senderLabel} onReveal={() => setStage('revealed')} />
+            <Letter title={letterTitle} message={gift.letter.message} senderName={senderName} onReveal={() => setStage('revealed')} />
           </section>
         )}
       </div>

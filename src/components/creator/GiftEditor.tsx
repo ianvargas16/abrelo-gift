@@ -9,11 +9,11 @@ interface GiftEditorProps {
   onImport: (file: File) => void;
 }
 
-const themes: Array<{ id: ThemeId; label: string }> = [
-  { id: 'rose', label: 'Rosa vino' },
-  { id: 'midnight', label: 'Medianoche' },
-  { id: 'sage', label: 'Salvia' },
-  { id: 'sunset', label: 'Atardecer' },
+const themes: Array<{ id: ThemeId; label: string; personality: string }> = [
+  { id: 'rose', label: 'Rosa vino', personality: 'Romántico' },
+  { id: 'midnight', label: 'Medianoche', personality: 'Nocturno' },
+  { id: 'sage', label: 'Salvia', personality: 'Botánico' },
+  { id: 'sunset', label: 'Atardecer', personality: 'Cálido' },
 ];
 
 export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImport }: GiftEditorProps) {
@@ -25,7 +25,7 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
   const senderLabel = gift.senderName.trim() || 'Alguien que te quiere';
   const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
   const giftTitle = gift.gift.title.trim() || 'Vale por una sorpresa';
-  const letterExcerpt = gift.letter.message.trim() || 'Aquí aparecerá la carta que acompaña el momento del reveal.';
+  const letterExcerpt = gift.letter.message.trim() || 'Tu mensaje personal aparecerá aquí.';
 
   return (
     <main className="studio-shell">
@@ -35,18 +35,17 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
       <section className="studio-frame">
         <header className="studio-header">
           <div className="studio-brand">
-            <p className="eyebrow">ÁBRELO · CREATOR</p>
+            <p className="eyebrow">ÁBRELO · ESTUDIO</p>
             <h1>Diseña un regalo que se abre como un objeto.</h1>
             <p>
-              Configura el archivo portable del regalo, ajusta su tono visual y
-              prueba el Runtime sin filtrar herramientas de edición al
-              destinatario.
+              Escribe cada detalle, elige su tono visual y recorre la experiencia
+              antes de entregarla.
             </p>
           </div>
 
           <div className="studio-header-actions">
-            <span className="studio-status">GiftConfig portable · Runtime aislado</span>
-            <button className="primary-button" onClick={onPreview}>Abrir preview completo</button>
+            <span className="studio-status">Borrador guardado automáticamente</span>
+            <button className="primary-button" onClick={onPreview}>Ver experiencia completa</button>
           </div>
         </header>
 
@@ -55,9 +54,9 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
             <div className="studio-panel-head">
               <div>
                 <p className="section-kicker">Editor</p>
-                <h2>Studio</h2>
+                <h2>Tu estudio</h2>
               </div>
-              <p>Una mesa de trabajo sobria para escribir el regalo, no un dashboard.</p>
+              <p>Un espacio tranquilo para escribir y dar forma al regalo.</p>
             </div>
 
             <div className="studio-form">
@@ -110,7 +109,7 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
                   <span>03</span>
                   <div>
                     <h3>Carta</h3>
-                    <p>El momento editorial antes del reveal.</p>
+                    <p>El mensaje personal antes de descubrir la sorpresa.</p>
                   </div>
                 </div>
 
@@ -177,11 +176,12 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
                       key={theme.id}
                       type="button"
                       className={`theme-choice theme-swatch-${theme.id} ${gift.theme === theme.id ? 'selected' : ''}`}
+                      aria-pressed={gift.theme === theme.id}
                       onClick={() => setRoot('theme', theme.id)}
                     >
-                      <i />
+                      <i aria-hidden="true" />
                       <span>{theme.label}</span>
-                      <small>{theme.id}</small>
+                      <small>{gift.theme === theme.id ? 'Elegido' : theme.personality}</small>
                     </button>
                   ))}
                 </div>
@@ -192,16 +192,16 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
           <aside className="studio-panel studio-preview-panel">
             <div className="studio-panel-head">
               <div>
-                <p className="section-kicker">Visual preview</p>
+                <p className="section-kicker">Vista del regalo</p>
                 <h2>Presencia</h2>
               </div>
-              <p>Una referencia decorativa dentro del Creator. El Runtime completo vive en la ruta de preview.</p>
+              <p>Una mirada rápida al tono, el papel y los detalles de tu regalo.</p>
             </div>
 
             <div className={`studio-preview-card theme-${gift.theme}`}>
               <div className="studio-preview-meta">
                 <span className="preview-meta-label">Vista del regalo</span>
-                <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Abrir preview</button>
+                <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Ver completo</button>
               </div>
 
               <div className="studio-preview-object" aria-hidden="true">
@@ -221,7 +221,7 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
               </div>
 
               <div className="studio-preview-copy">
-                <p className="section-kicker">{gift.intro.eyebrow.trim() || 'ÁBRELO · GIFT'}</p>
+                <p className="section-kicker">{gift.intro.eyebrow.trim() || 'ÁBRELO'}</p>
                 <h3>{introTitle}</h3>
                 <p>{letterExcerpt}</p>
               </div>
@@ -260,7 +260,7 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
             <button className="ghost-button" onClick={onExport}>Exportar .gift.json</button>
           </div>
 
-          <button className="primary-button studio-primary-action" onClick={onPreview}>Previsualizar Runtime</button>
+          <button className="primary-button studio-primary-action" onClick={onPreview}>Previsualizar regalo</button>
         </footer>
       </section>
     </main>
