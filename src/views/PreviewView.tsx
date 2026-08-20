@@ -8,12 +8,15 @@ interface PreviewViewProps {
 
 export function PreviewView({ gift, onBackToCreator }: PreviewViewProps) {
   return (
-    <>
+    <div className="preview-shell">
       <div className="preview-chrome">
-        <button className="ghost-button preview-back-button" onClick={onBackToCreator}>← Volver al Creator</button>
-        <span className="preview-badge">Vista previa</span>
+        <div className="preview-status">
+          <span className="preview-badge">Vista previa</span>
+          <p>Recorre el regalo antes de compartirlo.</p>
+        </div>
+        <button className="ghost-button preview-back-button" onClick={onBackToCreator}>← Volver a editar</button>
       </div>
       <RuntimeView gift={gift} />
-    </>
+    </div>
   );
 }
