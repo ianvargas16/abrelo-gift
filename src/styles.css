@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
-
 :root {
   --font-editorial: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', 'Playfair Display', serif;
   --font-body: 'DM Sans', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
@@ -870,6 +868,62 @@ button:disabled {
 
 .preview-shell .experience {
   padding-top: calc(env(safe-area-inset-top) + 8.5rem);
+}
+
+.runtime-failure {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding:
+    calc(env(safe-area-inset-top) + var(--space-xl))
+    var(--space-md)
+    calc(env(safe-area-inset-bottom) + var(--space-xl));
+  color: var(--color-page-ink);
+  background:
+    radial-gradient(circle at 50% 30%, var(--theme-glow), transparent 34%),
+    var(--color-page);
+}
+
+.runtime-failure-card {
+  position: relative;
+  width: min(100%, 31rem);
+  padding: clamp(2rem, 8vw, 4rem);
+  border: 1px solid rgba(72, 53, 48, 0.1);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 94%, white), var(--color-paper));
+  box-shadow: var(--shadow-paper);
+  color: var(--color-paper-ink);
+  text-align: center;
+}
+
+.runtime-failure-card::before {
+  content: '';
+  position: absolute;
+  inset: 0.55rem;
+  border: 1px solid rgba(112, 84, 75, 0.08);
+  pointer-events: none;
+}
+
+.runtime-failure-mark {
+  display: block;
+  margin-bottom: var(--space-lg);
+  color: var(--color-accent-strong);
+  font-size: 1.5rem;
+}
+
+.runtime-failure-card h1 {
+  margin: 0;
+  font-family: var(--font-editorial);
+  font-size: clamp(2.2rem, 10vw, 3.8rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.runtime-failure-card p {
+  max-width: 30ch;
+  margin: var(--space-lg) auto 0;
+  color: var(--color-paper-ink-muted);
+  line-height: 1.65;
 }
 
 .ambient,
