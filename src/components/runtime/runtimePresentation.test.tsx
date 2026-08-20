@@ -50,6 +50,8 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).not.toContain('Creator');
     expect(markup).toContain('ticket-perforation');
     expect(markup).toContain('ticket-barcode');
+    expect(markup).toContain('ticket-shell');
+    expect(markup).not.toContain('ticket-stub-code');
   });
 
   it('renders the physical ticket anatomy for configured vouchers', () => {
@@ -58,6 +60,7 @@ describe('Runtime empty-field presentation', () => {
     );
 
     expect(markup).toContain('ticket-perforation');
+    expect(markup).toContain('ticket-shell');
     expect(markup).toContain('ticket-stub-code');
     expect(markup).toContain('ticket-barcode');
     expect(markup).toContain('Volver a verlo');
