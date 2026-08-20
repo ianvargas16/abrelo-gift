@@ -40,3 +40,12 @@ jobs:
 
       - name: Check recipient bundle boundary
         run: npm run check:runtime-bundle
+
+      - name: Test publish Worker
+        run: npm run test:worker
+
+      - name: Type-check publish Worker
+        run: npm run typecheck:worker
+
+      - name: Build publish Worker
+        run: npm run build:worker
