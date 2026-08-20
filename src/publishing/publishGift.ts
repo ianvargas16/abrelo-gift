@@ -1,0 +1,89 @@
+import { createGiftFile, type GiftConfig } from '../models/giftConfig';
+
+export interface PublishedGift {
+  id: string;
+  url: string;
+}
+
+interface PublishGiftOptions {
+  apiBaseUrl?: string;
+  fetcher?: typeof fetch;
+}
+
+export class PublishGiftError extends Error {
+  constructor() {
+    super('No pudimos publicar el regalo. Inténtalo de nuevo.');
+    this.name = 'PublishGiftError';
+  }
+}
+
+function getPublishEndpoint(apiBaseUrl: string): string {
+  if (!apiBaseUrl) {
+    return '/api/gifts';
+  }
+
+  return new URL('/api/gifts', apiBaseUrl).toString();
+}
+
+function parsePublishedGift(value: unknown): PublishedGift {
+  if (typeof value !== 'object' || value === null) {
+    throw new PublishGiftError();
+  }
+
+  const source = value as Record<string, unknown>;
+
+  if (typeof source.id !== 'string' || !/^[A-Za-z0-9_-]{16,}$/u.test(source.id)) {
+    throw new PublishGiftError();
+  }
+
+  if (typeof source.url !== 'string') {
+    throw new PublishGiftError();
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(source.url);
+  } catch {
+    throw new PublishGiftError();
+  }
+
+  if (
+    (url.protocol !== 'http:' && url.protocol !== 'https:')
+    || !url.pathname.endsWith(`/g/${source.id}`)
+  ) {
+    throw new PublishGiftError();
+  }
+
+  return { id: source.id, url: url.toString() };
+}
+
+export async function publishGift(
+  gift: GiftConfig,
+  options: PublishGiftOptions = {},
+): Promise<PublishedGift> {
+  const apiBaseUrl = options.apiBaseUrl ?? import.meta.env.VITE_PUBLISH_API_URL?.trim() ?? '';
+  const fetcher = options.fetcher ?? fetch;
+
+  try {
+    const response = await fetcher(getPublishEndpoint(apiBaseUrl), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(createGiftFile(gift)),
+    });
+
+    if (!response.ok) {
+      throw new PublishGiftError();
+    }
+
+    return parsePublishedGift(await response.json());
+  } catch (error) {
+    if (error instanceof PublishGiftError) {
+      throw error;
+    }
+
+    throw new PublishGiftError();
+  }
+}

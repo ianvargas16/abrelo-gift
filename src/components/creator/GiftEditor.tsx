@@ -1,4 +1,5 @@
 import type { GiftConfig, ThemeId } from '../../models/giftConfig';
+import { PublishPanel } from './PublishPanel';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -240,6 +241,8 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
           </aside>
         </section>
 
+        <PublishPanel gift={gift} />
+
         <footer className="studio-footer">
           <div className="studio-secondary-actions">
             <button className="ghost-button" onClick={onReset}>Restaurar demo</button>
@@ -259,8 +262,6 @@ export function GiftEditor({ gift, onChange, onPreview, onReset, onExport, onImp
             </label>
             <button className="ghost-button" onClick={onExport}>Exportar .gift.json</button>
           </div>
-
-          <button className="primary-button studio-primary-action" onClick={onPreview}>Previsualizar regalo</button>
         </footer>
       </section>
     </main>
