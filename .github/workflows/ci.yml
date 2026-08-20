@@ -47,5 +47,11 @@ jobs:
       - name: Type-check publish Worker
         run: npm run typecheck:worker
 
+      - name: Test deployment safety tooling
+        run: npm run test:deployment
+
+      - name: Validate deployment configuration structure
+        run: npm run validate:deploy:config
+
       - name: Build publish Worker
         run: npm run build:worker
