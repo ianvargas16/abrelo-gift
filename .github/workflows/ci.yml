@@ -37,3 +37,6 @@ jobs:
 
       - name: Build recipient Runtime
         run: npm run build:runtime
+
+      - name: Check recipient bundle boundary
+        run: npm run check:runtime-bundle

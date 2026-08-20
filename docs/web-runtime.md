@@ -9,7 +9,13 @@
 
 Build the Creator/Tauri frontend with `npm run build`. Its output remains `dist/`, which is the directory configured in Tauri.
 
-Build the recipient application with `npm run build:runtime`. Its independent output is `dist-runtime/`. Use `npm run dev:runtime` for the local demo and `npm run preview:runtime` to serve the production output.
+Build the recipient application with `npm run build:runtime`. Its independent output is `dist-runtime/`. Use `npm run dev:runtime` and open `/runtime.html` for the local demo, or use `npm run preview:runtime` to serve the production output.
+
+## Style boundary
+
+Design tokens, resets, themes, focus behavior, and reduced-motion defaults live in `src/styles/base.css`. The physical recipient experience has one visual implementation in `src/styles/runtime.css`.
+
+The Creator entry imports base, Runtime, and `src/styles/creator.css`, because Creator Preview renders the real Runtime. The standalone recipient entry imports only local fonts, base styles, and Runtime styles. Creator and Preview selectors must not enter `dist-runtime`; `npm run check:runtime-bundle` enforces this boundary after the production Runtime build.
 
 ## Gift bootstrap contract
 

@@ -4,7 +4,8 @@ import { defaultGift } from './config/defaultGift';
 import { RecipientRuntimeApp } from './runtime/RecipientRuntimeApp';
 import { loadRuntimeGift, type RuntimeBootstrapResult } from './runtime/runtimeBootstrap';
 import './fonts.css';
-import './styles.css';
+import './styles/base.css';
+import './styles/runtime.css';
 
 const productionBootstrap = loadRuntimeGift(document);
 const bootstrap: RuntimeBootstrapResult = import.meta.env.DEV

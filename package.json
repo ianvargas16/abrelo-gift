@@ -9,6 +9,7 @@
     "test": "vitest run",
     "build": "tsc && vite build",
     "build:runtime": "tsc && vite build --mode runtime",
+    "check:runtime-bundle": "node scripts/check-runtime-bundle.mjs",
     "preview": "vite preview",
     "preview:runtime": "vite preview --mode runtime --port 4174",
     "tauri": "tauri"
