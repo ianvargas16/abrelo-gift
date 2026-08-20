@@ -7,7 +7,9 @@ import {
   parseCanonicalGiftFile,
   readGiftRequestBody,
 } from './giftPublishing';
+import { createRequestId, type OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository } from './publishedGiftRepository';
+import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
 
 interface RuntimeAssets {
   fetch(request: Request): Promise<Response>;
@@ -16,8 +18,9 @@ interface RuntimeAssets {
 export interface PublishAppOptions {
   repository: PublishedGiftRepository;
   assets: RuntimeAssets;
-  publicBaseUrl: string;
-  allowedOrigins: string;
+  runtimeConfig: RuntimeConfig;
+  logger?: OperationalLogger;
+  requestIdFactory?: () => string;
   now?: () => Date;
 }
 
@@ -47,7 +50,16 @@ function jsonResponse(body: unknown, status: number, allowedOrigin?: string): Re
   return Response.json(body, { status, headers });
 }
 
-function getAllowedOrigin(request: Request, configuredOrigins: string): string | null | false {
+const silentLogger: OperationalLogger = {
+  error() {},
+};
+
+function withRequestId(response: Response, requestId: string): Response {
+  response.headers.set('X-Request-Id', requestId);
+  return response;
+}
+
+function getAllowedOrigin(request: Request, configuredOrigins: ReadonlySet<string>): string | null | false {
   const origin = request.headers.get('origin');
 
   if (!origin) {
@@ -55,24 +67,7 @@ function getAllowedOrigin(request: Request, configuredOrigins: string): string |
   }
 
   const sameOrigin = new URL(request.url).origin;
-  const allowlist = new Set(
-    configuredOrigins
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean),
-  );
-
-  return origin === sameOrigin || allowlist.has(origin) ? origin : false;
-}
-
-function createPublicGiftUrl(publicBaseUrl: string, id: string): string {
-  const baseUrl = new URL(publicBaseUrl);
-
-  if (baseUrl.protocol !== 'http:' && baseUrl.protocol !== 'https:') {
-    throw new Error('PUBLIC_BASE_URL must use HTTP or HTTPS');
-  }
-
-  return new URL(`/g/${id}`, baseUrl).toString();
+  return origin === sameOrigin || configuredOrigins.has(origin) ? origin : false;
 }
 
 async function loadRuntimeShell(request: Request, assets: RuntimeAssets): Promise<Response> {
@@ -84,7 +79,9 @@ async function renderRecipientPage(
   request: Request,
   options: PublishAppOptions,
   id: string,
+  requestId: string,
 ): Promise<Response> {
+  const logger = options.logger ?? silentLogger;
   let giftFile = null;
   let status: 200 | 404 | 503 = 404;
 
@@ -95,6 +92,7 @@ async function renderRecipientPage(
       status = snapshot ? 200 : 404;
     } catch {
       status = 503;
+      logger.error('repository_read_failed', requestId);
     }
   }
 
@@ -103,6 +101,7 @@ async function renderRecipientPage(
   try {
     shell = await loadRuntimeShell(request, options.assets);
   } catch {
+    logger.error('runtime_shell_failed', requestId);
     return new Response('Este regalo no está disponible.', {
       status: 503,
       headers: SECURITY_HEADERS,
@@ -110,6 +109,7 @@ async function renderRecipientPage(
   }
 
   if (!shell.ok) {
+    logger.error('runtime_shell_failed', requestId);
     return new Response('Este regalo no está disponible.', {
       status: 503,
       headers: SECURITY_HEADERS,
@@ -121,6 +121,7 @@ async function renderRecipientPage(
   try {
     runtimeHtml = await shell.text();
   } catch {
+    logger.error('runtime_shell_failed', requestId);
     return new Response('Este regalo no está disponible.', {
       status: 503,
       headers: SECURITY_HEADERS,
@@ -134,6 +135,7 @@ async function renderRecipientPage(
       body = injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile);
     } catch {
       status = 503;
+      logger.error('runtime_injection_failed', requestId);
     }
   }
 
@@ -157,6 +159,7 @@ async function publishGift(
   request: Request,
   options: PublishAppOptions,
   allowedOrigin: string | null,
+  requestId: string,
 ): Promise<Response> {
   if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
     return jsonResponse({ error: API_ERROR_MESSAGE }, 415, allowedOrigin ?? undefined);
@@ -185,7 +188,7 @@ async function publishGift(
   const id = generateOpaqueGiftId();
 
   try {
-    const publicUrl = createPublicGiftUrl(options.publicBaseUrl, id);
+    const publicUrl = createPublicGiftUrl(options.runtimeConfig, id);
 
     await options.repository.create({
       id,
@@ -198,19 +201,36 @@ async function publishGift(
       url: publicUrl,
     }, 201, allowedOrigin ?? undefined);
   } catch {
+    (options.logger ?? silentLogger).error('publish_persistence_failed', requestId);
     return jsonResponse({ error: API_ERROR_MESSAGE }, 500, allowedOrigin ?? undefined);
   }
 }
 
+export function createInvalidRuntimeConfigResponse(request: Request, requestId: string): Response {
+  const url = new URL(request.url);
+  const response = url.pathname.startsWith('/api/')
+    ? jsonResponse({ error: 'Servicio no disponible.' }, 503)
+    : new Response('Este regalo no está disponible.', {
+      status: 503,
+      headers: SECURITY_HEADERS,
+    });
+
+  return withRequestId(response, requestId);
+}
+
 export function createPublishApp(options: PublishAppOptions) {
+  const allowedOrigins = new Set(options.runtimeConfig.allowedOrigins);
+  const nextRequestId = options.requestIdFactory ?? createRequestId;
+
   return async function handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/gifts') {
-      const allowedOrigin = getAllowedOrigin(request, options.allowedOrigins);
+      const requestId = nextRequestId();
+      const allowedOrigin = getAllowedOrigin(request, allowedOrigins);
 
       if (allowedOrigin === false) {
-        return jsonResponse({ error: API_ERROR_MESSAGE }, 403);
+        return withRequestId(jsonResponse({ error: API_ERROR_MESSAGE }, 403), requestId);
       }
 
       if (request.method === 'OPTIONS') {
@@ -226,33 +246,41 @@ export function createPublishApp(options: PublishAppOptions) {
           headers.set('Access-Control-Allow-Origin', allowedOrigin);
         }
 
-        return new Response(null, { status: 204, headers });
+        return withRequestId(new Response(null, { status: 204, headers }), requestId);
       }
 
       if (request.method !== 'POST') {
         const response = jsonResponse({ error: 'Ruta no disponible.' }, 405, allowedOrigin ?? undefined);
         response.headers.set('Allow', 'POST, OPTIONS');
-        return response;
+        return withRequestId(response, requestId);
       }
 
-      return publishGift(request, options, allowedOrigin);
+      return withRequestId(await publishGift(request, options, allowedOrigin, requestId), requestId);
     }
 
     const giftRoute = url.pathname.match(/^\/g\/([^/]+)$/u);
 
     if (giftRoute) {
+      const requestId = nextRequestId();
+
       if (request.method !== 'GET') {
-        return new Response('Método no permitido.', {
+        return withRequestId(new Response('Método no permitido.', {
           status: 405,
           headers: { ...SECURITY_HEADERS, Allow: 'GET' },
-        });
+        }), requestId);
       }
 
-      return renderRecipientPage(request, options, giftRoute[1]);
+      return withRequestId(
+        await renderRecipientPage(request, options, giftRoute[1], requestId),
+        requestId,
+      );
     }
 
     if (url.pathname.startsWith('/api/')) {
-      return jsonResponse({ error: 'Ruta no disponible.' }, 404);
+      return withRequestId(
+        jsonResponse({ error: 'Ruta no disponible.' }, 404),
+        nextRequestId(),
+      );
     }
 
     return options.assets.fetch(request);

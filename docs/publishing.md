@@ -32,14 +32,15 @@ published_gifts(id TEXT PRIMARY KEY, gift_json TEXT NOT NULL, created_at TEXT NO
 
 The canonical complete GiftFile is stored in `gift_json`. Names, messages, titles, and other personal content are not copied into searchable columns or indexes.
 
-Create the production database with `npx wrangler d1 create abrelo-published-gifts`, then replace the local `database_id` value in `wrangler.jsonc` with the ID returned by Cloudflare. No account ID, API token, or secret belongs in the repository.
+Remote staging and production use separate Wrangler environments and separate D1 databases. Provisioning, migration, deployment, smoke testing, rollback, and abuse controls are documented in [`production.md`](production.md). No account ID, API token, or secret belongs in the repository.
 
 ## Configuration
 
-Worker variables in `wrangler.jsonc`:
+Worker variables in each `wrangler.jsonc` environment:
 
-- `PUBLIC_BASE_URL` is the canonical origin returned by the server, without a gift path. Local development uses `http://127.0.0.1:8787`; production should use the owned deployment origin, eventually `https://abrelo.app`.
-- `ALLOWED_ORIGINS` is a comma-separated exact allowlist for Creator POST requests. It includes local Vite and common Tauri origins by default. Add the hosted Creator origin before deployment.
+- `ENVIRONMENT` is exactly `development`, `staging`, or `production`.
+- `PUBLIC_BASE_URL` is the canonical origin returned by the server, without a gift path. Local development uses `http://127.0.0.1:8787`; remote environments require the actual non-local HTTPS deployment origin.
+- `ALLOWED_ORIGINS` is a comma-separated exact allowlist for Creator POST requests. Development includes local Vite/Tauri origins; remote environments require configured HTTPS Creator origins.
 
 Creator configuration:
 
@@ -89,12 +90,13 @@ npm run check:runtime-bundle
 npm run build:worker
 ```
 
-For production, create/configure D1, set the production public base and exact CORS origins, then run:
+Remote deployment is intentionally blocked by placeholders until Cloudflare resources and exact origins are configured. Validate repository structure with:
 
 ```bash
-npx wrangler d1 migrations apply abrelo-published-gifts --remote
-npm run deploy:worker
+npm run validate:deploy:config
 ```
+
+Then follow the staging-first process in [`production.md`](production.md). Do not use a generic remote migration or deployment command.
 
 Wrangler uploads `dist-runtime` as static assets. The Worker runs first only for `/api/*` and `/g/*`; hashed Runtime assets remain normal static assets.
 
@@ -117,4 +119,4 @@ Creator can copy the returned URL, use Web Share when supported, or display a QR
 
 ## Current abuse limitation
 
-Publishing is anonymous in this MVP. Strict validation, a 64 KiB limit, method restrictions, exact-origin CORS, opaque retrieval, generic errors, and no listing reduce low-cost abuse, but they are not sufficient for a large public launch. Production should add Cloudflare rate limiting/WAF rules and operational monitoring before broad exposure. Authentication, accounts, moderation, expiration, and deletion remain intentionally deferred.
+Publishing is anonymous in this MVP. Strict validation, a 64 KiB limit, method restrictions, exact-origin CORS, opaque retrieval, generic errors, and no listing reduce low-cost abuse, but they are not sufficient for a large public launch. Cloudflare rate limiting/WAF and operational monitoring are required before broad exposure; CORS is not an abuse boundary. See [`production.md`](production.md) for the concrete rule and data-safety checklist. Authentication, accounts, moderation, expiration, and deletion remain intentionally deferred.

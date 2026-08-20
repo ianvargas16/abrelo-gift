@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "abrelo-publish",
+  "name": "abrelo-publish-development",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-08-20",
   "assets": {
@@ -17,7 +17,52 @@
     }
   ],
   "vars": {
+    "ENVIRONMENT": "development",
     "PUBLIC_BASE_URL": "http://127.0.0.1:8787",
     "ALLOWED_ORIGINS": "http://localhost:1420,http://127.0.0.1:1420,tauri://localhost,http://tauri.localhost"
+  },
+  "env": {
+    "staging": {
+      "name": "abrelo-publish-staging",
+      "assets": {
+        "directory": "./dist-runtime",
+        "binding": "ASSETS",
+        "run_worker_first": ["/api/*", "/g/*"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "abrelo-published-gifts-staging",
+          "database_id": "REPLACE_WITH_STAGING_D1_DATABASE_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "PUBLIC_BASE_URL": "https://staging.example.invalid",
+        "ALLOWED_ORIGINS": "https://creator-staging.example.invalid"
+      }
+    },
+    "production": {
+      "name": "abrelo-publish-production",
+      "assets": {
+        "directory": "./dist-runtime",
+        "binding": "ASSETS",
+        "run_worker_first": ["/api/*", "/g/*"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "abrelo-published-gifts-production",
+          "database_id": "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "PUBLIC_BASE_URL": "https://production.example.invalid",
+        "ALLOWED_ORIGINS": "https://creator-production.example.invalid"
+      }
+    }
   }
 }
