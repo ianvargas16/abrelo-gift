@@ -2,6 +2,13 @@ export type RuntimeStage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'reveal
 
 export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | 'reveal-gift' | 'reset';
 
+export const runtimePresentationTiming = {
+  sealRelease: 520,
+  envelopeOpen: 680,
+  cardExtraction: 720,
+  giftReveal: 680,
+} as const;
+
 export function transitionRuntimeStage(stage: RuntimeStage, event: RuntimeEvent): RuntimeStage {
   if (event === 'reset') return 'sealed';
   if (stage === 'sealed' && event === 'seal-complete') return 'unsealed';
@@ -13,6 +20,45 @@ export function transitionRuntimeStage(stage: RuntimeStage, event: RuntimeEvent)
 
 export function getRuntimeTransitionDelay(durationMs: number, prefersReducedMotion: boolean) {
   return prefersReducedMotion ? 0 : durationMs;
+}
+
+interface PointerInput {
+  pointerId: number;
+  pointerType: string;
+  button: number;
+  isPrimary: boolean;
+}
+
+export function isEligibleHoldPointer(input: PointerInput) {
+  return input.isPrimary && (input.pointerType !== 'mouse' || input.button === 0);
+}
+
+export function createPointerOwnership() {
+  let activePointerId: number | null = null;
+
+  return {
+    claim(pointerId: number) {
+      if (activePointerId !== null) return false;
+      activePointerId = pointerId;
+      return true;
+    },
+    owns(pointerId: number) {
+      return activePointerId === pointerId;
+    },
+    release(pointerId: number) {
+      if (activePointerId !== pointerId) return false;
+      activePointerId = null;
+      return true;
+    },
+    clear() {
+      const pointerId = activePointerId;
+      activePointerId = null;
+      return pointerId;
+    },
+    hasOwner() {
+      return activePointerId !== null;
+    },
+  };
 }
 
 interface SealHoldControllerOptions {
@@ -29,6 +75,7 @@ export interface SealHoldController {
   start: () => boolean;
   release: () => boolean;
   cancel: () => boolean;
+  interrupt: () => boolean;
   reset: () => void;
   dispose: () => void;
 }
@@ -64,11 +111,11 @@ export function createSealHoldController(options: SealHoldControllerOptions): Se
     frame = options.requestFrame(tick);
   };
 
-  const abortAttempt = () => {
+  const abortAttempt = (notify: boolean) => {
     if (startedAt === null || completed) return false;
     stopAttempt();
     options.onProgress(0);
-    options.onCancel();
+    if (notify) options.onCancel();
     return true;
   };
 
@@ -80,8 +127,9 @@ export function createSealHoldController(options: SealHoldControllerOptions): Se
       frame = options.requestFrame(tick);
       return true;
     },
-    release: abortAttempt,
-    cancel: abortAttempt,
+    release: () => abortAttempt(true),
+    cancel: () => abortAttempt(true),
+    interrupt: () => abortAttempt(false),
     reset() {
       stopAttempt();
       completed = false;

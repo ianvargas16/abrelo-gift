@@ -259,6 +259,12 @@ button:focus-visible {
   transform: translateY(-1px);
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
+}
+
 .file-button {
   display: inline-flex;
   align-items: center;
@@ -1007,8 +1013,8 @@ button:focus-visible {
   transform: rotateX(var(--envelope-rotate-x)) rotateY(var(--envelope-rotate-y));
   transform-style: preserve-3d;
   transition:
-    transform var(--motion-standard) var(--ease-standard),
-    opacity var(--motion-standard) var(--ease-standard);
+    transform var(--runtime-card-extraction-duration, var(--motion-paper)) var(--ease-standard),
+    opacity var(--runtime-card-extraction-duration, var(--motion-paper)) var(--ease-standard);
   will-change: transform;
 }
 
@@ -1124,7 +1130,7 @@ button:focus-visible {
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top center;
   z-index: 5;
-  transition: transform var(--motion-paper) var(--ease-deliberate), z-index var(--motion-fast) linear;
+  transition: transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate), z-index var(--motion-fast) linear;
   backface-visibility: hidden;
 }
 
@@ -1148,7 +1154,7 @@ button:focus-visible {
   background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper) 92%, white), var(--color-paper));
   box-shadow: var(--shadow-paper);
   transition:
-    transform var(--motion-paper) 180ms var(--ease-deliberate),
+    transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate),
     opacity var(--motion-standard) var(--ease-standard);
   z-index: 2;
 }
@@ -1160,6 +1166,7 @@ button:focus-visible {
 .envelope.state-extracting .letter-peek {
   opacity: 0;
   transform: translateY(-12rem) scale(1.055);
+  transition-duration: var(--runtime-card-extraction-duration, var(--motion-paper));
 }
 
 .wax-seal {
@@ -1249,7 +1256,7 @@ button:focus-visible {
 
 .wax-seal.is-released {
   pointer-events: none;
-  animation: seal-release 520ms var(--ease-deliberate) both;
+  animation: seal-release var(--runtime-seal-release-duration, var(--motion-standard)) var(--ease-deliberate) both;
 }
 
 @keyframes seal-release {
@@ -1359,7 +1366,9 @@ button:focus-visible {
   color: var(--color-paper-ink);
   text-align: center;
   transform-origin: center 18%;
-  transition: opacity var(--motion-standard) var(--ease-standard), transform var(--motion-paper) var(--ease-deliberate);
+  transition:
+    opacity var(--runtime-gift-reveal-duration, var(--motion-paper)) var(--ease-standard),
+    transform var(--runtime-gift-reveal-duration, var(--motion-paper)) var(--ease-deliberate);
 }
 
 .gift-letter.is-revealing {

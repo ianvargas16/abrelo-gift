@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { GiftConfig } from '../models/giftConfig';
 import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
@@ -6,6 +6,7 @@ import { Letter } from './runtime/Letter';
 import {
   createSealHoldController,
   getRuntimeTransitionDelay,
+  runtimePresentationTiming,
   transitionRuntimeStage,
   type RuntimeStage,
   type SealHoldController,
@@ -17,8 +18,6 @@ interface EnvelopeExperienceProps {
 }
 
 const HOLD_MS = 1350;
-const CARD_EXTRACTION_MS = 720;
-const GIFT_REVEAL_MS = 560;
 
 function usePrefersReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -39,12 +38,22 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [progress, setProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
   const [failedAttempt, setFailedAttempt] = useState(false);
+  const [isSealReleasing, setIsSealReleasing] = useState(false);
+  const [isEnvelopeOpening, setIsEnvelopeOpening] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotionRef = useRef(prefersReducedMotion);
+  prefersReducedMotionRef.current = prefersReducedMotion;
   const holdController = useRef<SealHoldController | null>(null);
   const feedbackTimer = useRef<number | null>(null);
   const transitionTimer = useRef<number | null>(null);
+  const runtimeMotionStyle = {
+    '--runtime-seal-release-duration': `${runtimePresentationTiming.sealRelease}ms`,
+    '--runtime-envelope-open-duration': `${runtimePresentationTiming.envelopeOpen}ms`,
+    '--runtime-card-extraction-duration': `${runtimePresentationTiming.cardExtraction}ms`,
+    '--runtime-gift-reveal-duration': `${runtimePresentationTiming.giftReveal}ms`,
+  } as CSSProperties;
   const recipientName = gift.recipientName.trim();
   const senderName = gift.senderName.trim();
   const introEyebrow = gift.intro.eyebrow.trim() || 'ÁBRELO';
@@ -71,6 +80,19 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     timer.current = null;
   };
 
+  const schedulePresentation = (callback: () => void, duration: number) => {
+    clearTimer(transitionTimer);
+    const delay = getRuntimeTransitionDelay(duration, prefersReducedMotionRef.current);
+    if (delay === 0) {
+      callback();
+      return;
+    }
+    transitionTimer.current = window.setTimeout(() => {
+      transitionTimer.current = null;
+      callback();
+    }, delay);
+  };
+
   useEffect(() => {
     holdController.current = createSealHoldController({
       durationMs: HOLD_MS,
@@ -81,7 +103,9 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
       onComplete: () => {
         setIsHolding(false);
         setFailedAttempt(false);
+        setIsSealReleasing(true);
         setStage((current) => transitionRuntimeStage(current, 'seal-complete'));
+        schedulePresentation(() => setIsSealReleasing(false), runtimePresentationTiming.sealRelease);
         navigator.vibrate?.(14);
       },
       onCancel: () => {
@@ -100,9 +124,11 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   }, []);
 
   const startHold = () => {
-    if (stage !== 'sealed') return;
+    if (stage !== 'sealed') return false;
     setFailedAttempt(false);
-    if (holdController.current?.start()) setIsHolding(true);
+    const started = holdController.current?.start() ?? false;
+    if (started) setIsHolding(true);
+    return started;
   };
 
   const releaseHold = () => {
@@ -113,29 +139,34 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     holdController.current?.cancel();
   };
 
+  const interruptHold = () => {
+    holdController.current?.interrupt();
+    clearTimer(feedbackTimer);
+    setIsHolding(false);
+    setFailedAttempt(false);
+  };
+
   const scheduleStage = (event: 'show-letter' | 'reveal-gift', delay: number) => {
-    clearTimer(transitionTimer);
-    const transitionDelay = getRuntimeTransitionDelay(delay, prefersReducedMotion);
-    if (transitionDelay === 0) {
-      setStage((current) => transitionRuntimeStage(current, event));
-      return;
-    }
-    transitionTimer.current = window.setTimeout(() => {
-      setStage((current) => transitionRuntimeStage(current, event));
-      transitionTimer.current = null;
-    }, transitionDelay);
+    schedulePresentation(() => setStage((current) => transitionRuntimeStage(current, event)), delay);
+  };
+
+  const openEnvelope = () => {
+    if (stage !== 'unsealed' || isSealReleasing || transitionTimer.current !== null) return;
+    setStage((current) => transitionRuntimeStage(current, 'open-envelope'));
+    setIsEnvelopeOpening(true);
+    schedulePresentation(() => setIsEnvelopeOpening(false), runtimePresentationTiming.envelopeOpen);
   };
 
   const extractLetter = () => {
-    if (stage !== 'opened' || isExtracting) return;
+    if (stage !== 'opened' || isEnvelopeOpening || isExtracting || transitionTimer.current !== null) return;
     setIsExtracting(true);
-    scheduleStage('show-letter', CARD_EXTRACTION_MS);
+    scheduleStage('show-letter', runtimePresentationTiming.cardExtraction);
   };
 
   const revealGift = () => {
     if (stage !== 'letter' || isRevealing) return;
     setIsRevealing(true);
-    scheduleStage('reveal-gift', GIFT_REVEAL_MS);
+    scheduleStage('reveal-gift', runtimePresentationTiming.giftReveal);
   };
 
   const reset = () => {
@@ -145,20 +176,22 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     setStage((current) => transitionRuntimeStage(current, 'reset'));
     setIsHolding(false);
     setFailedAttempt(false);
+    setIsSealReleasing(false);
+    setIsEnvelopeOpening(false);
     setIsExtracting(false);
     setIsRevealing(false);
   };
 
   if (stage === 'revealed') {
     return (
-      <main className={`experience theme-${gift.theme} stage-${stage}`}>
+      <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
   }
 
   return (
-    <main className={`experience theme-${gift.theme} stage-${stage}`}>
+    <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />
@@ -183,14 +216,15 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
                   onStart={startHold}
                   onRelease={releaseHold}
                   onCancel={cancelHold}
+                  onInterrupt={interruptHold}
                 />
               ) : undefined}
             />
 
             <div className={`interaction-copy ${isExtracting ? 'is-extracting' : ''}`} aria-live="polite">
               {stage === 'sealed' && <><strong>{sealHint}</strong><span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : 'El sello necesita una presión continua y tranquila.'}</span></>}
-              {stage === 'unsealed' && <><strong>El sello cedió.</strong><button onClick={() => setStage((current) => transitionRuntimeStage(current, 'open-envelope'))}>Abrir el sobre</button></>}
-              {stage === 'opened' && <><strong>Ahora sí.</strong><button onClick={extractLetter} disabled={isExtracting}>{isExtracting ? 'Sacando la carta…' : 'Sacar la carta'}</button></>}
+              {stage === 'unsealed' && <><strong>{isSealReleasing ? 'El sello se está soltando.' : 'El sello cedió.'}</strong><button onClick={openEnvelope} disabled={isSealReleasing}>{isSealReleasing ? 'Un instante…' : 'Abrir el sobre'}</button></>}
+              {stage === 'opened' && <><strong>{isEnvelopeOpening ? 'El sobre se está abriendo.' : 'Ahora sí.'}</strong><button onClick={extractLetter} disabled={isEnvelopeOpening || isExtracting}>{isEnvelopeOpening ? 'Abriendo el sobre…' : isExtracting ? 'Sacando la carta…' : 'Sacar la carta'}</button></>}
             </div>
           </section>
         ) : (

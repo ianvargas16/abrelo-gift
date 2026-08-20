@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { isSealActivationKey } from './WaxSeal';
 import {
+  createPointerOwnership,
   createSealHoldController,
   getRuntimeTransitionDelay,
+  isEligibleHoldPointer,
+  runtimePresentationTiming,
   transitionRuntimeStage,
 } from './runtimeInteraction';
 
@@ -81,6 +84,23 @@ describe('seal hold interaction', () => {
     expect(harness.onComplete).not.toHaveBeenCalled();
   });
 
+  it('silently interrupts an active hold and ignores a later large frame', () => {
+    const harness = createHoldHarness();
+
+    harness.controller.start();
+    harness.advance(300);
+    expect(harness.controller.interrupt()).toBe(true);
+    harness.advance(10_000);
+
+    expect(harness.onProgress).toHaveBeenLastCalledWith(0);
+    expect(harness.onCancel).not.toHaveBeenCalled();
+    expect(harness.onComplete).not.toHaveBeenCalled();
+
+    expect(harness.controller.start()).toBe(true);
+    harness.advance(1000);
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+  });
+
   it('can be reset and completed again without stale frames', () => {
     const harness = createHoldHarness();
 
@@ -107,6 +127,27 @@ describe('seal hold interaction', () => {
   });
 });
 
+describe('seal pointer ownership', () => {
+  it('allows only the pointer owner to release the active interaction', () => {
+    const ownership = createPointerOwnership();
+
+    expect(ownership.claim(1)).toBe(true);
+    expect(ownership.claim(2)).toBe(false);
+    expect(ownership.release(2)).toBe(false);
+    expect(ownership.owns(1)).toBe(true);
+    expect(ownership.release(1)).toBe(true);
+    expect(ownership.hasOwner()).toBe(false);
+  });
+
+  it('rejects secondary pointers and non-primary mouse buttons', () => {
+    expect(isEligibleHoldPointer({ pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true })).toBe(true);
+    expect(isEligibleHoldPointer({ pointerId: 2, pointerType: 'touch', button: 0, isPrimary: false })).toBe(false);
+    expect(isEligibleHoldPointer({ pointerId: 3, pointerType: 'pen', button: 0, isPrimary: false })).toBe(false);
+    expect(isEligibleHoldPointer({ pointerId: 4, pointerType: 'mouse', button: 1, isPrimary: true })).toBe(false);
+    expect(isEligibleHoldPointer({ pointerId: 5, pointerType: 'mouse', button: 2, isPrimary: true })).toBe(false);
+  });
+});
+
 describe('Runtime stage transitions', () => {
   it('only advances for the event valid in the current stage', () => {
     expect(transitionRuntimeStage('sealed', 'open-envelope')).toBe('sealed');
@@ -116,7 +157,7 @@ describe('Runtime stage transitions', () => {
   });
 
   it('removes presentation delays when reduced motion is requested', () => {
-    expect(getRuntimeTransitionDelay(720, false)).toBe(720);
-    expect(getRuntimeTransitionDelay(720, true)).toBe(0);
+    expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, false)).toBe(720);
+    expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, true)).toBe(0);
   });
 });
