@@ -2,16 +2,17 @@ interface LetterProps {
   title: string;
   message: string;
   senderName: string;
+  isRevealing: boolean;
   onReveal: () => void;
 }
 
-export function Letter({ title, message, senderName, onReveal }: LetterProps) {
+export function Letter({ title, message, senderName, isRevealing, onReveal }: LetterProps) {
   const heading = title.trim() || 'Carta';
   const body = message.trim();
   const signature = senderName.trim();
 
   return (
-    <article className="gift-letter">
+    <article className={`gift-letter ${isRevealing ? 'is-revealing' : ''}`}>
       <div className="letter-mark">✦</div>
       <div className="letter-header">
         <span className="letter-label">Carta</span>
@@ -19,7 +20,9 @@ export function Letter({ title, message, senderName, onReveal }: LetterProps) {
       </div>
       {body && <p>{body}</p>}
       {signature && <div className="letter-signature">— {signature}</div>}
-      <button className="reveal-button" onClick={onReveal}>Descubrir mi regalo</button>
+      <button className="reveal-button" onClick={onReveal} disabled={isRevealing}>
+        {isRevealing ? 'Preparando tu regalo…' : 'Descubrir mi regalo'}
+      </button>
     </article>
   );
 }

@@ -8,7 +8,7 @@ import { VoucherTicket } from './VoucherTicket';
 describe('Runtime empty-field presentation', () => {
   it('uses a neutral envelope label without duplicating Para', () => {
     const markup = renderToStaticMarkup(
-      <Envelope recipientName="" isOpen={false} isShaking={false} />,
+      <Envelope recipientName="" state="sealed" isShaking={false} />,
     );
 
     expect(markup).not.toContain('Para Para ti');
@@ -17,7 +17,7 @@ describe('Runtime empty-field presentation', () => {
 
   it('omits empty letter content and signature', () => {
     const markup = renderToStaticMarkup(
-      <Letter title="" message="" senderName="" onReveal={vi.fn()} />,
+      <Letter title="" message="" senderName="" isRevealing={false} onReveal={vi.fn()} />,
     );
 
     expect(markup).toContain('<h2>Carta</h2>');

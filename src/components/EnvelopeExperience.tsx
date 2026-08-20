@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { GiftConfig } from '../models/giftConfig';
 import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
 import { Letter } from './runtime/Letter';
+import {
+  createSealHoldController,
+  getRuntimeTransitionDelay,
+  runtimePresentationTiming,
+  transitionRuntimeStage,
+  type RuntimeStage,
+  type SealHoldController,
+} from './runtime/runtimeInteraction';
 import { WaxSeal } from './runtime/WaxSeal';
-
-type Stage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'revealed';
 
 interface EnvelopeExperienceProps {
   gift: GiftConfig;
@@ -13,18 +19,54 @@ interface EnvelopeExperienceProps {
 
 const HOLD_MS = 1350;
 
+function usePrefersReducedMotion() {
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setReducedMotion(media.matches);
+    updatePreference();
+    media.addEventListener('change', updatePreference);
+    return () => media.removeEventListener('change', updatePreference);
+  }, []);
+
+  return reducedMotion;
+}
+
 export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
-  const [stage, setStage] = useState<Stage>('sealed');
+  const [stage, setStage] = useState<RuntimeStage>('sealed');
   const [progress, setProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
   const [failedAttempt, setFailedAttempt] = useState(false);
-  const holdStartedAt = useRef<number | null>(null);
-  const animationFrame = useRef<number | null>(null);
+  const [isSealReleasing, setIsSealReleasing] = useState(false);
+  const [isEnvelopeOpening, setIsEnvelopeOpening] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersReducedMotionRef = useRef(prefersReducedMotion);
+  prefersReducedMotionRef.current = prefersReducedMotion;
+  const holdController = useRef<SealHoldController | null>(null);
+  const feedbackTimer = useRef<number | null>(null);
+  const transitionTimer = useRef<number | null>(null);
+  const runtimeMotionStyle = {
+    '--runtime-seal-release-duration': `${runtimePresentationTiming.sealRelease}ms`,
+    '--runtime-envelope-open-duration': `${runtimePresentationTiming.envelopeOpen}ms`,
+    '--runtime-card-extraction-duration': `${runtimePresentationTiming.cardExtraction}ms`,
+    '--runtime-gift-reveal-duration': `${runtimePresentationTiming.giftReveal}ms`,
+  } as CSSProperties;
   const recipientName = gift.recipientName.trim();
   const senderName = gift.senderName.trim();
   const introEyebrow = gift.intro.eyebrow.trim() || 'ÁBRELO';
   const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
   const letterTitle = gift.letter.title.trim() || 'Carta';
   const sealHint = gift.intro.envelopeHint.trim() || 'Mantén presionado el sello';
+  const envelopeState = isExtracting
+    ? 'extracting'
+    : stage === 'opened'
+      ? 'opened'
+      : stage === 'unsealed'
+        ? 'unsealed'
+        : 'sealed';
   const recipientLine = recipientName && senderName
     ? `Para ${recipientName}, de ${senderName}.`
     : recipientName
@@ -33,69 +75,130 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
         ? `De ${senderName}.`
         : 'Un regalo pensado para ti.';
 
-  const stopHold = () => {
-    if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
-    animationFrame.current = null;
-    holdStartedAt.current = null;
+  const clearTimer = (timer: typeof feedbackTimer) => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
   };
 
-  useEffect(() => () => stopHold(), []);
-
-  const tick = () => {
-    if (!holdStartedAt.current) return;
-    const elapsed = performance.now() - holdStartedAt.current;
-    const next = Math.min(100, (elapsed / HOLD_MS) * 100);
-    setProgress(next);
-
-    if (next >= 100) {
-      stopHold();
-      setStage('unsealed');
-      setProgress(100);
-      setFailedAttempt(false);
+  const schedulePresentation = (callback: () => void, duration: number) => {
+    clearTimer(transitionTimer);
+    const delay = getRuntimeTransitionDelay(duration, prefersReducedMotionRef.current);
+    if (delay === 0) {
+      callback();
       return;
     }
-
-    animationFrame.current = requestAnimationFrame(tick);
+    transitionTimer.current = window.setTimeout(() => {
+      transitionTimer.current = null;
+      callback();
+    }, delay);
   };
 
+  useEffect(() => {
+    holdController.current = createSealHoldController({
+      durationMs: HOLD_MS,
+      now: () => performance.now(),
+      requestFrame: (callback) => requestAnimationFrame(callback),
+      cancelFrame: (handle) => cancelAnimationFrame(handle),
+      onProgress: setProgress,
+      onComplete: () => {
+        setIsHolding(false);
+        setFailedAttempt(false);
+        setIsSealReleasing(true);
+        setStage((current) => transitionRuntimeStage(current, 'seal-complete'));
+        schedulePresentation(() => setIsSealReleasing(false), runtimePresentationTiming.sealRelease);
+        navigator.vibrate?.(14);
+      },
+      onCancel: () => {
+        setIsHolding(false);
+        setFailedAttempt(true);
+        clearTimer(feedbackTimer);
+        feedbackTimer.current = window.setTimeout(() => setFailedAttempt(false), 650);
+      },
+    });
+
+    return () => {
+      holdController.current?.dispose();
+      clearTimer(feedbackTimer);
+      clearTimer(transitionTimer);
+    };
+  }, []);
+
   const startHold = () => {
-    if (stage !== 'sealed') return;
+    if (stage !== 'sealed') return false;
     setFailedAttempt(false);
-    holdStartedAt.current = performance.now();
-    animationFrame.current = requestAnimationFrame(tick);
+    const started = holdController.current?.start() ?? false;
+    if (started) setIsHolding(true);
+    return started;
   };
 
   const releaseHold = () => {
-    if (stage !== 'sealed' || !holdStartedAt.current) return;
-    stopHold();
-    setProgress(0);
-    setFailedAttempt(true);
-    window.setTimeout(() => setFailedAttempt(false), 650);
+    holdController.current?.release();
+  };
+
+  const cancelHold = () => {
+    holdController.current?.cancel();
+  };
+
+  const interruptHold = () => {
+    holdController.current?.interrupt();
+    clearTimer(feedbackTimer);
+    setIsHolding(false);
+    setFailedAttempt(false);
+  };
+
+  const scheduleStage = (event: 'show-letter' | 'reveal-gift', delay: number) => {
+    schedulePresentation(() => setStage((current) => transitionRuntimeStage(current, event)), delay);
+  };
+
+  const openEnvelope = () => {
+    if (stage !== 'unsealed' || isSealReleasing || transitionTimer.current !== null) return;
+    setStage((current) => transitionRuntimeStage(current, 'open-envelope'));
+    setIsEnvelopeOpening(true);
+    schedulePresentation(() => setIsEnvelopeOpening(false), runtimePresentationTiming.envelopeOpen);
+  };
+
+  const extractLetter = () => {
+    if (stage !== 'opened' || isEnvelopeOpening || isExtracting || transitionTimer.current !== null) return;
+    setIsExtracting(true);
+    scheduleStage('show-letter', runtimePresentationTiming.cardExtraction);
+  };
+
+  const revealGift = () => {
+    if (stage !== 'letter' || isRevealing) return;
+    setIsRevealing(true);
+    scheduleStage('reveal-gift', runtimePresentationTiming.giftReveal);
   };
 
   const reset = () => {
-    setStage('sealed');
-    setProgress(0);
+    clearTimer(feedbackTimer);
+    clearTimer(transitionTimer);
+    holdController.current?.reset();
+    setStage((current) => transitionRuntimeStage(current, 'reset'));
+    setIsHolding(false);
     setFailedAttempt(false);
+    setIsSealReleasing(false);
+    setIsEnvelopeOpening(false);
+    setIsExtracting(false);
+    setIsRevealing(false);
   };
 
   if (stage === 'revealed') {
     return (
-      <main className={`experience theme-${gift.theme} stage-${stage}`}>
+      <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
   }
 
   return (
-    <main className={`experience theme-${gift.theme} stage-${stage}`}>
+    <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />
       <div className="experience-halo" aria-hidden="true" />
 
       <div className="experience-frame">
-        <header className="experience-heading">
+        <header className={`experience-heading ${isExtracting ? 'is-extracting' : ''}`}>
           {stage !== 'letter' && <><p>{introEyebrow}</p><h1>{introTitle}</h1></>}
           <span>{recipientLine}</span>
         </header>
@@ -104,20 +207,29 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
           <section className="envelope-zone">
             <Envelope
               recipientName={recipientName}
-              isOpen={stage === 'opened'}
+              state={envelopeState}
               isShaking={failedAttempt}
-              seal={stage === 'sealed' ? <WaxSeal progress={progress} onStart={startHold} onRelease={releaseHold} /> : undefined}
+              seal={stage === 'sealed' || stage === 'unsealed' ? (
+                <WaxSeal
+                  progress={stage === 'unsealed' ? 1 : progress}
+                  status={stage === 'unsealed' ? 'released' : isHolding ? 'holding' : 'idle'}
+                  onStart={startHold}
+                  onRelease={releaseHold}
+                  onCancel={cancelHold}
+                  onInterrupt={interruptHold}
+                />
+              ) : undefined}
             />
 
-            <div className="interaction-copy">
+            <div className={`interaction-copy ${isExtracting ? 'is-extracting' : ''}`} aria-live="polite">
               {stage === 'sealed' && <><strong>{sealHint}</strong><span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : 'El sello necesita una presión continua y tranquila.'}</span></>}
-              {stage === 'unsealed' && <><strong>El sello cedió.</strong><button onClick={() => setStage('opened')}>Abrir el sobre</button></>}
-              {stage === 'opened' && <><strong>Ahora sí.</strong><button onClick={() => setStage('letter')}>Sacar la carta</button></>}
+              {stage === 'unsealed' && <><strong>{isSealReleasing ? 'El sello se está soltando.' : 'El sello cedió.'}</strong><button onClick={openEnvelope} disabled={isSealReleasing}>{isSealReleasing ? 'Un instante…' : 'Abrir el sobre'}</button></>}
+              {stage === 'opened' && <><strong>{isEnvelopeOpening ? 'El sobre se está abriendo.' : 'Ahora sí.'}</strong><button onClick={extractLetter} disabled={isEnvelopeOpening || isExtracting}>{isEnvelopeOpening ? 'Abriendo el sobre…' : isExtracting ? 'Sacando la carta…' : 'Sacar la carta'}</button></>}
             </div>
           </section>
         ) : (
           <section className="letter-stage">
-            <Letter title={letterTitle} message={gift.letter.message} senderName={senderName} onReveal={() => setStage('revealed')} />
+            <Letter title={letterTitle} message={gift.letter.message} senderName={senderName} isRevealing={isRevealing} onReveal={revealGift} />
           </section>
         )}
       </div>

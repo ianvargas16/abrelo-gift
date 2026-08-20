@@ -9,9 +9,9 @@ interface GiftRevealProps {
 
 export function GiftReveal({ gift, onRestart }: GiftRevealProps) {
   return (
-    <>
+    <div className="gift-reveal">
       <Confetti />
       <VoucherTicket gift={gift} onRestart={onRestart} />
-    </>
+    </div>
   );
 }
