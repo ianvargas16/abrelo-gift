@@ -3,6 +3,7 @@ import { defaultGift } from '../config/defaultGift';
 import { LEGACY_GIFT_DRAFT_STORAGE_KEY } from '../lib/giftDraftStore';
 import { createGiftFile } from '../models/giftConfig';
 import { createCreatorPublication, hasUnpublishedChanges } from '../publishing/creatorPublication';
+import { getGiftTemplate } from '../templates/giftTemplates';
 import {
   DEFAULT_PROJECT_NAME,
   IMPORTED_PROJECT_NAME,
@@ -227,6 +228,41 @@ describe('ProjectRepository', () => {
     expect(imported.publication).toBeUndefined();
     expect(createGiftFile(imported.gift)).toEqual({ schema: 'abrelo.gift', version: 1, gift: importedGift });
     expect(JSON.stringify(createGiftFile(imported.gift))).not.toContain(imported.id);
+  });
+
+  it('persists a new project created from a template without storing template metadata', () => {
+    const { repository } = createRepository();
+    const birthday = getGiftTemplate('birthday');
+    let store = repository.load(defaultGift).store;
+    store = repository.create(store, birthday.createGift(), birthday.name);
+    repository.save(store);
+
+    const reloaded = repository.load(defaultGift).store;
+    const project = repository.get(reloaded, reloaded.activeProjectId)!;
+    expect(project.name).toBe('Cumpleaños');
+    expect(project.gift).toEqual(birthday.createGift());
+    expect(JSON.stringify(project)).not.toContain('templateId');
+  });
+
+  it('keeps two projects created from the same template independent after editing one', () => {
+    const { repository } = createRepository();
+    const birthday = getGiftTemplate('birthday');
+    let store = repository.load(defaultGift).store;
+    store = repository.create(store, birthday.createGift(), birthday.name);
+    const projectAId = store.activeProjectId;
+    store = repository.create(store, birthday.createGift(), birthday.name);
+    const projectBId = store.activeProjectId;
+
+    const projectA = repository.get(store, projectAId)!;
+    store = repository.saveGift(store, projectAId, {
+      ...projectA.gift,
+      recipientName: 'Sofía',
+      gift: { ...projectA.gift.gift, title: 'Una cena especial' },
+    });
+
+    expect(repository.get(store, projectAId)?.gift.recipientName).toBe('Sofía');
+    expect(repository.get(store, projectBId)?.gift.recipientName).toBe('');
+    expect(repository.get(store, projectBId)?.gift.gift.title).toBe('Un plan elegido por ti');
   });
 
   it('reports local storage write failures without corrupting the in-memory project state', () => {
