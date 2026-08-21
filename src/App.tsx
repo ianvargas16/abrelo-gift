@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { defaultGift } from './config/defaultGift';
-import { loadGiftDraft, saveGiftDraft } from './lib/giftDraftStore';
 import { createGiftDownloadName, createGiftFile, parseGiftFile } from './models/giftConfig';
 import { getCurrentRoute, navigateToRoute } from './lib/routes';
+import { ProjectRepository } from './projects/projectRepository';
 import { CreatorView } from './views/CreatorView';
 import { PreviewView } from './views/PreviewView';
 import { RuntimeView } from './views/RuntimeView';
@@ -10,13 +10,27 @@ import type { GiftConfig } from './models/giftConfig';
 import type { CreatorPublication } from './publishing/creatorPublication';
 
 export default function App() {
-  const [gift, setGift] = useState<GiftConfig>(() => loadGiftDraft(defaultGift));
-  const [publication, setPublication] = useState<CreatorPublication | null>(null);
+  const [repository] = useState(() => new ProjectRepository({ storage: window.localStorage }));
+  const [initialProjects] = useState(() => repository.load(defaultGift));
+  const [projectStore, setProjectStore] = useState(initialProjects.store);
+  const [storageError, setStorageError] = useState(initialProjects.warning ?? '');
+  const legacyMigrationPending = useRef(initialProjects.legacyMigrationPending);
   const [route, setRoute] = useState(() => getCurrentRoute(window.location.hash));
+  const activeProject = repository.get(projectStore, projectStore.activeProjectId) ?? projectStore.projects[0];
+  const gift = activeProject.gift;
 
   useEffect(() => {
-    saveGiftDraft(gift);
-  }, [gift]);
+    try {
+      repository.save(projectStore);
+      if (legacyMigrationPending.current) {
+        repository.completeLegacyMigration();
+        legacyMigrationPending.current = false;
+      }
+      setStorageError((current) => current.startsWith('No pudimos guardar') ? '' : current);
+    } catch {
+      setStorageError('No pudimos guardar tus cambios en este navegador. Puedes seguir editando, pero evita cerrar esta ventana hasta resolverlo.');
+    }
+  }, [projectStore, repository]);
 
   useEffect(() => {
     const syncRoute = () => setRoute(getCurrentRoute(window.location.hash));
@@ -37,7 +51,8 @@ export default function App() {
   const importGift = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
-      setGift(parseGiftFile(parsed));
+      const importedGift = parseGiftFile(parsed);
+      setProjectStore((current) => repository.createImported(current, importedGift));
     } catch {
       window.alert('No pude importar ese archivo. Usa un .gift.json exportado por Ábrelo.');
     }
@@ -46,13 +61,21 @@ export default function App() {
   return route === 'creator' ? (
     <CreatorView
       gift={gift}
-      onChange={setGift}
+      project={activeProject}
+      projects={repository.list(projectStore)}
+      storageError={storageError}
+      onChange={(nextGift: GiftConfig) => setProjectStore((current) => repository.saveGift(current, current.activeProjectId, nextGift))}
       onPreview={() => navigateToRoute('preview')}
-      onReset={() => setGift(defaultGift)}
+      onReset={() => setProjectStore((current) => repository.saveGift(current, current.activeProjectId, defaultGift))}
       onExport={exportGift}
       onImport={importGift}
-      publication={publication}
-      onPublicationChange={setPublication}
+      publication={activeProject.publication ?? null}
+      onPublicationChange={(publication: CreatorPublication) => setProjectStore((current) => repository.setPublication(current, current.activeProjectId, publication))}
+      onCreateProject={() => setProjectStore((current) => repository.create(current, defaultGift))}
+      onSelectProject={(projectId: string) => setProjectStore((current) => repository.select(current, projectId))}
+      onRenameProject={(projectId: string, name: string) => setProjectStore((current) => repository.rename(current, projectId, name))}
+      onDuplicateProject={(projectId: string) => setProjectStore((current) => repository.duplicate(current, projectId))}
+      onDeleteProject={(projectId: string) => setProjectStore((current) => repository.delete(current, projectId, defaultGift))}
     />
   ) : route === 'preview' ? (
     <PreviewView gift={gift} onBackToCreator={() => navigateToRoute('creator')} />

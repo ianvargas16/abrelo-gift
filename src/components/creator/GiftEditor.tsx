@@ -1,9 +1,14 @@
 import type { GiftConfig, ThemeId } from '../../models/giftConfig';
+import type { GiftProject } from '../../projects/giftProject';
 import type { CreatorPublication } from '../../publishing/creatorPublication';
 import { PublishPanel } from './PublishPanel';
+import { ProjectSwitcher } from './ProjectSwitcher';
 
 interface GiftEditorProps {
   gift: GiftConfig;
+  project: GiftProject;
+  projects: GiftProject[];
+  storageError: string;
   onChange: (gift: GiftConfig) => void;
   onPreview: () => void;
   onReset: () => void;
@@ -11,6 +16,11 @@ interface GiftEditorProps {
   onImport: (file: File) => void;
   publication: CreatorPublication | null;
   onPublicationChange: (publication: CreatorPublication) => void;
+  onCreateProject: () => void;
+  onSelectProject: (projectId: string) => void;
+  onRenameProject: (projectId: string, name: string) => void;
+  onDuplicateProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
 }
 
 const themes: Array<{ id: ThemeId; label: string; personality: string }> = [
@@ -22,6 +32,9 @@ const themes: Array<{ id: ThemeId; label: string; personality: string }> = [
 
 export function GiftEditor({
   gift,
+  project,
+  projects,
+  storageError,
   onChange,
   onPreview,
   onReset,
@@ -29,6 +42,11 @@ export function GiftEditor({
   onImport,
   publication,
   onPublicationChange,
+  onCreateProject,
+  onSelectProject,
+  onRenameProject,
+  onDuplicateProject,
+  onDeleteProject,
 }: GiftEditorProps) {
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
@@ -57,7 +75,18 @@ export function GiftEditor({
           </div>
 
           <div className="studio-header-actions">
-            <span className="studio-status">Borrador guardado automáticamente</span>
+            <ProjectSwitcher
+              activeProject={project}
+              projects={projects}
+              onCreate={onCreateProject}
+              onSelect={onSelectProject}
+              onRename={onRenameProject}
+              onDuplicate={onDuplicateProject}
+              onDelete={onDeleteProject}
+            />
+            <span className={`studio-status ${storageError ? 'is-error' : ''}`} role={storageError ? 'alert' : undefined}>
+              {storageError || 'Guardado local automático'}
+            </span>
             <button className="primary-button" onClick={onPreview}>Ver experiencia completa</button>
           </div>
         </header>

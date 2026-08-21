@@ -20,6 +20,7 @@ const forbiddenMarkers = [
   'fonts.gstatic.com',
   '@tauri-apps',
   'localStorage',
+  'abrelo.projects',
 ];
 
 async function listFiles(directory) {
