@@ -154,6 +154,8 @@ describe('Runtime stage transitions', () => {
     expect(transitionRuntimeStage('unsealed', 'open-envelope')).toBe('opened');
     expect(transitionRuntimeStage('opened', 'show-letter')).toBe('letter');
     expect(transitionRuntimeStage('letter', 'reveal-gift')).toBe('revealed');
+    expect(transitionRuntimeStage('letter', 'show-memories')).toBe('memories');
+    expect(transitionRuntimeStage('memories', 'reveal-gift')).toBe('revealed');
   });
 
   it('removes presentation delays when reduced motion is requested', () => {

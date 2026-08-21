@@ -1,3 +1,5 @@
+import { assertMemoryImageDataUrl, MAX_MEMORY_ITEMS } from './memoryMedia';
+
 export const GIFT_FILE_SCHEMA = 'abrelo.gift';
 export const GIFT_FILE_VERSION = 1 as const;
 
@@ -15,6 +17,18 @@ export interface GiftLetter {
   message: string;
 }
 
+export interface MemoryItem {
+  image: string;
+  caption?: string;
+  alt?: string;
+}
+
+export interface MemorySection {
+  enabled: boolean;
+  title?: string;
+  items: MemoryItem[];
+}
+
 export interface VoucherGiftContent {
   type: 'voucher';
   title: string;
@@ -30,6 +44,7 @@ export interface GiftConfig {
   theme: ThemeId;
   intro: GiftIntro;
   letter: GiftLetter;
+  memories?: MemorySection;
   gift: VoucherGiftContent;
 }
 
@@ -101,6 +116,41 @@ function assertGiftType(value: unknown): GiftType {
   throw new Error('Tipo de regalo no soportado');
 }
 
+function parseMemorySection(value: unknown): MemorySection {
+  const source = assertRecord(value, 'Recuerdos inválidos');
+
+  if (typeof source.enabled !== 'boolean') {
+    throw new Error('Campo inválido: memories.enabled');
+  }
+
+  if (!Array.isArray(source.items) || source.items.length > MAX_MEMORY_ITEMS) {
+    throw new Error('Cantidad inválida de recuerdos');
+  }
+
+  const title = source.title === undefined ? undefined : assertString(source.title, 'memories.title');
+  const items = source.items.map((item, index) => {
+    const memory = assertRecord(item, `Recuerdo inválido: memories.items.${index}`);
+    const caption = memory.caption === undefined
+      ? undefined
+      : assertString(memory.caption, `memories.items.${index}.caption`);
+    const alt = memory.alt === undefined
+      ? undefined
+      : assertString(memory.alt, `memories.items.${index}.alt`);
+
+    return {
+      image: assertMemoryImageDataUrl(memory.image, `memories.items.${index}.image`),
+      ...(caption === undefined ? {} : { caption }),
+      ...(alt === undefined ? {} : { alt }),
+    };
+  });
+
+  return {
+    enabled: source.enabled,
+    ...(title === undefined ? {} : { title }),
+    items,
+  };
+}
+
 function assertGiftConfigVersion(value: unknown, fieldName: string): typeof GIFT_FILE_VERSION {
   if (value === undefined || value === GIFT_FILE_VERSION) {
     return GIFT_FILE_VERSION;
@@ -123,6 +173,8 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
   const letter = assertRecord(source.letter, 'Carta inválida');
   const gift = assertRecord(source.gift, 'Regalo inválido');
 
+  const memories = source.memories === undefined ? undefined : parseMemorySection(source.memories);
+
   return {
     version: assertGiftConfigVersion(source.version, 'gift.version'),
     recipientName: assertString(source.recipientName, 'recipientName'),
@@ -137,6 +189,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
       title: assertString(letter.title, 'letter.title'),
       message: assertString(letter.message, 'letter.message'),
     },
+    ...(memories === undefined ? {} : { memories }),
     gift: {
       type: assertGiftType(gift.type),
       title: assertString(gift.title, 'gift.title'),
@@ -180,6 +233,10 @@ export function normalizeGiftConfig(gift: GiftConfig): GiftConfig {
     ...gift,
     version: GIFT_FILE_VERSION,
   };
+}
+
+export function hasGiftMemories(gift: GiftConfig): boolean {
+  return gift.memories?.enabled === true && gift.memories.items.length > 0;
 }
 
 export function normalizeLegacyGiftConfig(legacyGift: LegacyGiftConfig): GiftConfig {
