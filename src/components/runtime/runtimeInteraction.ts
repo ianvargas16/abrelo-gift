@@ -1,6 +1,6 @@
-export type RuntimeStage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'revealed';
+export type RuntimeStage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'memories' | 'revealed';
 
-export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | 'reveal-gift' | 'reset';
+export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | 'show-memories' | 'reveal-gift' | 'reset';
 
 export const runtimePresentationTiming = {
   sealRelease: 520,
@@ -14,7 +14,8 @@ export function transitionRuntimeStage(stage: RuntimeStage, event: RuntimeEvent)
   if (stage === 'sealed' && event === 'seal-complete') return 'unsealed';
   if (stage === 'unsealed' && event === 'open-envelope') return 'opened';
   if (stage === 'opened' && event === 'show-letter') return 'letter';
-  if (stage === 'letter' && event === 'reveal-gift') return 'revealed';
+  if (stage === 'letter' && event === 'show-memories') return 'memories';
+  if ((stage === 'letter' || stage === 'memories') && event === 'reveal-gift') return 'revealed';
   return stage;
 }
 

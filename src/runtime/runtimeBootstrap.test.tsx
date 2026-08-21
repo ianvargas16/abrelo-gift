@@ -12,6 +12,22 @@ describe('recipient Runtime bootstrap', () => {
     expect(result).toEqual({ status: 'ready', gift: defaultGift });
   });
 
+  it('accepts a published GiftFile with local memory data URLs', () => {
+    const giftWithMemories = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [{
+          image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==',
+          caption: 'Un recuerdo guardado aquí.',
+        }],
+      },
+    };
+
+    expect(parseRuntimeGiftPayload(JSON.stringify(createGiftFile(giftWithMemories))))
+      .toEqual({ status: 'ready', gift: giftWithMemories });
+  });
+
   it('rejects malformed JSON safely', () => {
     expect(parseRuntimeGiftPayload('{not-json')).toEqual({ status: 'error', reason: 'invalid' });
   });

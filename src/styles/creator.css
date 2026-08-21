@@ -743,6 +743,132 @@ textarea:focus-visible {
   --swatch: #b36244;
 }
 
+.memory-editor-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 16%, var(--color-border));
+  border-radius: var(--radius-medium);
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--color-paper) 78%, white), color-mix(in srgb, var(--color-surface-elevated) 84%, white));
+}
+
+.field-label {
+  color: var(--color-accent-strong);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.memory-editor-intro p,
+.memory-editor-note,
+.memory-editor-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-ink-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.memory-toggle,
+.memory-order-button,
+.memory-remove-button {
+  min-height: 2.5rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  transition: transform var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+
+.memory-toggle {
+  flex: 0 0 auto;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--color-ink-muted);
+}
+
+.memory-toggle.is-active {
+  border-color: color-mix(in srgb, var(--color-accent) 52%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 12%, white);
+  color: var(--color-accent-strong);
+}
+
+.memory-editor-list {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.memory-editor-item {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  border: 1px solid rgba(59, 44, 47, 0.1);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-surface-elevated) 76%, white);
+}
+
+.memory-editor-item > img {
+  width: 100%;
+  aspect-ratio: 1.5;
+  border-radius: calc(var(--radius-small) - 0.05rem);
+  object-fit: cover;
+  background: var(--color-paper-secondary);
+}
+
+.memory-caption-field textarea {
+  min-height: 5.4rem;
+}
+
+.memory-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.memory-order-button,
+.memory-remove-button {
+  padding: 0.62rem 0.78rem;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--color-ink-muted);
+}
+
+.memory-remove-button {
+  border-color: color-mix(in srgb, var(--color-danger) 32%, var(--color-border));
+  color: var(--color-danger);
+}
+
+.memory-toggle:hover,
+.memory-order-button:hover:not(:disabled),
+.memory-remove-button:hover {
+  transform: translateY(-1px);
+}
+
+.memory-order-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.memory-add-button {
+  justify-self: start;
+}
+
+.memory-add-button.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.memory-editor-error {
+  color: var(--color-danger);
+}
+
 .studio-preview-panel {
   background:
     linear-gradient(180deg, rgba(255, 253, 251, 0.95), rgba(248, 242, 236, 0.92)),
@@ -1154,6 +1280,19 @@ textarea:focus-visible {
 
   .field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .memory-editor-item {
+    grid-template-columns: 9rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .memory-editor-item > img {
+    min-height: 9rem;
+  }
+
+  .memory-item-actions {
+    grid-column: 2;
   }
 
   .studio-header {

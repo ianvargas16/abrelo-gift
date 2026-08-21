@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../../config/defaultGift';
 import { Envelope } from './Envelope';
 import { Letter } from './Letter';
+import { Memories } from './Memories';
 import { VoucherTicket } from './VoucherTicket';
 
 describe('Runtime empty-field presentation', () => {
@@ -64,5 +65,26 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).toContain('ticket-stub-code');
     expect(markup).toContain('ticket-barcode');
     expect(markup).toContain('Volver a verlo');
+  });
+
+  it('renders a keepsake scene only when Runtime receives configured memories', () => {
+    const markup = renderToStaticMarkup(
+      <Memories
+        memories={{
+          enabled: true,
+          title: 'Unos momentos',
+          items: [{
+            image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==',
+            caption: 'Aquí empieza la historia.',
+          }],
+        }}
+        isRevealing={false}
+        onReveal={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain('memory-keepsake');
+    expect(markup).toContain('Aquí empieza la historia.');
+    expect(markup).toContain('Descubrir mi regalo');
   });
 });

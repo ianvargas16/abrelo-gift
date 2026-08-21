@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
-import { createGiftFile, GIFT_FILE_SCHEMA, GIFT_FILE_VERSION, parseGiftFile } from './giftConfig';
+import { createGiftFile, GIFT_FILE_SCHEMA, GIFT_FILE_VERSION, hasGiftMemories, parseGiftFile } from './giftConfig';
+import { assertMemoryImageFile, MAX_MEMORY_IMAGE_BYTES, MAX_MEMORY_ITEMS } from './memoryMedia';
+
+const memoryImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
 
 describe('parseGiftFile', () => {
   it('parses a current exported GiftFile', () => {
@@ -120,6 +123,85 @@ describe('parseGiftFile', () => {
     };
 
     expect(parseGiftFile(createGiftFile(creatorCompatibleGift))).toEqual(creatorCompatibleGift);
+  });
+
+  it('round-trips an optional memories section through GiftFile export and import', () => {
+    const giftWithMemories = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        title: 'Pequeños momentos',
+        items: [{ image: memoryImage, caption: 'Una tarde que quiero repetir.' }],
+      },
+    };
+
+    expect(parseGiftFile(createGiftFile(giftWithMemories))).toEqual(giftWithMemories);
+  });
+
+  it('keeps legacy gifts on the original Runtime path when memories are absent or empty', () => {
+    expect(hasGiftMemories(defaultGift)).toBe(false);
+    expect(hasGiftMemories({ ...defaultGift, memories: { enabled: true, items: [] } })).toBe(false);
+    expect(hasGiftMemories({ ...defaultGift, memories: { enabled: false, items: [{ image: memoryImage }] } })).toBe(false);
+    expect(hasGiftMemories({ ...defaultGift, memories: { enabled: true, items: [{ image: memoryImage }] } })).toBe(true);
+  });
+
+  it('drops unknown local memory ids while parsing an imported GiftFile', () => {
+    const parsed = parseGiftFile({
+      ...createGiftFile(defaultGift),
+      gift: {
+        ...defaultGift,
+        memories: {
+          enabled: true,
+          items: [{ id: 'local-only-id', image: memoryImage }],
+        },
+      },
+    });
+
+    expect(parsed.memories?.items).toEqual([{ image: memoryImage }]);
+    expect(JSON.stringify(createGiftFile(parsed))).not.toContain('local-only-id');
+  });
+
+  it('rejects malformed or unsupported memory images', () => {
+    const invalidImageGift = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [{ image: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==' }],
+      },
+    };
+
+    expect(() => parseGiftFile(createGiftFile(invalidImageGift))).toThrow(/Imagen inválida/);
+  });
+
+  it('rejects memory images over the local 5 MB limit', () => {
+    const tooLargePayload = `iVBORw0KGgoA${'A'.repeat(Math.ceil((MAX_MEMORY_IMAGE_BYTES + 1) / 3) * 4)}`;
+    const giftWithLargeMemory = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [{ image: `data:image/png;base64,${tooLargePayload}` }],
+      },
+    };
+
+    expect(() => parseGiftFile(createGiftFile(giftWithLargeMemory))).toThrow(/Imagen demasiado grande/);
+  });
+
+  it('rejects more than the maximum number of memories', () => {
+    const giftWithTooManyMemories = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: Array.from({ length: MAX_MEMORY_ITEMS + 1 }, () => ({ image: memoryImage })),
+      },
+    };
+
+    expect(() => parseGiftFile(createGiftFile(giftWithTooManyMemories))).toThrow(/Cantidad inválida/);
+  });
+
+  it('validates selected image types and file sizes before reading them', () => {
+    expect(() => assertMemoryImageFile({ type: 'image/gif', size: 1024 })).toThrow(/JPG, PNG o WebP/);
+    expect(() => assertMemoryImageFile({ type: 'image/png', size: MAX_MEMORY_IMAGE_BYTES + 1 })).toThrow(/5 MB/);
+    expect(() => assertMemoryImageFile({ type: 'image/webp', size: 1024 })).not.toThrow();
   });
 
   it('parses the legacy flat GiftConfig shape', () => {

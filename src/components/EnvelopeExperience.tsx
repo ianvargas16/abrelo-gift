@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { GiftConfig } from '../models/giftConfig';
+import { hasGiftMemories, type GiftConfig } from '../models/giftConfig';
 import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
 import { Letter } from './runtime/Letter';
+import { Memories } from './runtime/Memories';
 import {
   createSealHoldController,
   getRuntimeTransitionDelay,
@@ -42,6 +43,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [isEnvelopeOpening, setIsEnvelopeOpening] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [isMemoryRevealing, setIsMemoryRevealing] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
   prefersReducedMotionRef.current = prefersReducedMotion;
@@ -60,6 +62,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
   const letterTitle = gift.letter.title.trim() || 'Carta';
   const sealHint = gift.intro.envelopeHint.trim() || 'Mantén presionado el sello';
+  const hasMemories = hasGiftMemories(gift);
   const envelopeState = isExtracting
     ? 'extracting'
     : stage === 'opened'
@@ -166,7 +169,19 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const revealGift = () => {
     if (stage !== 'letter' || isRevealing) return;
     setIsRevealing(true);
-    scheduleStage('reveal-gift', runtimePresentationTiming.giftReveal);
+    schedulePresentation(() => {
+      setStage((current) => transitionRuntimeStage(current, hasMemories ? 'show-memories' : 'reveal-gift'));
+      setIsRevealing(false);
+    }, runtimePresentationTiming.giftReveal);
+  };
+
+  const revealGiftFromMemories = () => {
+    if (stage !== 'memories' || isMemoryRevealing) return;
+    setIsMemoryRevealing(true);
+    schedulePresentation(() => {
+      setStage((current) => transitionRuntimeStage(current, 'reveal-gift'));
+      setIsMemoryRevealing(false);
+    }, runtimePresentationTiming.giftReveal);
   };
 
   const reset = () => {
@@ -180,6 +195,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     setIsEnvelopeOpening(false);
     setIsExtracting(false);
     setIsRevealing(false);
+    setIsMemoryRevealing(false);
   };
 
   if (stage === 'revealed') {
@@ -199,11 +215,11 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
       <div className="experience-frame">
         <header className={`experience-heading ${isExtracting ? 'is-extracting' : ''}`}>
-          {stage !== 'letter' && <><p>{introEyebrow}</p><h1>{introTitle}</h1></>}
+          {stage !== 'letter' && stage !== 'memories' && <><p>{introEyebrow}</p><h1>{introTitle}</h1></>}
           <span>{recipientLine}</span>
         </header>
 
-        {stage !== 'letter' ? (
+        {stage !== 'letter' && stage !== 'memories' ? (
           <section className="envelope-zone">
             <Envelope
               recipientName={recipientName}
@@ -228,9 +244,20 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
             </div>
           </section>
         ) : (
-          <section className="letter-stage">
-            <Letter title={letterTitle} message={gift.letter.message} senderName={senderName} isRevealing={isRevealing} onReveal={revealGift} />
-          </section>
+          stage === 'letter' ? (
+            <section className="letter-stage">
+              <Letter
+                title={letterTitle}
+                message={gift.letter.message}
+                senderName={senderName}
+                isRevealing={isRevealing}
+                onReveal={revealGift}
+                revealLabel={hasMemories ? 'Ver nuestros recuerdos' : undefined}
+              />
+            </section>
+          ) : (
+            <Memories memories={gift.memories!} isRevealing={isMemoryRevealing} onReveal={revealGiftFromMemories} />
+          )
         )}
       </div>
     </main>
