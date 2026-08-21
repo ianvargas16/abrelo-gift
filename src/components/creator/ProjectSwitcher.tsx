@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { GiftProject } from '../../projects/giftProject';
+import { giftTemplates, type GiftTemplate } from '../../templates/giftTemplates';
+import { TemplatePicker } from './TemplatePicker';
 
 interface ProjectSwitcherProps {
   activeProject: GiftProject;
   projects: GiftProject[];
-  onCreate: () => void;
+  onCreate: (template: GiftTemplate) => void;
   onSelect: (projectId: string) => void;
   onRename: (projectId: string, name: string) => void;
   onDuplicate: (projectId: string) => void;
@@ -28,6 +30,7 @@ export function ProjectSwitcher({
   onDelete,
 }: ProjectSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [name, setName] = useState(activeProject.name);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
@@ -41,8 +44,9 @@ export function ProjectSwitcher({
     setIsConfirmingDelete(false);
   };
 
-  const createProject = () => {
-    onCreate();
+  const createProject = (template: GiftTemplate) => {
+    onCreate(template);
+    setIsTemplatePickerOpen(false);
     close();
   };
 
@@ -74,7 +78,15 @@ export function ProjectSwitcher({
         <small>{activeProject.gift.recipientName.trim() || 'Sin destinatario'} · {formatUpdatedAt(activeProject.updatedAt)}</small>
       </button>
 
-      <button type="button" className="ghost-button project-create-button" onClick={createProject}>Nuevo regalo</button>
+      <button type="button" className="ghost-button project-create-button" onClick={() => setIsTemplatePickerOpen(true)}>Nuevo regalo</button>
+
+      {isTemplatePickerOpen && (
+        <TemplatePicker
+          templates={giftTemplates}
+          onChoose={createProject}
+          onClose={() => setIsTemplatePickerOpen(false)}
+        />
+      )}
 
       {isOpen && (
         <div

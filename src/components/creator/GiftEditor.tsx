@@ -1,6 +1,7 @@
 import type { GiftConfig, ThemeId } from '../../models/giftConfig';
 import type { GiftProject } from '../../projects/giftProject';
 import type { CreatorPublication } from '../../publishing/creatorPublication';
+import type { GiftTemplate } from '../../templates/giftTemplates';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 
@@ -16,7 +17,7 @@ interface GiftEditorProps {
   onImport: (file: File) => void;
   publication: CreatorPublication | null;
   onPublicationChange: (publication: CreatorPublication) => void;
-  onCreateProject: () => void;
+  onCreateProject: (template: GiftTemplate) => void;
   onSelectProject: (projectId: string) => void;
   onRenameProject: (projectId: string, name: string) => void;
   onDuplicateProject: (projectId: string) => void;

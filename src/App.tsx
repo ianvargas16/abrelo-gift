@@ -8,6 +8,7 @@ import { PreviewView } from './views/PreviewView';
 import { RuntimeView } from './views/RuntimeView';
 import type { GiftConfig } from './models/giftConfig';
 import type { CreatorPublication } from './publishing/creatorPublication';
+import type { GiftTemplate } from './templates/giftTemplates';
 
 export default function App() {
   const [repository] = useState(() => new ProjectRepository({ storage: window.localStorage }));
@@ -71,7 +72,7 @@ export default function App() {
       onImport={importGift}
       publication={activeProject.publication ?? null}
       onPublicationChange={(publication: CreatorPublication) => setProjectStore((current) => repository.setPublication(current, current.activeProjectId, publication))}
-      onCreateProject={() => setProjectStore((current) => repository.create(current, defaultGift))}
+      onCreateProject={(template: GiftTemplate) => setProjectStore((current) => repository.create(current, template.createGift(), template.name))}
       onSelectProject={(projectId: string) => setProjectStore((current) => repository.select(current, projectId))}
       onRenameProject={(projectId: string, name: string) => setProjectStore((current) => repository.rename(current, projectId, name))}
       onDuplicateProject={(projectId: string) => setProjectStore((current) => repository.duplicate(current, projectId))}

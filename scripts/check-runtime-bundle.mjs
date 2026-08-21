@@ -21,6 +21,7 @@ const forbiddenMarkers = [
   '@tauri-apps',
   'localStorage',
   'abrelo.projects',
+  'giftTemplates',
 ];
 
 async function listFiles(directory) {
