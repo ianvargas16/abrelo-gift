@@ -1,5 +1,7 @@
 export const MAX_MEMORY_ITEMS = 5;
 export const MAX_MEMORY_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_MEMORY_IMAGE_DIMENSION = 1600;
+export const MEMORY_IMAGE_QUALITY = 0.86;
 
 export const MEMORY_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
@@ -8,6 +10,11 @@ export type MemoryImageType = (typeof MEMORY_IMAGE_TYPES)[number];
 interface MemoryImageFile {
   type: string;
   size: number;
+}
+
+export interface MemoryImageDimensions {
+  width: number;
+  height: number;
 }
 
 function isMemoryImageType(value: string): value is MemoryImageType {
@@ -27,6 +34,23 @@ export function assertMemoryImageFile(file: MemoryImageFile): void {
   if (!Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_MEMORY_IMAGE_BYTES) {
     throw new Error('Cada recuerdo debe pesar 5 MB o menos.');
   }
+}
+
+export function getMemoryImageDimensions(width: number, height: number): MemoryImageDimensions {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error('No pude preparar esa imagen.');
+  }
+
+  const longestSide = Math.max(width, height);
+  if (longestSide <= MAX_MEMORY_IMAGE_DIMENSION) {
+    return { width: Math.round(width), height: Math.round(height) };
+  }
+
+  const scale = MAX_MEMORY_IMAGE_DIMENSION / longestSide;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
 }
 
 export function assertMemoryImageDataUrl(value: unknown, fieldName: string): string {

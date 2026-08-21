@@ -12,6 +12,7 @@ export function Memories({ memories, isRevealing, onReveal }: MemoriesProps) {
   const activeMemory = memories.items[activeIndex];
   const title = memories.title?.trim() || 'Unos recuerdos para guardar';
   const caption = activeMemory.caption?.trim();
+  const alt = activeMemory.alt?.trim() || caption || 'Recuerdo personal';
   const hasPrevious = activeIndex > 0;
   const hasNext = activeIndex < memories.items.length - 1;
 
@@ -24,7 +25,7 @@ export function Memories({ memories, isRevealing, onReveal }: MemoriesProps) {
         </div>
 
         <div className="memory-photo-frame">
-          <img src={activeMemory.image} alt={caption || `Recuerdo ${activeIndex + 1}`} />
+          <img src={activeMemory.image} alt={alt} />
         </div>
 
         <div className="memory-keepsake-copy">

@@ -826,6 +826,23 @@ textarea:focus-visible {
   min-height: 5.4rem;
 }
 
+.memory-alt-details {
+  display: grid;
+  gap: var(--space-sm);
+  color: var(--color-ink-muted);
+  font-size: 0.82rem;
+}
+
+.memory-alt-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-accent-strong);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .memory-item-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1292,6 +1309,10 @@ textarea:focus-visible {
   }
 
   .memory-item-actions {
+    grid-column: 2;
+  }
+
+  .memory-alt-details {
     grid-column: 2;
   }
 

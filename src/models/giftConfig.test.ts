@@ -131,7 +131,7 @@ describe('parseGiftFile', () => {
       memories: {
         enabled: true,
         title: 'Pequeños momentos',
-        items: [{ image: memoryImage, caption: 'Una tarde que quiero repetir.' }],
+        items: [{ image: memoryImage, caption: 'Una tarde que quiero repetir.', alt: 'Dos personas caminando al atardecer.' }],
       },
     };
 
@@ -171,6 +171,18 @@ describe('parseGiftFile', () => {
     };
 
     expect(() => parseGiftFile(createGiftFile(invalidImageGift))).toThrow(/Imagen inválida/);
+  });
+
+  it('rejects malformed optional memory alt text', () => {
+    const invalidAltGift = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [{ image: memoryImage, alt: 42 }],
+      },
+    };
+
+    expect(() => parseGiftFile({ ...createGiftFile(defaultGift), gift: invalidAltGift })).toThrow(/memories.items.0.alt/);
   });
 
   it('rejects memory images over the local 5 MB limit', () => {

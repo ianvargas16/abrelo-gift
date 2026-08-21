@@ -87,4 +87,15 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).toContain('Aquí empieza la historia.');
     expect(markup).toContain('Descubrir mi regalo');
   });
+
+  it('uses optional alt text, caption, then a neutral fallback for memory images', () => {
+    const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
+    const renderMemory = (item: { image: string; caption?: string; alt?: string }) => renderToStaticMarkup(
+      <Memories memories={{ enabled: true, items: [item] }} isRevealing={false} onReveal={vi.fn()} />,
+    );
+
+    expect(renderMemory({ image, caption: 'Una mesa junto a la ventana.', alt: 'Dos copas sobre una mesa.' })).toContain('alt="Dos copas sobre una mesa."');
+    expect(renderMemory({ image, caption: 'Una mesa junto a la ventana.' })).toContain('alt="Una mesa junto a la ventana."');
+    expect(renderMemory({ image })).toContain('alt="Recuerdo personal"');
+  });
 });

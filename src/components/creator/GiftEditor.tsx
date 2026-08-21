@@ -265,6 +265,22 @@ export function GiftEditor({
                                 }}
                               />
                             </label>
+                            <details className="memory-alt-details">
+                              <summary>Descripción de la imagen (opcional)</summary>
+                              <label className="field">
+                                <span>Texto alternativo</span>
+                                <input
+                                  value={memory.alt ?? ''}
+                                  placeholder="Describe el recuerdo para quien no pueda verlo"
+                                  onChange={(event) => {
+                                    const items = memories.items.map((item, itemIndex) => itemIndex === index
+                                      ? { ...item, alt: event.target.value }
+                                      : item);
+                                    setMemories({ ...memories, items });
+                                  }}
+                                />
+                              </label>
+                            </details>
                             <div className="memory-item-actions" aria-label={`Acciones para recuerdo ${index + 1}`}>
                               <button type="button" className="memory-order-button" onClick={() => moveMemory(index, -1)} disabled={index === 0}>Subir</button>
                               <button type="button" className="memory-order-button" onClick={() => moveMemory(index, 1)} disabled={index === memories.items.length - 1}>Bajar</button>

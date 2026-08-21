@@ -20,6 +20,7 @@ export interface GiftLetter {
 export interface MemoryItem {
   image: string;
   caption?: string;
+  alt?: string;
 }
 
 export interface MemorySection {
@@ -132,10 +133,14 @@ function parseMemorySection(value: unknown): MemorySection {
     const caption = memory.caption === undefined
       ? undefined
       : assertString(memory.caption, `memories.items.${index}.caption`);
+    const alt = memory.alt === undefined
+      ? undefined
+      : assertString(memory.alt, `memories.items.${index}.alt`);
 
     return {
       image: assertMemoryImageDataUrl(memory.image, `memories.items.${index}.image`),
       ...(caption === undefined ? {} : { caption }),
+      ...(alt === undefined ? {} : { alt }),
     };
   });
 
