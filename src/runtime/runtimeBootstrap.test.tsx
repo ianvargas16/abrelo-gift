@@ -2,7 +2,11 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA } from '../models/giftConfig';
-import { RecipientRuntimeApp } from './RecipientRuntimeApp';
+import {
+  getRecipientPreparationDuration,
+  RECIPIENT_PREPARATION_DURATION,
+  RecipientRuntimeApp,
+} from './RecipientRuntimeApp';
 import { loadRuntimeGift, parseRuntimeGiftPayload, RUNTIME_GIFT_DATA_ID } from './runtimeBootstrap';
 
 describe('recipient Runtime bootstrap', () => {
@@ -66,6 +70,13 @@ describe('recipient Runtime bootstrap', () => {
 
     expect(markup).toContain('Hay algo para ti');
     expect(markup).not.toContain('Este regalo no está disponible');
+    expect(markup).toContain('Preparando algo para ti');
+    expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);
+  });
+
+  it('skips the preparation delay when reduced motion is preferred', () => {
+    expect(getRecipientPreparationDuration(false)).toBe(RECIPIENT_PREPARATION_DURATION);
+    expect(getRecipientPreparationDuration(true)).toBe(0);
   });
 
   it('renders only recipient-safe copy when bootstrap fails', () => {

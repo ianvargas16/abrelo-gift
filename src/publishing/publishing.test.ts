@@ -4,11 +4,14 @@ import { createGiftFile } from '../models/giftConfig';
 import {
   createCreatorPublication,
   hasUnpublishedChanges,
+  parseCreatorPublication,
 } from './creatorPublication';
 import { PublishGiftError, publishGift } from './publishGift';
 import {
   copyPublishedGiftUrl,
   createPublishedGiftQrDataUrl,
+  DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE,
+  getPublishedGiftShareMessage,
   getPublishedGiftQrPayload,
   isWebShareAvailable,
   sharePublishedGift,
@@ -57,6 +60,27 @@ describe('Creator publication state', () => {
     expect(publication.gift.url).toBe(publishedUrl);
     expect(JSON.parse(publication.snapshot).gift.recipientName).toBe(defaultGift.recipientName);
   });
+
+  it('keeps a custom share message in Creator-only publication state', () => {
+    const publication = createCreatorPublication(
+      { id: publishedId, url: publishedUrl },
+      defaultGift,
+      'Abre esto cuando tengas un momento.',
+    );
+
+    expect(parseCreatorPublication(JSON.parse(JSON.stringify(publication)))).toEqual(publication);
+    expect(JSON.stringify(createGiftFile(defaultGift))).not.toContain(publication.shareMessage!);
+    expect(JSON.parse(publication.snapshot)).toEqual(createGiftFile(defaultGift));
+  });
+
+  it('keeps existing publications without a share message valid', () => {
+    const legacyPublication = {
+      gift: { id: publishedId, url: publishedUrl },
+      snapshot: JSON.stringify(createGiftFile(defaultGift)),
+    };
+
+    expect(parseCreatorPublication(legacyPublication)).toEqual(legacyPublication);
+  });
 });
 
 describe('published gift sharing', () => {
@@ -71,16 +95,18 @@ describe('published gift sharing', () => {
     await expect(copyPublishedGiftUrl(publishedUrl, undefined, undefined)).resolves.toBe(false);
   });
 
-  it('uses generic Web Share copy and remains optional', async () => {
+  it('uses the thoughtful default or a Creator-only custom Web Share message and remains optional', async () => {
     const share = vi.fn(async () => undefined);
 
     expect(isWebShareAvailable({ share })).toBe(true);
     expect(isWebShareAvailable({})).toBe(false);
-    await expect(sharePublishedGift(publishedUrl, {})).resolves.toBe(false);
-    await expect(sharePublishedGift(publishedUrl, { share })).resolves.toBe(true);
+    expect(getPublishedGiftShareMessage()).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
+    expect(getPublishedGiftShareMessage('   ')).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
+    await expect(sharePublishedGift(publishedUrl, undefined, {})).resolves.toBe(false);
+    await expect(sharePublishedGift(publishedUrl, 'Ábrelo cuando quieras.', { share })).resolves.toBe(true);
     expect(share).toHaveBeenCalledWith({
       title: 'Ábrelo — Tienes un regalo',
-      text: 'Te comparto un regalo para abrir y descubrir.',
+      text: 'Ábrelo cuando quieras.',
       url: publishedUrl,
     });
   });
