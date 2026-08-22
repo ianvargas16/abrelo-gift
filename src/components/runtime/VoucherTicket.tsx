@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import type { GiftConfig } from '../../models/giftConfig';
 import {
-  getTicketInteractionPosition,
+  getTicketInteractionTilt,
   isEligibleTicketPointer,
-  restingTicketInteraction,
-  type TicketInteractionPosition,
+  restingTicketTilt,
+  type TicketInteractionTilt,
 } from './ticketInteraction';
 
 interface VoucherTicketProps {
@@ -13,7 +13,7 @@ interface VoucherTicketProps {
 }
 
 export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
-  const [position, setPosition] = useState<TicketInteractionPosition>(restingTicketInteraction);
+  const [tilt, setTilt] = useState<TicketInteractionTilt>(restingTicketTilt);
   const [isDragging, setIsDragging] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -26,9 +26,8 @@ export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
   const ticketFinePrint = gift.gift.finePrint.trim();
   const ticketCode = gift.gift.code.trim();
   const interactionStyle = {
-    '--ticket-drag-x': `${position.x}px`,
-    '--ticket-drag-y': `${position.y}px`,
-    '--ticket-rotation': `${position.rotation}deg`,
+    '--ticket-rotate-x': `${tilt.rotateX}deg`,
+    '--ticket-rotate-y': `${tilt.rotateY}deg`,
   } as CSSProperties;
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
   const returnToRest = () => {
     activePointer.current = null;
     setIsDragging(false);
-    setPosition(restingTicketInteraction);
+    setTilt(restingTicketTilt);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -57,7 +56,7 @@ export function VoucherTicket({ gift, onRestart }: VoucherTicketProps) {
     const pointer = activePointer.current;
     if (!pointer || pointer.id !== event.pointerId) return;
 
-    setPosition(getTicketInteractionPosition(event.clientX - pointer.x, event.clientY - pointer.y));
+    setTilt(getTicketInteractionTilt(event.clientX - pointer.x, event.clientY - pointer.y));
   };
 
   const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {

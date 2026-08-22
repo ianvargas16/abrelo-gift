@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  getTicketInteractionPosition,
+  getTicketInteractionTilt,
   isEligibleTicketPointer,
-  restingTicketInteraction,
+  restingTicketTilt,
   ticketInteractionBounds,
 } from './ticketInteraction';
 
@@ -14,20 +14,18 @@ describe('ticket interaction', () => {
     expect(isEligibleTicketPointer({ pointerType: 'touch', button: 0, isPrimary: false })).toBe(false);
   });
 
-  it('keeps movement and tilt within the physical interaction bounds', () => {
-    expect(getTicketInteractionPosition(6, -4)).toEqual({
-      x: 6,
-      y: -4,
-      rotation: (6 / ticketInteractionBounds.maxDragX) * ticketInteractionBounds.maxRotation,
+  it('converts pointer movement into a bounded 3D tilt without a position offset', () => {
+    expect(getTicketInteractionTilt(24, -20)).toEqual({
+      rotateX: ticketInteractionBounds.maxTilt / 2,
+      rotateY: ticketInteractionBounds.maxTilt / 2,
     });
-    expect(getTicketInteractionPosition(200, -200)).toEqual({
-      x: ticketInteractionBounds.maxDragX,
-      y: -ticketInteractionBounds.maxDragY,
-      rotation: ticketInteractionBounds.maxRotation,
+    expect(getTicketInteractionTilt(200, -200)).toEqual({
+      rotateX: ticketInteractionBounds.maxTilt,
+      rotateY: ticketInteractionBounds.maxTilt,
     });
   });
 
-  it('returns to the resting position after an interaction', () => {
-    expect(restingTicketInteraction).toEqual({ x: 0, y: 0, rotation: 0 });
+  it('returns to the resting tilt after an interaction', () => {
+    expect(restingTicketTilt).toEqual({ rotateX: 0, rotateY: 0 });
   });
 });

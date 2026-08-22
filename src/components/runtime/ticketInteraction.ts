@@ -4,16 +4,15 @@ export interface TicketPointerInput {
   isPrimary: boolean;
 }
 
-export interface TicketInteractionPosition {
-  x: number;
-  y: number;
-  rotation: number;
+export interface TicketInteractionTilt {
+  rotateX: number;
+  rotateY: number;
 }
 
 export const ticketInteractionBounds = {
-  maxDragX: 18,
-  maxDragY: 14,
-  maxRotation: 2.4,
+  maxPointerOffsetX: 48,
+  maxPointerOffsetY: 40,
+  maxTilt: 4.5,
 } as const;
 
 function clamp(value: number, limit: number) {
@@ -24,19 +23,17 @@ export function isEligibleTicketPointer(input: TicketPointerInput) {
   return input.isPrimary && (input.pointerType !== 'mouse' || input.button === 0);
 }
 
-export function getTicketInteractionPosition(deltaX: number, deltaY: number): TicketInteractionPosition {
-  const x = clamp(deltaX, ticketInteractionBounds.maxDragX);
-  const y = clamp(deltaY, ticketInteractionBounds.maxDragY);
+export function getTicketInteractionTilt(deltaX: number, deltaY: number): TicketInteractionTilt {
+  const x = clamp(deltaX, ticketInteractionBounds.maxPointerOffsetX);
+  const y = clamp(deltaY, ticketInteractionBounds.maxPointerOffsetY);
 
   return {
-    x,
-    y,
-    rotation: (x / ticketInteractionBounds.maxDragX) * ticketInteractionBounds.maxRotation,
+    rotateX: (-y / ticketInteractionBounds.maxPointerOffsetY) * ticketInteractionBounds.maxTilt,
+    rotateY: (x / ticketInteractionBounds.maxPointerOffsetX) * ticketInteractionBounds.maxTilt,
   };
 }
 
-export const restingTicketInteraction: TicketInteractionPosition = {
-  x: 0,
-  y: 0,
-  rotation: 0,
+export const restingTicketTilt: TicketInteractionTilt = {
+  rotateX: 0,
+  rotateY: 0,
 };
