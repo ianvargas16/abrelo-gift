@@ -31,7 +31,9 @@ export function TemplatePicker({ templates, onChoose, onClose }: TemplatePickerP
             className={`template-option template-option-${template.id}`}
             onClick={() => onChoose(template)}
           >
-            <span className="template-marker" aria-hidden="true">{template.marker}</span>
+            <span className="template-option-visual" aria-hidden="true">
+              <span className="template-marker">{template.marker}</span>
+            </span>
             <span className="template-option-copy">
               <strong>{template.name}</strong>
               <small>{template.description}</small>

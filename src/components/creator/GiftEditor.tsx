@@ -5,6 +5,7 @@ import { readMemoryImageFile } from './readMemoryImageFile';
 import type { GiftProject } from '../../projects/giftProject';
 import type { CreatorPublication } from '../../publishing/creatorPublication';
 import type { GiftTemplate } from '../../templates/giftTemplates';
+import { CreationGuide } from './CreationGuide';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 
@@ -64,6 +65,9 @@ export function GiftEditor({
   const introTitle = gift.intro.title.trim() || 'Hay algo para ti';
   const giftTitle = gift.gift.title.trim() || 'Vale por una sorpresa';
   const letterExcerpt = gift.letter.message.trim() || 'Tu mensaje personal aparecerá aquí.';
+  const hasRecipient = Boolean(gift.recipientName.trim());
+  const hasMessage = Boolean(gift.letter.message.trim());
+  const hasGift = Boolean(gift.gift.title.trim());
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -140,6 +144,13 @@ export function GiftEditor({
               <p>Un espacio tranquilo para escribir y dar forma al regalo.</p>
             </div>
 
+            <CreationGuide
+              hasRecipient={hasRecipient}
+              hasMessage={hasMessage}
+              hasGift={hasGift}
+              isPublished={Boolean(publication)}
+            />
+
             <div className="studio-form">
               <section className="studio-section">
                 <div className="studio-section-heading">
@@ -174,9 +185,14 @@ export function GiftEditor({
                 </div>
 
                 <div className="field-grid">
-                  <label className="field">
+                  <label className={`field ${!hasRecipient ? 'is-guided-empty' : ''}`}>
                     <span>Destinatario</span>
-                    <input value={gift.recipientName} onChange={(event) => setRoot('recipientName', event.target.value)} />
+                    <input
+                      value={gift.recipientName}
+                      aria-describedby={!hasRecipient ? 'recipient-guidance' : undefined}
+                      onChange={(event) => setRoot('recipientName', event.target.value)}
+                    />
+                    {!hasRecipient && <small id="recipient-guidance" className="field-guidance">Empieza por la persona que abrirá esta sorpresa.</small>}
                   </label>
                   <label className="field">
                     <span>Remitente</span>
@@ -205,9 +221,15 @@ export function GiftEditor({
                   </label>
                 </div>
 
-                <label className="field">
+                <label className={`field ${!hasMessage ? 'is-guided-empty' : ''}`}>
                   <span>Mensaje</span>
-                  <textarea rows={6} value={gift.letter.message} onChange={(event) => setLetter('message', event.target.value)} />
+                  <textarea
+                    rows={6}
+                    value={gift.letter.message}
+                    aria-describedby={!hasMessage ? 'message-guidance' : undefined}
+                    onChange={(event) => setLetter('message', event.target.value)}
+                  />
+                  {!hasMessage && <small id="message-guidance" className="field-guidance">Una frase sincera basta para transformar este momento.</small>}
                 </label>
               </section>
 
@@ -324,9 +346,14 @@ export function GiftEditor({
                 </div>
 
                 <div className="field-grid">
-                  <label className="field">
+                  <label className={`field ${!hasGift ? 'is-guided-empty' : ''}`}>
                     <span>Regalo</span>
-                    <input value={gift.gift.title} onChange={(event) => setVoucher('title', event.target.value)} />
+                    <input
+                      value={gift.gift.title}
+                      aria-describedby={!hasGift ? 'gift-guidance' : undefined}
+                      onChange={(event) => setVoucher('title', event.target.value)}
+                    />
+                    {!hasGift && <small id="gift-guidance" className="field-guidance">Nombra el detalle que esperará al final.</small>}
                   </label>
                   <label className="field">
                     <span>Código del ticket</span>
@@ -384,8 +411,8 @@ export function GiftEditor({
 
             <div className={`studio-preview-card theme-${gift.theme}`}>
               <div className="studio-preview-meta">
-                <span className="preview-meta-label">Vista del regalo</span>
-                <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Ver completo</button>
+                <span className="preview-meta-label">Así se sentirá</span>
+                <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Recorrer experiencia</button>
               </div>
 
               <div className="studio-preview-object" aria-hidden="true">
@@ -409,6 +436,8 @@ export function GiftEditor({
                 <h3>{introTitle}</h3>
                 <p>{letterExcerpt}</p>
               </div>
+
+              <p className="studio-preview-hint"><span aria-hidden="true">✦</span> Presiona el sello, abre el sobre y descubre el detalle.</p>
 
               <div className="studio-preview-ticket">
                 <div>
