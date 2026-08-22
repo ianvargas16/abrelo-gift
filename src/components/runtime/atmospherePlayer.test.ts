@@ -1,72 +1,87 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAtmospherePlayer, getAtmosphereVoices } from './atmospherePlayer';
+import { createAtmospherePlayer, getAtmosphereTrack } from './atmospherePlayer';
 
-function createAudioContextHarness() {
-  const gainNodes: Array<{ gain: { value: number }; connect: ReturnType<typeof vi.fn> }> = [];
-  const oscillators: Array<{
-    type: OscillatorType;
-    frequency: { value: number };
-    connect: ReturnType<typeof vi.fn>;
-    start: ReturnType<typeof vi.fn>;
-    stop: ReturnType<typeof vi.fn>;
-  }> = [];
-  const context = {
-    destination: {},
-    resume: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn().mockResolvedValue(undefined),
-    createGain: vi.fn(() => {
-      const gain = { gain: { value: 0 }, connect: vi.fn() };
-      gainNodes.push(gain);
-      return gain;
-    }),
-    createOscillator: vi.fn(() => {
-      const oscillator = {
-        type: 'sine' as OscillatorType,
-        frequency: { value: 0 },
-        connect: vi.fn(),
-        start: vi.fn(),
-        stop: vi.fn(),
-      };
-      oscillators.push(oscillator);
-      return oscillator;
-    }),
+function createAudioHarness() {
+  let now = 0;
+  let nextFrameId = 1;
+  const frames = new Map<number, FrameRequestCallback>();
+  const audio = {
+    currentTime: 0,
+    loop: false,
+    pause: vi.fn(),
+    play: vi.fn().mockResolvedValue(undefined),
+    preload: 'none' as const,
+    volume: 1,
   };
 
-  return { context, gainNodes, oscillators };
+  return {
+    audio,
+    scheduler: {
+      now: () => now,
+      requestFrame: (callback: FrameRequestCallback) => {
+        const frame = nextFrameId++;
+        frames.set(frame, callback);
+        return frame;
+      },
+      cancelFrame: (frame: number) => frames.delete(frame),
+    },
+    advance(milliseconds: number) {
+      now += milliseconds;
+      const pendingFrames = [...frames.values()];
+      frames.clear();
+      pendingFrames.forEach((callback) => callback(now));
+    },
+  };
 }
 
 describe('atmosphere player', () => {
-  it('keeps each soundscape intentionally small', () => {
-    expect(getAtmosphereVoices('soft')).toHaveLength(1);
-    expect(getAtmosphereVoices('celebration')).toHaveLength(2);
-    expect(getAtmosphereVoices('romantic')).toHaveLength(2);
+  it('maps every configured atmosphere to a bundled local audio asset', () => {
+    expect(getAtmosphereTrack('soft')).toContain('soft-atmosphere');
+    expect(getAtmosphereTrack('celebration')).toContain('celebration-atmosphere');
+    expect(getAtmosphereTrack('romantic')).toContain('romantic-atmosphere');
   });
 
-  it('does not create browser audio until Runtime explicitly activates it', async () => {
-    const harness = createAudioContextHarness();
-    const createContext = vi.fn(() => harness.context as unknown as AudioContext);
-    const player = createAtmospherePlayer('soft', createContext);
+  it('does not create or load audio until Runtime explicitly activates it', async () => {
+    const harness = createAudioHarness();
+    const createAudio = vi.fn(() => harness.audio);
+    const player = createAtmospherePlayer('soft', createAudio, harness.scheduler);
 
-    expect(createContext).not.toHaveBeenCalled();
+    expect(createAudio).not.toHaveBeenCalled();
 
     await player.start();
 
-    expect(createContext).toHaveBeenCalledOnce();
-    expect(harness.context.resume).toHaveBeenCalledOnce();
-    expect(harness.oscillators).toHaveLength(1);
-    expect(harness.oscillators[0].start).toHaveBeenCalledOnce();
+    expect(createAudio).toHaveBeenCalledOnce();
+    expect(harness.audio.loop).toBe(true);
+    expect(harness.audio.preload).toBe('auto');
+    expect(harness.audio.play).toHaveBeenCalledOnce();
+    expect(harness.audio.volume).toBe(0);
+
+    harness.advance(900);
+    expect(harness.audio.volume).toBeCloseTo(0.38);
   });
 
-  it('mutes the active layer and releases browser audio on disposal', async () => {
-    const harness = createAudioContextHarness();
-    const player = createAtmospherePlayer('romantic', () => harness.context as unknown as AudioContext);
+  it('fades out and pauses the active track when muted', async () => {
+    const harness = createAudioHarness();
+    const player = createAtmospherePlayer('romantic', () => harness.audio, harness.scheduler);
 
     await player.start();
+    harness.advance(900);
     player.setMuted(true);
-    expect(harness.gainNodes[0].gain.value).toBe(0);
+    harness.advance(180);
 
+    expect(harness.audio.volume).toBe(0);
+    expect(harness.audio.pause).toHaveBeenCalledOnce();
+  });
+
+  it('stops and rewinds the local track on disposal', async () => {
+    const harness = createAudioHarness();
+    const player = createAtmospherePlayer('celebration', () => harness.audio, harness.scheduler);
+
+    await player.start();
+    harness.audio.currentTime = 12;
     player.dispose();
-    expect(harness.oscillators.every((oscillator) => oscillator.stop.mock.calls.length === 1)).toBe(true);
-    expect(harness.context.close).toHaveBeenCalledOnce();
+
+    expect(harness.audio.pause).toHaveBeenCalledOnce();
+    expect(harness.audio.currentTime).toBe(0);
   });
 });
