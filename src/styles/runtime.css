@@ -891,13 +891,30 @@
   transform: translateY(-4%);
 }
 
+.ticket-interaction {
+  width: min(100%, 28rem);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  transform:
+    translate3d(var(--ticket-drag-x, 0), var(--ticket-drag-y, 0), 0)
+    rotate(var(--ticket-rotation, 0deg));
+  transition: transform var(--motion-standard) var(--ease-deliberate);
+  will-change: transform;
+}
+
+.ticket-interaction.is-dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
 .ticket-shell {
   --ticket-stub-size: clamp(6.75rem, 25vw, 7.75rem);
   --ticket-notch-radius: 0.9rem;
   --ticket-tear-position: calc(100% - var(--ticket-stub-size));
   position: relative;
   z-index: 1;
-  width: min(100%, 28rem);
+  width: 100%;
   transform: rotate(-0.45deg);
   filter:
     drop-shadow(0 1.1rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 13%, transparent))
@@ -1204,6 +1221,10 @@
     --ticket-stub-size: clamp(10.75rem, 25vw, 13.5rem);
     --ticket-notch-radius: 0.95rem;
     --ticket-tear-position: calc(100% - var(--ticket-stub-size));
+    width: 100%;
+  }
+
+  .ticket-interaction {
     width: min(100%, 52rem);
   }
 
@@ -1326,6 +1347,7 @@
   .memories-stage,
   .gift-reveal,
   .ticket,
+  .ticket-interaction,
   .ticket-shell,
   .envelope-flap,
   .letter-peek {
