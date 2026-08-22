@@ -1932,10 +1932,6 @@ textarea:focus-visible {
     padding-inline: var(--space-lg);
   }
 
-  .theme-mood-picker {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .studio-preview-object {
     min-height: 24rem;
   }
