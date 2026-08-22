@@ -8,8 +8,15 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     clearScreen: false,
     server: {
+      host: "0.0.0.0",
       port: isRuntimeBuild ? 1421 : 1420,
       strictPort: true,
+      proxy: {
+        "/api": {
+          target: "http://localhost:8787",
+          changeOrigin: true,
+        },
+      },
     },
     build: isRuntimeBuild
       ? {
