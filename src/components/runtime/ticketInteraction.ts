@@ -12,7 +12,7 @@ export interface TicketInteractionTilt {
 export const ticketInteractionBounds = {
   maxPointerOffsetX: 48,
   maxPointerOffsetY: 40,
-  maxTilt: 6,
+  maxTilt: 15,
 } as const;
 
 function clamp(value: number, limit: number) {
