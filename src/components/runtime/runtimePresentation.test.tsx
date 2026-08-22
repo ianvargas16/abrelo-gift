@@ -84,8 +84,27 @@ describe('Runtime empty-field presentation', () => {
     );
 
     expect(markup).toContain('memory-keepsake');
+    expect(markup).toContain('memory-album-page');
+    expect(markup).toContain('Momento 01');
+    expect(markup).toContain('Unos momentos');
     expect(markup).toContain('Aquí empieza la historia.');
     expect(markup).toContain('Descubrir mi regalo');
+  });
+
+  it('uses a neutral moment title when an older memory has no caption', () => {
+    const markup = renderToStaticMarkup(
+      <Memories
+        memories={{
+          enabled: true,
+          items: [{ image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==' }],
+        }}
+        isRevealing={false}
+        onReveal={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain('Un instante para guardar');
+    expect(markup).toContain('Unos recuerdos para guardar');
   });
 
   it('uses optional alt text, caption, then a neutral fallback for memory images', () => {

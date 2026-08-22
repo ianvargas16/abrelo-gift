@@ -1188,12 +1188,39 @@ textarea:focus-visible {
   background: color-mix(in srgb, var(--color-surface-elevated) 76%, white);
 }
 
-.memory-editor-item > img {
+.memory-editor-photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius-small) - 0.05rem);
+  background: var(--color-paper-secondary);
+}
+
+.memory-editor-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--color-ink) 46%, transparent));
+  pointer-events: none;
+}
+
+.memory-editor-photo > img {
+  display: block;
   width: 100%;
   aspect-ratio: 1.5;
-  border-radius: calc(var(--radius-small) - 0.05rem);
   object-fit: cover;
-  background: var(--color-paper-secondary);
+}
+
+.memory-editor-photo > span {
+  position: absolute;
+  right: var(--space-sm);
+  bottom: var(--space-sm);
+  z-index: 1;
+  color: white;
+  font-family: var(--font-label);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .memory-caption-field textarea {
@@ -1760,7 +1787,7 @@ textarea:focus-visible {
     align-items: start;
   }
 
-  .memory-editor-item > img {
+  .memory-editor-photo {
     min-height: 9rem;
   }
 
