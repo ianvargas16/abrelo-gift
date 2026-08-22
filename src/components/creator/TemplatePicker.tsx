@@ -7,6 +7,14 @@ interface TemplatePickerProps {
   onClose: () => void;
 }
 
+const templateMood: Record<GiftTemplate['id'], string> = {
+  birthday: 'Celebración cercana',
+  anniversary: 'Historia compartida',
+  dinner: 'Una invitación para salir',
+  'movie-night': 'Un plan para bajar el ritmo',
+  blank: 'Todo empieza contigo',
+};
+
 export function TemplatePicker({ templates, onChoose, onClose }: TemplatePickerProps) {
   return (
     <CreatorDialog
@@ -37,6 +45,7 @@ export function TemplatePicker({ templates, onChoose, onClose }: TemplatePickerP
             <span className="template-option-copy">
               <strong>{template.name}</strong>
               <small>{template.description}</small>
+              <em>{templateMood[template.id]}</em>
             </span>
             <span className="template-option-arrow" aria-hidden="true">→</span>
           </button>
