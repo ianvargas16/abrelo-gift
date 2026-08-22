@@ -430,7 +430,7 @@
   inset: 0 0 auto;
   height: 62%;
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-paper) 88%, white), var(--color-paper-secondary));
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  clip-path: polygon(0.95rem 0, calc(100% - 0.95rem) 0, 50% 100%);
   transform-origin: top center;
   z-index: 5;
   transition: transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate), z-index var(--motion-fast) linear;
