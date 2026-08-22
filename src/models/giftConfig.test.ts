@@ -64,6 +64,17 @@ describe('parseGiftFile', () => {
     expect(parseGiftFile(createGiftFile(giftWithEmptyFields))).toEqual(giftWithEmptyFields);
   });
 
+  it('round-trips an optional configured atmosphere and keeps older gifts silent', () => {
+    const giftWithAtmosphere = { ...defaultGift, atmosphere: 'romantic' as const };
+
+    expect(parseGiftFile(createGiftFile(giftWithAtmosphere))).toEqual(giftWithAtmosphere);
+    expect(parseGiftFile(createGiftFile(defaultGift)).atmosphere).toBeUndefined();
+  });
+
+  it('rejects an unsupported configured atmosphere', () => {
+    expect(() => parseGiftFile({ ...createGiftFile(defaultGift), gift: { ...defaultGift, atmosphere: 'loud' } })).toThrow(/Atmósfera sonora inválida/);
+  });
+
   it('rejects unsupported future file versions', () => {
     expect(() =>
       parseGiftFile({

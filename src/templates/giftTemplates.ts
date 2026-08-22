@@ -27,6 +27,7 @@ export const giftTemplates: GiftTemplate[] = [
       recipientName: '',
       senderName: '',
       theme: 'rose',
+      atmosphere: 'celebration',
       intro: {
         eyebrow: 'HOY ES TU DIA',
         title: 'Hay algo para celebrar',
@@ -54,6 +55,7 @@ export const giftTemplates: GiftTemplate[] = [
       recipientName: '',
       senderName: '',
       theme: 'rose',
+      atmosphere: 'romantic',
       intro: {
         eyebrow: 'PARA NOSOTROS',
         title: 'Un momento que quiero guardar',
@@ -81,6 +83,7 @@ export const giftTemplates: GiftTemplate[] = [
       recipientName: '',
       senderName: '',
       theme: 'sage',
+      atmosphere: 'soft',
       intro: {
         eyebrow: 'UNA INVITACION',
         title: 'Reservé algo para ti',
@@ -108,6 +111,7 @@ export const giftTemplates: GiftTemplate[] = [
       recipientName: '',
       senderName: '',
       theme: 'midnight',
+      atmosphere: 'soft',
       intro: {
         eyebrow: 'FUNCION ESPECIAL',
         title: 'Esta noche hay plan',
