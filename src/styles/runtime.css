@@ -725,7 +725,7 @@
   width: 100%;
   display: grid;
   justify-items: center;
-  padding-top: var(--space-sm);
+  padding-block: var(--space-sm) var(--space-md);
   animation: memories-stage-arrive var(--motion-paper) var(--ease-deliberate) both;
   transition: opacity var(--runtime-gift-reveal-duration, var(--motion-paper)) var(--ease-standard), transform var(--runtime-gift-reveal-duration, var(--motion-paper)) var(--ease-deliberate);
 }
@@ -751,7 +751,7 @@
   position: relative;
   width: min(100%, 36rem);
   display: grid;
-  gap: clamp(1rem, 4vw, 1.5rem);
+  gap: clamp(1.1rem, 4vw, 1.65rem);
   padding: clamp(1rem, 4.5vw, 2rem);
   border: 1px solid color-mix(in srgb, var(--color-paper-ink) 12%, transparent);
   border-radius: 0.4rem;
@@ -770,7 +770,21 @@
   pointer-events: none;
 }
 
+.memory-keepsake::after {
+  content: '';
+  position: absolute;
+  inset: auto 14% -0.7rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-paper-ink) 16%, transparent);
+  filter: blur(0.85rem);
+  opacity: 0.38;
+  pointer-events: none;
+}
+
 .memory-keepsake-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   gap: var(--space-sm);
@@ -782,12 +796,46 @@
   text-transform: uppercase;
 }
 
+.memory-album-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-page-count {
+  flex: 0 0 auto;
+}
+
+.memory-album-page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(1rem, 3.5vw, 1.45rem);
+  animation: memory-page-turn 520ms var(--ease-deliberate) both;
+}
+
+@keyframes memory-page-turn {
+  from {
+    opacity: 0;
+    transform: translate3d(1.1rem, 0.45rem, 0) rotate(0.6deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .memory-photo-frame {
   position: relative;
   z-index: 1;
   padding: clamp(0.4rem, 1.5vw, 0.65rem);
   background: color-mix(in srgb, var(--color-paper-secondary) 78%, white);
-  box-shadow: 0 0.9rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 14%, transparent);
+  box-shadow:
+    0 0.9rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 14%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.44);
+  transform: rotate(-0.45deg);
 }
 
 .memory-photo-frame img {
@@ -805,6 +853,15 @@
   text-align: center;
 }
 
+.memory-moment-label {
+  color: var(--color-accent-strong);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .memory-keepsake-copy h2 {
   margin: 0;
   font-family: var(--font-editorial);
@@ -819,14 +876,16 @@
   max-width: 38ch;
   margin: 0 auto;
   color: var(--color-paper-ink-muted);
-  font-family: var(--font-editorial);
-  font-size: clamp(1rem, 4.4vw, 1.32rem);
-  line-height: 1.48;
+  font-family: var(--font-body);
+  font-size: clamp(0.86rem, 3.6vw, 1rem);
+  line-height: 1.5;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .memory-controls {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -844,6 +903,12 @@
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+}
+
+.memory-step-button span,
+.memory-controls .reveal-button span {
+  font-size: 1rem;
+  line-height: 0;
 }
 
 .memory-step-button:disabled {
@@ -1379,6 +1444,7 @@
   .envelope-shadow,
   .letter-stage,
   .memories-stage,
+  .memory-album-page,
   .gift-reveal,
   .ticket-glow,
   .ticket,

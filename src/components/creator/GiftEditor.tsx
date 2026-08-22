@@ -233,14 +233,14 @@ export function GiftEditor({
                   <span>04</span>
                   <div>
                     <h3>Recuerdos</h3>
-                    <p>Un pequeño álbum entre la carta y el regalo final.</p>
+                    <p>Un pequeño álbum para detenerse antes de descubrir el regalo final.</p>
                   </div>
                 </div>
 
                 <div className="memory-editor-intro">
                   <div>
                     <span className="field-label">Álbum de recuerdos</span>
-                    <p>Las imágenes se guardan dentro de este regalo. Máximo {MAX_MEMORY_ITEMS}, de hasta 5 MB cada una.</p>
+                    <p>Ordena los momentos como quieres que se descubran. Máximo {MAX_MEMORY_ITEMS}, de hasta 5 MB cada una.</p>
                   </div>
                   <button
                     type="button"
@@ -267,9 +267,12 @@ export function GiftEditor({
                       <div className="memory-editor-list">
                         {memories.items.map((memory, index) => (
                           <article className="memory-editor-item" key={`${memory.image.slice(0, 48)}-${index}`}>
-                            <img src={memory.image} alt="" />
+                            <div className="memory-editor-photo">
+                              <img src={memory.image} alt="" />
+                              <span>Momento {String(index + 1).padStart(2, '0')}</span>
+                            </div>
                             <label className="field memory-caption-field">
-                              <span>Texto del recuerdo {index + 1}</span>
+                              <span>La historia de este momento</span>
                               <textarea
                                 rows={3}
                                 value={memory.caption ?? ''}
