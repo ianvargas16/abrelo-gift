@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import type { GiftProject } from '../../projects/giftProject';
 import { giftTemplates, type GiftTemplate } from '../../templates/giftTemplates';
+import { CreatorDialog } from './CreatorDialog';
 import { TemplatePicker } from './TemplatePicker';
 
 interface ProjectSwitcherProps {
@@ -89,79 +89,62 @@ export function ProjectSwitcher({
         />
       )}
 
-      {isOpen && createPortal(
-        <div
-          className="project-dialog-backdrop"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              close();
-            }
-          }}
+      {isOpen && (
+        <CreatorDialog
+          backdropClassName="project-dialog-backdrop"
+          dialogClassName="project-dialog"
+          labelledBy="project-dialog-title"
+          closeLabel="Cerrar proyectos"
+          onClose={close}
+          heading={(
+            <>
+              <p className="section-kicker">Tus regalos</p>
+              <h2 id="project-dialog-title">Cambia de proyecto</h2>
+            </>
+          )}
         >
-          <section
-            className="project-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="project-dialog-title"
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                close();
-              }
-            }}
-          >
-            <div className="project-dialog-heading">
-              <div>
-                <p className="section-kicker">Tus regalos</p>
-                <h2 id="project-dialog-title">Cambia de proyecto</h2>
+          <div className="project-list" aria-label="Proyectos locales">
+            {projects.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                className={`project-list-item ${project.id === activeProject.id ? 'selected' : ''}`}
+                aria-current={project.id === activeProject.id ? 'true' : undefined}
+                onClick={() => {
+                  onSelect(project.id);
+                  close();
+                }}
+              >
+                <span>
+                  <strong>{project.name}</strong>
+                  <small>{project.gift.recipientName.trim() || 'Sin destinatario'}</small>
+                </span>
+                <time dateTime={project.updatedAt}>{formatUpdatedAt(project.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+
+          <label className="field project-name-field">
+            <span>Nombre local</span>
+            <div className="project-name-control">
+              <input value={name} onChange={(event) => setName(event.target.value)} onBlur={saveName} />
+              <button type="button" className="ghost-button" onClick={saveName}>Guardar nombre</button>
+            </div>
+          </label>
+
+          <div className="project-dialog-actions">
+            <button type="button" className="ghost-button" onClick={duplicateProject}>Duplicar</button>
+            {!isConfirmingDelete ? (
+              <button type="button" className="danger-button" onClick={() => setIsConfirmingDelete(true)}>Eliminar</button>
+            ) : (
+              <div className="project-delete-confirmation" role="alert">
+                <p>Eliminar este proyecto local no afecta ningún enlace publicado.</p>
+                <button type="button" className="ghost-button" onClick={() => setIsConfirmingDelete(false)}>Cancelar</button>
+                <button type="button" className="danger-button" onClick={deleteProject}>Eliminar proyecto</button>
               </div>
-              <button type="button" className="icon-button" aria-label="Cerrar proyectos" onClick={close}>×</button>
-            </div>
-
-            <div className="project-list" aria-label="Proyectos locales">
-              {projects.map((project) => (
-                <button
-                  key={project.id}
-                  type="button"
-                  className={`project-list-item ${project.id === activeProject.id ? 'selected' : ''}`}
-                  aria-current={project.id === activeProject.id ? 'true' : undefined}
-                  onClick={() => {
-                    onSelect(project.id);
-                    close();
-                  }}
-                >
-                  <span>
-                    <strong>{project.name}</strong>
-                    <small>{project.gift.recipientName.trim() || 'Sin destinatario'}</small>
-                  </span>
-                  <time dateTime={project.updatedAt}>{formatUpdatedAt(project.updatedAt)}</time>
-                </button>
-              ))}
-            </div>
-
-            <label className="field project-name-field">
-              <span>Nombre local</span>
-              <div className="project-name-control">
-                <input value={name} onChange={(event) => setName(event.target.value)} onBlur={saveName} />
-                <button type="button" className="ghost-button" onClick={saveName}>Guardar nombre</button>
-              </div>
-            </label>
-
-            <div className="project-dialog-actions">
-              <button type="button" className="ghost-button" onClick={duplicateProject}>Duplicar</button>
-              {!isConfirmingDelete ? (
-                <button type="button" className="danger-button" onClick={() => setIsConfirmingDelete(true)}>Eliminar</button>
-              ) : (
-                <div className="project-delete-confirmation" role="alert">
-                  <p>Eliminar este proyecto local no afecta ningún enlace publicado.</p>
-                  <button type="button" className="ghost-button" onClick={() => setIsConfirmingDelete(false)}>Cancelar</button>
-                  <button type="button" className="danger-button" onClick={deleteProject}>Eliminar proyecto</button>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>,
-        document.body,
+            )}
+          </div>
+        </CreatorDialog>
       )}
     </div>
   );

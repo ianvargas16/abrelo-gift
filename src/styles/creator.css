@@ -220,9 +220,8 @@ textarea:focus-visible {
   align-self: stretch;
 }
 
-.project-dialog-backdrop {
+.creator-dialog-backdrop {
   position: fixed;
-  z-index: 80;
   inset: 0;
   display: grid;
   place-items: center;
@@ -231,25 +230,19 @@ textarea:focus-visible {
     max(var(--space-sm), env(safe-area-inset-right))
     max(var(--space-sm), env(safe-area-inset-bottom))
     max(var(--space-sm), env(safe-area-inset-left));
-  background: rgba(35, 27, 29, 0.34);
-  backdrop-filter: blur(7px);
   overscroll-behavior: contain;
 }
 
+.project-dialog-backdrop {
+  z-index: 80;
+  background: rgba(35, 27, 29, 0.34);
+  backdrop-filter: blur(7px);
+}
+
 .template-dialog-backdrop {
-  position: fixed;
   z-index: 90;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding:
-    max(var(--space-sm), env(safe-area-inset-top))
-    max(var(--space-sm), env(safe-area-inset-right))
-    max(var(--space-sm), env(safe-area-inset-bottom))
-    max(var(--space-sm), env(safe-area-inset-left));
   background: rgba(35, 27, 29, 0.38);
   backdrop-filter: blur(8px);
-  overscroll-behavior: contain;
 }
 
 .template-dialog {
@@ -277,7 +270,7 @@ textarea:focus-visible {
   box-shadow: var(--shadow-strong-reveal);
 }
 
-.template-dialog-heading {
+.creator-dialog-heading {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -289,12 +282,11 @@ textarea:focus-visible {
   background: transparent;
 }
 
-.template-dialog-heading > div,
-.project-dialog-heading > div {
+.creator-dialog-heading > div {
   min-width: 0;
 }
 
-.template-dialog-heading h2 {
+.template-dialog .creator-dialog-heading h2 {
   margin: var(--space-xs) 0 var(--space-sm);
   font-family: var(--font-editorial);
   font-size: clamp(2rem, 8vw, 3rem);
@@ -303,7 +295,7 @@ textarea:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.template-dialog-heading p:last-child {
+.template-dialog .creator-dialog-heading p:last-child {
   max-width: 28rem;
   margin: 0;
   color: var(--color-ink-muted);
@@ -422,19 +414,7 @@ textarea:focus-visible {
   box-shadow: var(--shadow-strong-reveal);
 }
 
-.project-dialog-heading {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  padding-bottom: var(--space-sm);
-  background: transparent;
-}
-
-.project-dialog-heading h2 {
+.project-dialog .creator-dialog-heading h2 {
   margin: var(--space-xs) 0 0;
   font-family: var(--font-editorial);
   font-size: clamp(1.9rem, 7vw, 2.5rem);
@@ -1543,8 +1523,7 @@ textarea:focus-visible {
     );
   }
 
-  .project-dialog-heading,
-  .template-dialog-heading {
+  .creator-dialog-heading {
     gap: var(--space-sm);
   }
 
