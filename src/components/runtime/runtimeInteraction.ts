@@ -4,9 +4,10 @@ export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | '
 
 export const runtimePresentationTiming = {
   sealRelease: 520,
-  envelopeOpen: 680,
-  cardExtraction: 720,
-  giftReveal: 680,
+  envelopeOpen: 720,
+  cardExtraction: 820,
+  giftReveal: 720,
+  ticketRevealDelay: 180,
 } as const;
 
 export function transitionRuntimeStage(stage: RuntimeStage, event: RuntimeEvent): RuntimeStage {

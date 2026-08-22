@@ -159,7 +159,7 @@ describe('Runtime stage transitions', () => {
   });
 
   it('removes presentation delays when reduced motion is requested', () => {
-    expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, false)).toBe(720);
+    expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, false)).toBe(820);
     expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, true)).toBe(0);
   });
 });

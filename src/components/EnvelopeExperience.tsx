@@ -55,6 +55,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     '--runtime-envelope-open-duration': `${runtimePresentationTiming.envelopeOpen}ms`,
     '--runtime-card-extraction-duration': `${runtimePresentationTiming.cardExtraction}ms`,
     '--runtime-gift-reveal-duration': `${runtimePresentationTiming.giftReveal}ms`,
+    '--runtime-ticket-reveal-delay': `${runtimePresentationTiming.ticketRevealDelay}ms`,
   } as CSSProperties;
   const recipientName = gift.recipientName.trim();
   const senderName = gift.senderName.trim();
