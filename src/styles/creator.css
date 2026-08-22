@@ -1482,6 +1482,13 @@ textarea:focus-visible {
 }
 
 @media (max-width: 719px) {
+  .template-dialog-backdrop {
+    --template-dialog-top-inset: max(4rem, calc(env(safe-area-inset-top) + var(--space-lg)));
+    align-items: start;
+    overflow-y: auto;
+    padding-top: var(--template-dialog-top-inset);
+  }
+
   .studio-shell {
     padding-inline: clamp(0.75rem, 3.75vw, var(--space-md));
   }
@@ -1525,6 +1532,15 @@ textarea:focus-visible {
     width: 100%;
     padding: clamp(1rem, 4vw, 1.25rem);
     border-radius: var(--radius-large);
+  }
+
+  .template-dialog {
+    align-self: start;
+    max-height: calc(
+      100dvh
+      - var(--template-dialog-top-inset)
+      - max(var(--space-sm), env(safe-area-inset-bottom))
+    );
   }
 
   .project-dialog-heading,
