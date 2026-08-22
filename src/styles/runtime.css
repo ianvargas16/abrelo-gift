@@ -323,7 +323,7 @@
 
 .envelope.state-extracting {
   opacity: 0;
-  transform: translateY(3.5rem) scale(0.9);
+  transform: translateY(2.25rem) scale(0.93) rotate(-0.8deg);
 }
 
 .envelope-shadow {
@@ -430,7 +430,7 @@
   inset: 0 0 auto;
   height: 62%;
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-paper) 88%, white), var(--color-paper-secondary));
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  clip-path: polygon(0.95rem 0, calc(100% - 0.95rem) 0, 50% 100%);
   transform-origin: top center;
   z-index: 5;
   transition: transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate), z-index var(--motion-fast) linear;
@@ -468,8 +468,9 @@
 
 .envelope.state-extracting .letter-peek {
   opacity: 0;
-  transform: translateY(-12rem) scale(1.055);
+  transform: translateY(-10.5rem) scale(1.03) rotate(0.45deg);
   transition-duration: var(--runtime-card-extraction-duration, var(--motion-paper));
+  transition-timing-function: var(--ease-deliberate);
 }
 
 .wax-seal {
@@ -641,18 +642,23 @@
 .letter-stage {
   padding-top: var(--space-sm);
   align-content: start;
-  animation: letter-stage-arrive var(--motion-paper) var(--ease-deliberate) both;
+  animation: letter-stage-arrive var(--motion-deliberate) var(--ease-deliberate) both;
 }
 
 @keyframes letter-stage-arrive {
   from {
     opacity: 0;
-    transform: translateY(2.5rem) scale(0.97);
+    transform: translateY(1.75rem) rotate(-0.75deg) scale(0.985);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateY(-0.08rem) rotate(0.08deg) scale(1.002);
   }
 
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(0) rotate(0) scale(1);
   }
 }
 
@@ -867,16 +873,18 @@
   min-height: inherit;
   display: grid;
   align-items: center;
-  animation: reveal-background var(--motion-reveal) var(--ease-deliberate) both;
+  animation: reveal-background var(--motion-deliberate) var(--ease-deliberate) both;
 }
 
 @keyframes reveal-background {
   from {
     opacity: 0;
+    transform: translateY(0.5rem);
   }
 
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -889,6 +897,24 @@
   background: radial-gradient(circle, color-mix(in srgb, var(--theme-glow, rgba(127, 54, 86, 0.12)) 90%, transparent), transparent 66%);
   filter: blur(18px);
   transform: translateY(-4%);
+  animation: ticket-glow-arrive var(--motion-reveal) var(--runtime-ticket-reveal-delay, 180ms) var(--ease-deliberate) both;
+}
+
+@keyframes ticket-glow-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(5%) scale(0.76);
+  }
+
+  68% {
+    opacity: 1;
+    transform: translateY(-5%) scale(1.04);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-4%) scale(1);
+  }
 }
 
 .ticket-interaction {
@@ -918,7 +944,7 @@
   filter:
     drop-shadow(0 1.1rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 13%, transparent))
     drop-shadow(0 2.5rem 5rem color-mix(in srgb, var(--color-paper-ink) 14%, transparent));
-  animation: ticket-in var(--motion-reveal) 100ms var(--ease-deliberate) both;
+  animation: ticket-in var(--motion-reveal) var(--runtime-ticket-reveal-delay, 180ms) var(--ease-deliberate) both;
   will-change: filter, transform;
 }
 
@@ -972,16 +998,25 @@
 @keyframes ticket-in {
   from {
     opacity: 0;
-    transform: translateY(2.4rem) scale(0.965) rotate(-1.45deg);
+    transform: translateY(2.8rem) scale(0.95) rotate(-1.7deg);
+    filter:
+      drop-shadow(0 0.45rem 0.75rem color-mix(in srgb, var(--color-paper-ink) 7%, transparent))
+      drop-shadow(0 1rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 8%, transparent));
   }
 
-  72% {
-    transform: translateY(-0.12rem) scale(1.006) rotate(-0.33deg);
+  74% {
+    transform: translateY(-0.16rem) scale(1.008) rotate(-0.28deg);
+    filter:
+      drop-shadow(0 1.3rem 2rem color-mix(in srgb, var(--color-paper-ink) 15%, transparent))
+      drop-shadow(0 2.9rem 5.4rem color-mix(in srgb, var(--color-paper-ink) 16%, transparent));
   }
 
   to {
     opacity: 1;
     transform: rotate(-0.45deg);
+    filter:
+      drop-shadow(0 1.1rem 1.8rem color-mix(in srgb, var(--color-paper-ink) 13%, transparent))
+      drop-shadow(0 2.5rem 5rem color-mix(in srgb, var(--color-paper-ink) 14%, transparent));
   }
 }
 
@@ -1345,6 +1380,7 @@
   .letter-stage,
   .memories-stage,
   .gift-reveal,
+  .ticket-glow,
   .ticket,
   .ticket-interaction,
   .ticket-shell,
