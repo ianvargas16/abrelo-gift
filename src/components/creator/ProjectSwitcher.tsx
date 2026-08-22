@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { GiftProject } from '../../projects/giftProject';
 import { giftTemplates, type GiftTemplate } from '../../templates/giftTemplates';
 import { TemplatePicker } from './TemplatePicker';
@@ -88,7 +89,7 @@ export function ProjectSwitcher({
         />
       )}
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
           className="project-dialog-backdrop"
           role="presentation"
@@ -159,7 +160,8 @@ export function ProjectSwitcher({
               )}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

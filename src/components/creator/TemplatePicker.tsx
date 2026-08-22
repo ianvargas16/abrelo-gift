@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { GiftTemplate } from '../../templates/giftTemplates';
 
 interface TemplatePickerProps {
@@ -7,7 +8,7 @@ interface TemplatePickerProps {
 }
 
 export function TemplatePicker({ templates, onChoose, onClose }: TemplatePickerProps) {
-  return (
+  return createPortal(
     <div
       className="template-dialog-backdrop"
       role="presentation"
@@ -55,6 +56,7 @@ export function TemplatePicker({ templates, onChoose, onClose }: TemplatePickerP
           ))}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
