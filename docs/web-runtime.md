@@ -43,13 +43,13 @@ The Publisher provides:
 - a safely serialized, validated GiftFile payload;
 - an opaque gift identifier and route mapping;
 - exact-ID availability decisions before serving the shell;
-- gift-specific metadata and preview images when those features are introduced.
+- generic canonical and Open Graph URL metadata for each opaque public route.
 
 ## Privacy and metadata
 
 `runtime.html` defaults to `noindex`, `nofollow`, `noarchive`, `nosnippet`, and a `no-referrer` policy. Its title, description, site name, and Open Graph type are deliberately generic and contain no recipient data.
 
-Messaging and social crawlers usually do not execute client JavaScript reliably. Recipient-specific titles, descriptions, and preview images must eventually be rendered by the publishing/server layer when it serves `/g/<gift-id>`; the client Runtime cannot provide reliable dynamic social cards by itself.
+Messaging and social crawlers usually do not execute client JavaScript reliably. The publishing Worker injects the canonical URL and `og:url` for each opaque public route while retaining generic title and description copy. Recipient-specific titles, descriptions, and preview images must eventually be rendered by the publishing/server layer when it serves `/g/<gift-id>`; the client Runtime cannot provide reliable dynamic social cards by itself.
 
 ## Browser independence
 

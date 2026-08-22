@@ -3,6 +3,7 @@ import {
   GiftPayloadTooLargeError,
   GIFT_ID_PATTERN,
   generateOpaqueGiftId,
+  injectPublicMetadataIntoRuntimeHtml,
   injectGiftFileIntoRuntimeHtml,
   parseCanonicalGiftFile,
   readGiftRequestBody,
@@ -132,7 +133,10 @@ async function renderRecipientPage(
 
   if (giftFile) {
     try {
-      body = injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile);
+      body = injectPublicMetadataIntoRuntimeHtml(
+        injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile),
+        createPublicGiftUrl(options.runtimeConfig, id),
+      );
     } catch {
       status = 503;
       logger.error('runtime_injection_failed', requestId);

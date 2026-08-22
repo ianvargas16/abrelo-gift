@@ -2,15 +2,24 @@ import { createGiftFile, parseGiftFile, type GiftFile } from '../src/models/gift
 
 export const GIFT_ID_BYTES = 16;
 export const GIFT_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
-export const MAX_GIFT_FILE_BYTES = 64 * 1024;
+// D1 stores the serialized GiftFile in one row, whose maximum string/BLOB value is 2 MB.
+export const MAX_GIFT_FILE_BYTES = 1024 * 1024;
 
 const RUNTIME_GIFT_PLACEHOLDER = '<script id="abrelo-gift-data" type="application/json"></script>';
+const RUNTIME_METADATA_PLACEHOLDER = '<!-- abrelo:public-metadata -->';
 const INLINE_JSON_ESCAPES: Record<string, string> = {
   '<': '\\u003c',
   '>': '\\u003e',
   '&': '\\u0026',
   '\u2028': '\\u2028',
   '\u2029': '\\u2029',
+};
+const HTML_ATTRIBUTE_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&#39;',
+  '<': '&lt;',
+  '>': '&gt;',
 };
 
 export function generateOpaqueGiftId(): string {
@@ -45,6 +54,16 @@ export function injectGiftFileIntoRuntimeHtml(runtimeHtml: string, giftFile: Gif
     RUNTIME_GIFT_PLACEHOLDER,
     `<script id="abrelo-gift-data" type="application/json">${serializedGift}</script>`,
   );
+}
+
+export function injectPublicMetadataIntoRuntimeHtml(runtimeHtml: string, publicUrl: string): string {
+  if (!runtimeHtml.includes(RUNTIME_METADATA_PLACEHOLDER)) {
+    throw new Error('Runtime metadata placeholder is missing');
+  }
+
+  const escapedUrl = publicUrl.replace(/[&"'<>]/gu, (character) => HTML_ATTRIBUTE_ESCAPES[character]);
+  const metadata = `<link rel="canonical" href="${escapedUrl}" />\n    <meta property="og:url" content="${escapedUrl}" />\n    <meta name="twitter:card" content="summary" />`;
+  return runtimeHtml.replace(RUNTIME_METADATA_PLACEHOLDER, metadata);
 }
 
 export async function readGiftRequestBody(request: Request): Promise<string> {

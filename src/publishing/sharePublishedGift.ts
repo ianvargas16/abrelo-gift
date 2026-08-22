@@ -8,6 +8,8 @@ interface ShareTarget {
   share?: (data: ShareData) => Promise<void>;
 }
 
+export const DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE = 'Te preparé una sorpresa para abrir cuando tengas un momento.';
+
 function fallbackCopy(text: string, targetDocument: Document | undefined): boolean {
   if (!targetDocument?.body || typeof targetDocument.execCommand !== 'function') {
     return false;
@@ -53,8 +55,13 @@ export function isWebShareAvailable(
   return typeof target?.share === 'function';
 }
 
+export function getPublishedGiftShareMessage(message?: string): string {
+  return message?.trim() || DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE;
+}
+
 export async function sharePublishedGift(
   url: string,
+  message?: string,
   target: ShareTarget | undefined = typeof navigator === 'undefined' ? undefined : navigator,
 ): Promise<boolean> {
   if (!target?.share) {
@@ -63,7 +70,7 @@ export async function sharePublishedGift(
 
   await target.share({
     title: 'Ábrelo — Tienes un regalo',
-    text: 'Te comparto un regalo para abrir y descubrir.',
+    text: getPublishedGiftShareMessage(message),
     url,
   });
 

@@ -4,6 +4,7 @@ import { createGiftFile, GIFT_FILE_SCHEMA, parseGiftFile } from '../src/models/g
 import { createPublishApp } from './app';
 import {
   GIFT_ID_PATTERN,
+  injectPublicMetadataIntoRuntimeHtml,
   MAX_GIFT_FILE_BYTES,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
@@ -12,7 +13,7 @@ import type { PublishedGiftRepository, PublishedGiftSnapshot } from './published
 import { parseRuntimeConfig } from './runtimeConfig.js';
 
 const runtimeHtml = `<!doctype html>
-<html><body><div id="root"></div><script id="abrelo-gift-data" type="application/json"></script><script type="module" src="/assets/runtime.js"></script></body></html>`;
+<html><head><!-- abrelo:public-metadata --></head><body><div id="root"></div><script id="abrelo-gift-data" type="application/json"></script><script type="module" src="/assets/runtime.js"></script></body></html>`;
 
 class MemoryPublishedGiftRepository implements PublishedGiftRepository {
   private readonly snapshots = new Map<string, PublishedGiftSnapshot>();
@@ -108,7 +109,7 @@ describe('publish Worker', () => {
     expect(second.result.id).toHaveLength(22);
   });
 
-  it('serves a published snapshot through the recipient Runtime shell', async () => {
+  it('serves existing published snapshots through the recipient Runtime shell with generic social metadata', async () => {
     const { app } = createTestContext();
     const gift = { ...defaultGift, recipientName: 'Contenido publicado' };
     const { result } = await publish(app, gift);
@@ -120,6 +121,11 @@ describe('publish Worker', () => {
     expect(response.headers.get('X-Robots-Tag')).toContain('noindex');
     expect(payload).toBeTruthy();
     expect(parseGiftFile(JSON.parse(payload!))).toEqual(gift);
+    const head = html.slice(0, html.indexOf('</head>'));
+    expect(head).toContain(`<link rel="canonical" href="${result.url}" />`);
+    expect(head).toContain(`<meta property="og:url" content="${result.url}" />`);
+    expect(head).toContain('<meta name="twitter:card" content="summary" />');
+    expect(head).not.toContain('Contenido publicado');
   });
 
   it('keeps an earlier published URL immutable after another publication', async () => {
@@ -263,6 +269,26 @@ describe('publish Worker', () => {
     expect(html).not.toContain(maliciousText);
     expect(payload).toContain('\\u003c/script\\u003e');
     expect(parseGiftFile(JSON.parse(payload!)).letter.message).toBe(maliciousText);
+  });
+
+  it('injects only the public URL into social metadata', () => {
+    const publicUrl = `https://gifts.example/g/${'A'.repeat(22)}`;
+    const html = injectPublicMetadataIntoRuntimeHtml(runtimeHtml, publicUrl);
+
+    expect(html).toContain(`<link rel="canonical" href="${publicUrl}" />`);
+    expect(html).toContain(`<meta property="og:url" content="${publicUrl}" />`);
+    expect(html).not.toContain('recipientName');
+    expect(html).not.toContain('shareMessage');
+  });
+
+  it('escapes public metadata attributes before inserting them into the Runtime shell', () => {
+    const html = injectPublicMetadataIntoRuntimeHtml(
+      runtimeHtml,
+      'https://gifts.example/g/example?note=<untrusted>&label="gift"',
+    );
+
+    expect(html).toContain('note=&lt;untrusted&gt;&amp;label=&quot;gift&quot;');
+    expect(html).not.toContain('note=<untrusted>');
   });
 
   it('returns the public URL from server configuration', async () => {
