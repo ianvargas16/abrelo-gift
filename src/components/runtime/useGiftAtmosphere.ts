@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GiftAtmosphere } from '../../models/giftAtmosphere';
-import { createAtmospherePlayer, createBrowserAudioContext, type AtmospherePlayer } from './atmospherePlayer';
+import { createAtmospherePlayer, type AtmospherePlayer } from './atmospherePlayer';
 
 export function useGiftAtmosphere(atmosphere?: GiftAtmosphere) {
   const player = useRef<AtmospherePlayer | null>(null);
@@ -20,7 +20,7 @@ export function useGiftAtmosphere(atmosphere?: GiftAtmosphere) {
   const activate = () => {
     if (!atmosphere) return;
 
-    player.current ??= createAtmospherePlayer(atmosphere, createBrowserAudioContext);
+    player.current ??= createAtmospherePlayer(atmosphere);
     void player.current.start()
       .then(() => setIsActive(true))
       .catch(() => {

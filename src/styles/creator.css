@@ -1369,6 +1369,11 @@ textarea:focus-visible {
 }
 
 .studio-preview-card {
+  --preview-ink: var(--color-page-ink);
+  --preview-ink-muted: var(--color-page-ink-muted);
+  --preview-paper: var(--color-paper);
+  --preview-paper-ink: var(--color-paper-ink);
+  --preview-paper-ink-muted: var(--color-paper-ink-muted);
   position: relative;
   overflow: hidden;
   display: grid;
@@ -1379,7 +1384,7 @@ textarea:focus-visible {
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.45), transparent 36%),
     linear-gradient(180deg, color-mix(in srgb, var(--color-surface-elevated) 90%, white), color-mix(in srgb, var(--color-page) 76%, var(--color-paper) 24%));
-  color: var(--color-ink);
+  color: var(--preview-ink);
   box-shadow: var(--shadow-floating-surface);
   transition: background var(--motion-standard) var(--ease-standard), color var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
 }
@@ -1404,7 +1409,9 @@ textarea:focus-visible {
 
 .studio-inline-preview-button {
   padding-inline: 1rem;
-  background: rgba(255, 255, 255, 0.66);
+  border-color: color-mix(in srgb, var(--preview-paper-ink) 16%, transparent);
+  background: color-mix(in srgb, var(--preview-paper) 88%, white);
+  color: var(--preview-paper-ink);
 }
 
 .studio-preview-object {
@@ -1530,7 +1537,7 @@ textarea:focus-visible {
 
 .studio-preview-copy p {
   margin: 0;
-  color: var(--color-ink-muted);
+  color: var(--preview-ink-muted);
   line-height: 1.65;
 }
 
@@ -1539,7 +1546,8 @@ textarea:focus-visible {
   gap: 0.2rem;
   padding: 0.85rem 0.95rem;
   border-left: 2px solid var(--color-accent);
-  background: color-mix(in srgb, var(--color-paper) 48%, transparent);
+  background: color-mix(in srgb, var(--preview-paper) 88%, white);
+  color: var(--preview-paper-ink);
   transition: background var(--motion-standard) var(--ease-standard), border-color var(--motion-standard) var(--ease-standard);
 }
 
@@ -1550,7 +1558,7 @@ textarea:focus-visible {
 }
 
 .studio-preview-mood small {
-  color: var(--color-ink-muted);
+  color: var(--preview-paper-ink-muted);
   font-size: 0.8rem;
   line-height: 1.4;
 }
@@ -1566,6 +1574,10 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
+.studio-preview-mood .ticket-inline-label {
+  color: var(--color-accent-strong);
+}
+
 .studio-preview-hint {
   position: relative;
   z-index: 1;
@@ -1574,10 +1586,10 @@ textarea:focus-visible {
   align-items: start;
   margin: 0;
   padding: 0.8rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 14%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--preview-paper-ink) 14%, var(--color-border));
   border-radius: var(--radius-small);
-  background: color-mix(in srgb, var(--color-paper) 48%, transparent);
-  color: var(--color-ink-muted);
+  background: color-mix(in srgb, var(--preview-paper) 88%, white);
+  color: var(--preview-paper-ink-muted);
   font-size: 0.82rem;
   line-height: 1.45;
 }
@@ -1591,7 +1603,7 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
   padding-top: var(--space-md);
-  border-top: 1px solid rgba(59, 44, 47, 0.09);
+  border-top: 1px solid color-mix(in srgb, var(--preview-ink) 14%, transparent);
 }
 
 .studio-preview-ticket > div {
@@ -1930,10 +1942,6 @@ textarea:focus-visible {
 @media (min-width: 1024px) {
   .studio-shell {
     padding-inline: var(--space-lg);
-  }
-
-  .theme-mood-picker {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .studio-preview-object {
