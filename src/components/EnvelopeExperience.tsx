@@ -4,6 +4,8 @@ import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
 import { Letter } from './runtime/Letter';
 import { Memories } from './runtime/Memories';
+import { AtmosphereControl } from './runtime/AtmosphereControl';
+import { useGiftAtmosphere } from './runtime/useGiftAtmosphere';
 import {
   createSealHoldController,
   getRuntimeTransitionDelay,
@@ -46,6 +48,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [isMemoryRevealing, setIsMemoryRevealing] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
+  const giftAtmosphere = useGiftAtmosphere(gift.atmosphere);
   prefersReducedMotionRef.current = prefersReducedMotion;
   const holdController = useRef<SealHoldController | null>(null);
   const feedbackTimer = useRef<number | null>(null);
@@ -131,7 +134,10 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     if (stage !== 'sealed') return false;
     setFailedAttempt(false);
     const started = holdController.current?.start() ?? false;
-    if (started) setIsHolding(true);
+    if (started) {
+      setIsHolding(true);
+      giftAtmosphere.activate();
+    }
     return started;
   };
 
@@ -202,6 +208,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   if (stage === 'revealed') {
     return (
       <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
+        {giftAtmosphere.isActive && <AtmosphereControl isMuted={giftAtmosphere.isMuted} onToggle={giftAtmosphere.toggleMuted} />}
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
@@ -209,6 +216,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   return (
     <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
+      {giftAtmosphere.isActive && <AtmosphereControl isMuted={giftAtmosphere.isMuted} onToggle={giftAtmosphere.toggleMuted} />}
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />

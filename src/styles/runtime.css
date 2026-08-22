@@ -81,6 +81,34 @@
     linear-gradient(180deg, color-mix(in srgb, var(--color-page) 82%, white) 0%, var(--color-page) 100%);
 }
 
+.atmosphere-control {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + var(--space-md));
+  right: var(--space-md);
+  z-index: 5;
+  min-height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.56rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-page-ink) 16%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-page) 72%, transparent);
+  color: var(--color-page-ink);
+  box-shadow: var(--shadow-subtle-ui);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(14px);
+}
+
+.atmosphere-control span {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 
 .runtime-failure {
   min-height: 100vh;

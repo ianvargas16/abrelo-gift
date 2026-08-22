@@ -978,6 +978,81 @@ textarea:focus-visible {
   line-height: 1.5;
 }
 
+.sound-atmosphere-intro {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+
+.sound-atmosphere-intro p {
+  max-width: 52ch;
+  margin: var(--space-xs) 0 0;
+  color: var(--color-ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.sound-atmosphere-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.sound-atmosphere-choice {
+  min-width: 0;
+  min-height: 5.6rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.8rem;
+  border: 1px solid rgba(59, 44, 47, 0.1);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-surface-elevated) 88%, white);
+  color: var(--color-ink);
+  text-align: left;
+  transition: transform var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), box-shadow var(--motion-standard) var(--ease-standard);
+}
+
+.sound-atmosphere-choice:hover {
+  transform: translateY(-1px);
+}
+
+.sound-atmosphere-choice.selected {
+  border-color: color-mix(in srgb, var(--color-accent) 48%, var(--color-border));
+  background: color-mix(in srgb, var(--color-paper) 78%, white);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 12%, transparent), var(--shadow-subtle-ui);
+}
+
+.sound-atmosphere-mark {
+  width: 2.45rem;
+  height: 2.45rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+  color: var(--color-accent-strong);
+  font-family: var(--font-editorial);
+  font-size: 1.2rem;
+}
+
+.sound-atmosphere-choice > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.sound-atmosphere-choice strong {
+  font-size: 0.9rem;
+}
+
+.sound-atmosphere-choice small {
+  color: var(--color-ink-subtle);
+  font-size: 0.71rem;
+  line-height: 1.35;
+}
+
 .theme-choice {
   min-width: 0;
   min-height: 6.25rem;
@@ -1478,6 +1553,17 @@ textarea:focus-visible {
   color: var(--color-ink-muted);
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.studio-preview-sound {
+  width: fit-content;
+  margin-top: var(--space-xs);
+  color: var(--color-accent-strong);
+  font-family: var(--font-label);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 .studio-preview-hint {
@@ -2001,6 +2087,10 @@ textarea:focus-visible {
   }
 
   .theme-mood-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sound-atmosphere-picker {
     grid-template-columns: minmax(0, 1fr);
   }
 

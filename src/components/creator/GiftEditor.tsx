@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import type { GiftConfig, MemorySection } from '../../models/giftConfig';
+import type { GiftAtmosphere } from '../../models/giftAtmosphere';
 import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
 import { readMemoryImageFile } from './readMemoryImageFile';
 import type { GiftProject } from '../../projects/giftProject';
@@ -9,6 +10,7 @@ import { CreationGuide } from './CreationGuide';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { getThemeMood, ThemeMoodPicker } from './ThemeMoodPicker';
+import { AtmospherePicker, getAtmosphereOption } from './AtmospherePicker';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -52,6 +54,15 @@ export function GiftEditor({
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
   const setLetter = <K extends keyof GiftConfig['letter']>(key: K, value: GiftConfig['letter'][K]) => onChange({ ...gift, letter: { ...gift.letter, [key]: value } });
   const setVoucher = <K extends keyof GiftConfig['gift']>(key: K, value: GiftConfig['gift'][K]) => onChange({ ...gift, gift: { ...gift.gift, [key]: value } });
+  const setAtmosphere = (atmosphere: GiftAtmosphere | undefined) => {
+    if (atmosphere) {
+      onChange({ ...gift, atmosphere });
+      return;
+    }
+
+    const { atmosphere: _removedAtmosphere, ...giftWithoutAtmosphere } = gift;
+    onChange(giftWithoutAtmosphere);
+  };
   const memories: MemorySection = gift.memories ?? { enabled: false, title: '', items: [] };
   const setMemories = (nextMemories: MemorySection) => onChange({ ...gift, memories: nextMemories });
   const recipientLabel = gift.recipientName.trim() || 'Para ti';
@@ -63,6 +74,7 @@ export function GiftEditor({
   const hasMessage = Boolean(gift.letter.message.trim());
   const hasGift = Boolean(gift.gift.title.trim());
   const activeTheme = getThemeMood(gift.theme);
+  const activeAtmosphere = getAtmosphereOption(gift.atmosphere);
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -374,13 +386,21 @@ export function GiftEditor({
                 <div className="studio-section-heading">
                   <span>06</span>
                   <div>
-                    <h3>Atmósfera</h3>
-                    <p>Elige el ánimo, la presencia y la intensidad de la sorpresa.</p>
+                    <h3>Presencia</h3>
+                    <p>Elige el ánimo visual y, si quieres, una capa sonora discreta.</p>
                   </div>
                 </div>
 
                 <p className="theme-picker-intro">Esta elección se refleja al instante en el sobre, el papel y el ticket de tu vista previa.</p>
                 <ThemeMoodPicker value={gift.theme} onChange={(theme) => setRoot('theme', theme)} />
+
+                <div className="sound-atmosphere-intro">
+                  <div>
+                    <span className="field-label">Sonido opcional</span>
+                    <p>Empieza únicamente cuando la persona toque el sello. Nunca se reproduce al abrir el enlace.</p>
+                  </div>
+                </div>
+                <AtmospherePicker value={gift.atmosphere} onChange={setAtmosphere} />
               </section>
             </div>
           </div>
@@ -426,6 +446,7 @@ export function GiftEditor({
                 <span className="ticket-inline-label">Atmósfera</span>
                 <strong>{activeTheme.label}</strong>
                 <small>{activeTheme.style}</small>
+                <span className="studio-preview-sound">{activeAtmosphere.mark} {activeAtmosphere.label}</span>
               </div>
 
               <p className="studio-preview-hint"><span aria-hidden="true">✦</span> Presiona el sello, abre el sobre y descubre el detalle.</p>

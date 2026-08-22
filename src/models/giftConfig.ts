@@ -1,4 +1,5 @@
 import { assertMemoryImageDataUrl, MAX_MEMORY_ITEMS } from './memoryMedia';
+import { isGiftAtmosphere, type GiftAtmosphere } from './giftAtmosphere';
 
 export const GIFT_FILE_SCHEMA = 'abrelo.gift';
 export const GIFT_FILE_VERSION = 1 as const;
@@ -42,6 +43,7 @@ export interface GiftConfig {
   recipientName: string;
   senderName: string;
   theme: ThemeId;
+  atmosphere?: GiftAtmosphere;
   intro: GiftIntro;
   letter: GiftLetter;
   memories?: MemorySection;
@@ -106,6 +108,11 @@ function assertTheme(value: unknown): ThemeId {
   }
 
   throw new Error('Tema inválido');
+}
+
+function assertAtmosphere(value: unknown): GiftAtmosphere {
+  if (isGiftAtmosphere(value)) return value;
+  throw new Error('Atmósfera sonora inválida');
 }
 
 function assertGiftType(value: unknown): GiftType {
@@ -174,12 +181,14 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
   const gift = assertRecord(source.gift, 'Regalo inválido');
 
   const memories = source.memories === undefined ? undefined : parseMemorySection(source.memories);
+  const atmosphere = source.atmosphere === undefined ? undefined : assertAtmosphere(source.atmosphere);
 
   return {
     version: assertGiftConfigVersion(source.version, 'gift.version'),
     recipientName: assertString(source.recipientName, 'recipientName'),
     senderName: assertString(source.senderName, 'senderName'),
     theme: assertTheme(source.theme),
+    ...(atmosphere === undefined ? {} : { atmosphere }),
     intro: {
       eyebrow: assertString(intro.eyebrow, 'intro.eyebrow'),
       title: assertString(intro.title, 'intro.title'),

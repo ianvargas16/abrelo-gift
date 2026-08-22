@@ -13,6 +13,16 @@ describe('giftTemplates', () => {
     ]);
   });
 
+  it('uses optional soundscapes for new guided templates while leaving the blank canvas silent', () => {
+    expect(giftTemplates.map((template) => template.createGift().atmosphere)).toEqual([
+      'celebration',
+      'romantic',
+      'soft',
+      'soft',
+      undefined,
+    ]);
+  });
+
   it.each(giftTemplates)('creates a valid GiftConfig for $name', (template) => {
     const gift = template.createGift();
 
