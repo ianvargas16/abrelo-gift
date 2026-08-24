@@ -60,7 +60,7 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
   }
 
   if (environment !== 'development') {
-    for (const key of ['vars', 'd1_databases', 'assets']) {
+    for (const key of ['vars', 'd1_databases', 'r2_buckets', 'assets']) {
       if (!Object.hasOwn(target, key)) {
         issues.push(`${environment} must explicitly configure non-inheritable ${key}`);
       }
@@ -109,6 +109,25 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
     issues.push(`${environment} D1 database_name must clearly identify the environment`);
   }
 
+  const buckets = target.r2_buckets;
+
+  if (!Array.isArray(buckets) || buckets.length !== 1) {
+    issues.push(`${environment} must configure exactly one R2 bucket`);
+  }
+
+  const bucket = Array.isArray(buckets) ? buckets[0] : undefined;
+
+  if (bucket?.binding !== 'GIFT_ASSETS') {
+    issues.push(`${environment} R2 binding must be GIFT_ASSETS`);
+  }
+
+  if (
+    typeof bucket?.bucket_name !== 'string'
+    || !bucket.bucket_name.toLowerCase().includes(environment)
+  ) {
+    issues.push(`${environment} R2 bucket_name must clearly identify the environment`);
+  }
+
   const assets = target.assets;
 
   if (
@@ -135,7 +154,7 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
     }
   }
 
-  return { issues, target, database, runtimeConfig };
+  return { issues, target, database, bucket, runtimeConfig };
 }
 
 export function validateWranglerStructure(config) {
@@ -161,6 +180,10 @@ export function validateWranglerStructure(config) {
 
   if (staging?.database?.database_id === production?.database?.database_id) {
     issues.push('staging and production must not share a D1 database ID');
+  }
+
+  if (staging?.bucket?.bucket_name === production?.bucket?.bucket_name) {
+    issues.push('staging and production must not share an R2 bucket name');
   }
 
   if (staging?.runtimeConfig?.publicBaseUrl === production?.runtimeConfig?.publicBaseUrl) {

@@ -14,21 +14,25 @@ Recipient
   -> GET /g/<opaque-id>
   -> the same environment Worker
   -> dist-runtime/runtime.html + safely injected GiftFile
+
+Future optional media
+  -> private environment-specific R2 bucket
+  -> Worker-owned /g/<opaque-id>/audio route
 ```
 
-The Worker serves the existing recipient Runtime. Staging and production must never share D1, public origins, Creator origins, or Worker deployments.
+The Worker serves the existing recipient Runtime. Staging and production must never share D1, R2, public origins, Creator origins, or Worker deployments.
 
 ## Environment model
 
-| Environment | Worker | D1 | URL policy | Purpose |
+| Environment | Worker | D1 | R2 | URL policy | Purpose |
 | --- | --- | --- | --- | --- |
-| development | `abrelo-publish-development` | local D1 simulator | HTTP allowed only for local origins | local development |
-| staging | `abrelo-publish-staging` | `abrelo-published-gifts-staging` | non-local HTTPS | first remote release and verification |
-| production | `abrelo-publish-production` | `abrelo-published-gifts-production` | non-local HTTPS | controlled public operation |
+| development | `abrelo-publish-development` | local D1 simulator | `abrelo-gift-assets-development` | HTTP allowed only for local origins | local development |
+| staging | `abrelo-publish-staging` | `abrelo-published-gifts-staging` | `abrelo-gift-assets-staging` | non-local HTTPS | first remote release and verification |
+| production | `abrelo-publish-production` | `abrelo-published-gifts-production` | `abrelo-gift-assets-production` | non-local HTTPS | controlled public operation |
 
-`ENVIRONMENT`, `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, the static asset binding, and D1 are declared separately for each Wrangler environment. Wrangler bindings and `vars` are non-inheritable; do not remove the repeated environment blocks.
+`ENVIRONMENT`, `PUBLIC_BASE_URL`, `ALLOWED_ORIGINS`, the static asset binding, D1, and the private `GIFT_ASSETS` R2 binding are declared separately for each Wrangler environment. Wrangler bindings and `vars` are non-inheritable; do not remove the repeated environment blocks.
 
-The committed staging and production values under `.invalid` and `REPLACE_WITH_...` are deliberate placeholders. `npm run validate:deploy:staging` and `npm run validate:deploy:production` must fail until real resources are configured.
+Staging is provisioned and must pass its deployment preflight. Production values under `.invalid` and `REPLACE_WITH_...` are deliberate placeholders; `npm run validate:deploy:production` must fail until independent production resources are configured.
 
 ## Cloudflare provisioning
 
@@ -39,6 +43,13 @@ Create independent databases:
 ```bash
 npx wrangler d1 create abrelo-published-gifts-staging
 npx wrangler d1 create abrelo-published-gifts-production
+```
+
+Create independent private buckets. Do not enable public bucket access or use bucket URLs in GiftFiles:
+
+```bash
+npx wrangler r2 bucket create abrelo-gift-assets-staging
+npx wrangler r2 bucket create abrelo-gift-assets-production
 ```
 
 Copy each returned database ID into only its matching `wrangler.jsonc` environment. Do not copy the staging ID into production or production data into a development machine.

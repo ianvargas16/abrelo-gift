@@ -16,6 +16,12 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "GIFT_ASSETS",
+      "bucket_name": "abrelo-gift-assets-development"
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "development",
     "PUBLIC_BASE_URL": "http://127.0.0.1:8787",
@@ -37,6 +43,12 @@
           "migrations_dir": "migrations"
         }
       ],
+      "r2_buckets": [
+        {
+          "binding": "GIFT_ASSETS",
+          "bucket_name": "abrelo-gift-assets-staging"
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "staging",
         "PUBLIC_BASE_URL": "https://abrelo-publish-staging.ianvargas16.workers.dev",
@@ -56,6 +68,12 @@
           "database_name": "abrelo-published-gifts-production",
           "database_id": "REPLACE_WITH_PRODUCTION_D1_DATABASE_ID",
           "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "GIFT_ASSETS",
+          "bucket_name": "abrelo-gift-assets-production"
         }
       ],
       "vars": {
