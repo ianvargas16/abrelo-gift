@@ -3,6 +3,7 @@ export const OPERATIONAL_ERROR_CATEGORIES = [
   'runtime_shell_failed',
   'runtime_injection_failed',
   'publish_persistence_failed',
+  'gift_asset_cleanup_failed',
   'invalid_runtime_config',
 ] as const;
 

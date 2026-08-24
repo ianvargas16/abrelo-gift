@@ -44,7 +44,7 @@ Optional binary assets are reserved for a private, environment-specific `GIFT_AS
 
 `POST /api/gifts` remains JSON-only for silent gifts. Audio publishing uses multipart form data with exactly one `gift` JSON part and one optional `audio` part. The Worker accepts only `audio/mpeg` and `audio/mp4`, limits audio to 5 MiB and the complete request to a bounded size, generates the private R2 key itself, and never returns keys or bucket URLs.
 
-The Worker validates every part before writing. It writes the private R2 object before the immutable D1 snapshot and deletes that object if snapshot persistence fails. Recipient playback is available only through `GET /g/<opaque-id>/audio`; the bucket has no public access, listing, or search route.
+The Worker validates every part, including a lightweight MP3 or MP4/M4A file-signature check, before writing. It writes the private R2 object before the immutable D1 snapshot and deletes that object if snapshot persistence fails. A failed cleanup emits only a request-correlated operational event; operators must reconcile any resulting private orphan through controlled R2 operations. Recipient playback is available only through `GET /g/<opaque-id>/audio`; the bucket has no public access, listing, or search route.
 
 ## Configuration
 

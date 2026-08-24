@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+export function getGiftAudioUrl(hasAudio: boolean, pathname: string): string | null {
+  return hasAudio ? `${pathname.replace(/\/$/u, '')}/audio` : null;
+}
+
 export function useGiftAudio(hasAudio: boolean) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -7,9 +11,10 @@ export function useGiftAudio(hasAudio: boolean) {
   useEffect(() => () => { audio.current?.pause(); audio.current = null; }, []);
   const activate = () => {
     if (!hasAudio || audio.current) return;
-    const source = new Audio(`${window.location.pathname.replace(/\/$/u, '')}/audio`);
+    const source = new Audio();
     source.loop = true;
     source.preload = 'none';
+    source.src = getGiftAudioUrl(true, window.location.pathname)!;
     audio.current = source;
     void source.play().then(() => setIsActive(true)).catch(() => { audio.current = null; });
   };

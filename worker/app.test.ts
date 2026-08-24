@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../src/config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA, parseGiftFile } from '../src/models/giftConfig';
 import { createPublishApp } from './app';
+import { MAX_GIFT_AUDIO_BYTES, type GiftAudioMimeType } from '../src/models/giftAudio';
+import { MAX_MULTIPART_BYTES } from './giftAudioPublishing';
 import {
   GIFT_ID_PATTERN,
   injectPublicMetadataIntoRuntimeHtml,
   MAX_GIFT_FILE_BYTES,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
-import type { OperationalErrorCategory } from './operationalLogging';
+import type { OperationalErrorCategory, OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository, PublishedGiftSnapshot } from './publishedGiftRepository';
 import { parseRuntimeConfig } from './runtimeConfig.js';
 
@@ -17,8 +19,10 @@ const runtimeHtml = `<!doctype html>
 
 class MemoryPublishedGiftRepository implements PublishedGiftRepository {
   private readonly snapshots = new Map<string, PublishedGiftSnapshot>();
+  createCalls = 0;
 
   async create(snapshot: PublishedGiftSnapshot): Promise<void> {
+    this.createCalls += 1;
     this.snapshots.set(snapshot.id, structuredClone(snapshot));
   }
 
@@ -28,10 +32,56 @@ class MemoryPublishedGiftRepository implements PublishedGiftRepository {
   }
 }
 
-function createTestContext(overrides: { publicBaseUrl?: string; allowedOrigins?: string } = {}) {
-  const repository = new MemoryPublishedGiftRepository();
+class MemoryGiftAssets {
+  readonly objects = new Map<string, { body: Uint8Array; contentType?: string }>();
+  putCalls = 0;
+  deleteCalls = 0;
+  failPut = false;
+  failDelete = false;
+
+  async put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object> {
+    this.putCalls += 1;
+    if (this.failPut) throw new Error('R2 unavailable');
+    const body = new Uint8Array(await new Response(value).arrayBuffer());
+    this.objects.set(key, { body });
+    return {} as R2Object;
+  }
+
+  async get(key: string): Promise<R2ObjectBody | null> {
+    const object = this.objects.get(key);
+    if (!object) return null;
+    return {
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(object.body);
+          controller.close();
+        },
+      }),
+      size: object.body.byteLength,
+    } as R2ObjectBody;
+  }
+
+  async delete(key: string): Promise<void> {
+    this.deleteCalls += 1;
+    if (this.failDelete) throw new Error('R2 delete unavailable');
+    this.objects.delete(key);
+  }
+}
+
+type TestContextOverrides = {
+  publicBaseUrl?: string;
+  allowedOrigins?: string;
+  repository?: PublishedGiftRepository;
+  giftAssets?: MemoryGiftAssets;
+  logger?: OperationalLogger;
+};
+
+function createTestContext(overrides: TestContextOverrides = {}) {
+  const repository = overrides.repository ?? new MemoryPublishedGiftRepository();
+  const giftAssets = overrides.giftAssets ?? new MemoryGiftAssets();
   const app = createPublishApp({
     repository,
+    giftAssets,
     assets: {
       async fetch() {
         return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
@@ -44,9 +94,10 @@ function createTestContext(overrides: { publicBaseUrl?: string; allowedOrigins?:
     }),
     requestIdFactory: () => 'request-test',
     now: () => new Date('2026-08-20T12:00:00.000Z'),
+    logger: overrides.logger,
   });
 
-  return { app, repository };
+  return { app, repository, giftAssets };
 }
 
 function publishRequest(body: unknown, origin = 'http://localhost:1420'): Request {
@@ -64,6 +115,29 @@ async function publish(app: ReturnType<typeof createPublishApp>, gift = defaultG
   const response = await app(publishRequest(createGiftFile(gift)));
   const result = await response.json() as { id: string; url: string };
   return { response, result };
+}
+
+function createAudioFile(size: number, mimeType: GiftAudioMimeType = 'audio/mpeg'): File {
+  const bytes = new Uint8Array(size);
+  if (mimeType === 'audio/mpeg') {
+    bytes.set([0x49, 0x44, 0x33, 0x04]);
+  } else {
+    bytes.set([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20]);
+  }
+  return new File([bytes], mimeType === 'audio/mpeg' ? 'gift.mp3' : 'gift.m4a', { type: mimeType });
+}
+
+function multipartPublishRequest(
+  entries: Array<[string, string | File]>,
+  body?: BodyInit,
+): Request {
+  const form = new FormData();
+  for (const [name, value] of entries) form.append(name, value);
+  return new Request('https://api.example/api/gifts', {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:1420' },
+    body: body ?? form,
+  });
 }
 
 describe('publish Worker', () => {
@@ -346,8 +420,203 @@ describe('publish Worker', () => {
       recipientName: 'Sensitive recipient',
     })));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(events).toEqual([{ category: 'publish_persistence_failed', requestId: 'request-publish' }]);
     expect(JSON.stringify(events)).not.toContain('Sensitive recipient');
+  });
+
+  it('keeps JSON-only publishing unchanged and accepts legacy GiftFiles without audio', async () => {
+    const { app, giftAssets } = createTestContext();
+    const { response, result } = await publish(app, { ...defaultGift, atmosphere: 'romantic' });
+
+    expect(response.status).toBe(201);
+    expect(result.url).toBe(`https://gifts.example/g/${result.id}`);
+    expect(giftAssets.putCalls).toBe(0);
+  });
+
+  it('publishes one valid multipart audio asset and keeps internal storage details private', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+    const result = await response.json() as { id: string; url: string };
+    const snapshot = await repository.getById(result.id);
+
+    expect(response.status).toBe(201);
+    expect(snapshot?.giftFile.gift.audio).toEqual({ mimeType: 'audio/mpeg' });
+    expect(giftAssets.putCalls).toBe(1);
+    expect(JSON.stringify(result)).not.toContain('gifts/');
+    expect(JSON.stringify(result)).not.toContain('abrelo-gift-assets');
+  });
+
+  it('accepts exactly 5 MiB audio and rejects one byte more before writes', async () => {
+    const accepted = createTestContext();
+    const exact = await accepted.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(MAX_GIFT_AUDIO_BYTES)],
+    ]));
+    const rejected = createTestContext();
+    const oversized = await rejected.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(MAX_GIFT_AUDIO_BYTES + 1)],
+    ]));
+
+    expect(exact.status).toBe(201);
+    expect(oversized.status).toBe(413);
+    expect(rejected.giftAssets.putCalls).toBe(0);
+    expect((rejected.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('rejects oversized multipart bodies before parsing or storage writes', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(new Request('https://api.example/api/gifts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=abrelo',
+        Origin: 'http://localhost:1420',
+      },
+      body: new Uint8Array(MAX_MULTIPART_BYTES + 1),
+    }));
+
+    expect(response.status).toBe(413);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('rejects unsupported or mismatched audio MIME types before writes', async () => {
+    const unsupported = createTestContext();
+    const unsupportedResponse = await unsupported.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', new File([new Uint8Array([0x49, 0x44, 0x33])], 'gift.wav', { type: 'audio/wav' })],
+    ]));
+    const mismatched = createTestContext();
+    const mismatchedResponse = await mismatched.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', new File(['not an mp3'], 'gift.mp3', { type: 'audio/mpeg' })],
+    ]));
+
+    expect(unsupportedResponse.status).toBe(415);
+    expect(mismatchedResponse.status).toBe(415);
+    expect(unsupported.giftAssets.putCalls + mismatched.giftAssets.putCalls).toBe(0);
+    expect((unsupported.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+    expect((mismatched.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('rejects duplicate audio parts and unexpected multipart fields before writes', async () => {
+    const duplicate = createTestContext();
+    const duplicateResponse = await duplicate.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+      ['audio', createAudioFile(32)],
+    ]));
+    const unexpected = createTestContext();
+    const unexpectedResponse = await unexpected.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['notes', 'unexpected'],
+    ]));
+
+    expect(duplicateResponse.status).toBe(400);
+    expect(unexpectedResponse.status).toBe(400);
+    expect(duplicate.giftAssets.putCalls + unexpected.giftAssets.putCalls).toBe(0);
+    expect((duplicate.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+    expect((unexpected.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('rejects malformed GiftFiles before any R2 or D1 write', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify({ schema: GIFT_FILE_SCHEMA, version: 1, gift: {} })],
+      ['audio', createAudioFile(32)],
+    ]));
+
+    expect(response.status).toBe(400);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('does not persist a D1 snapshot when R2 upload fails', async () => {
+    const giftAssets = new MemoryGiftAssets();
+    giftAssets.failPut = true;
+    const { app, repository } = createTestContext({ giftAssets });
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+    expect(giftAssets.deleteCalls).toBe(0);
+  });
+
+  it('cleans up the R2 object after a D1 failure', async () => {
+    const giftAssets = new MemoryGiftAssets();
+    const repository: PublishedGiftRepository = {
+      async create() { throw new Error('D1 unavailable'); },
+      async getById() { return null; },
+    };
+    const { app } = createTestContext({ repository, giftAssets });
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect(giftAssets.deleteCalls).toBe(1);
+    expect(giftAssets.objects.size).toBe(0);
+  });
+
+  it('logs a privacy-safe event when R2 cleanup after a D1 failure also fails', async () => {
+    const events: Array<{ category: OperationalErrorCategory; requestId: string }> = [];
+    const giftAssets = new MemoryGiftAssets();
+    giftAssets.failDelete = true;
+    const repository: PublishedGiftRepository = {
+      async create() { throw new Error('D1 unavailable'); },
+      async getById() { return null; },
+    };
+    const { app } = createTestContext({
+      repository,
+      giftAssets,
+      logger: { error(category: OperationalErrorCategory, requestId: string) { events.push({ category, requestId }); } },
+    });
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect(giftAssets.deleteCalls).toBe(1);
+    expect(events).toEqual([
+      { category: 'gift_asset_cleanup_failed', requestId: 'request-test' },
+      { category: 'publish_persistence_failed', requestId: 'request-test' },
+    ]);
+    expect(JSON.stringify(events)).not.toContain('gifts/');
+  });
+
+  it('returns 404 for unknown gifts and silent gifts on the audio route', async () => {
+    const { app } = createTestContext();
+    const unknown = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}/audio`));
+    const { result } = await publish(app);
+    const silent = await app(new Request(`${result.url}/audio`));
+
+    expect(unknown.status).toBe(404);
+    expect(silent.status).toBe(404);
+  });
+
+  it('streams audio through safe headers without exposing the private R2 key', async () => {
+    const { app } = createTestContext();
+    const published = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32, 'audio/mp4')],
+    ]));
+    const { url } = await published.json() as { url: string };
+    const response = await app(new Request(`${url}/audio`));
+    const body = await response.arrayBuffer();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('audio/mp4');
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect(body.byteLength).toBe(32);
+    expect(response.url).not.toContain('gifts/');
   });
 });

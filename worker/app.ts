@@ -6,7 +6,7 @@ import {
   injectPublicMetadataIntoRuntimeHtml,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
-import { getGiftAudioKey, MalformedPublishRequestError, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
+import { getGiftAudioKey, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
 import { createRequestId, type OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository } from './publishedGiftRepository';
 import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
@@ -14,7 +14,11 @@ import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
 interface RuntimeAssets {
   fetch(request: Request): Promise<Response>;
 }
-interface GiftAssets { put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object>; get(key: string): Promise<R2ObjectBody | null>; delete(key: string): Promise<void>; }
+interface GiftAssets {
+  put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object>;
+  get(key: string): Promise<R2ObjectBody | null>;
+  delete(key: string): Promise<void>;
+}
 
 export interface PublishAppOptions {
   repository: PublishedGiftRepository;
@@ -179,30 +183,41 @@ async function publishGift(
 
   const id = generateOpaqueGiftId();
   const audioKey = parsed.audio ? getGiftAudioKey(id) : null;
+  const logger = options.logger ?? silentLogger;
+  const gift = parsed.audio ? { ...parsed.giftFile.gift, audio: parsed.audio.metadata } : parsed.giftFile.gift;
 
   try {
-    const publicUrl = createPublicGiftUrl(options.runtimeConfig, id);
-    const gift = parsed.audio ? { ...parsed.giftFile.gift, audio: parsed.audio.metadata } : parsed.giftFile.gift;
     if (parsed.audio && audioKey) {
       if (!options.giftAssets) throw new Error('gift asset storage unavailable');
       await options.giftAssets.put(audioKey, parsed.audio.file.stream(), { httpMetadata: { contentType: parsed.audio.metadata.mimeType } });
     }
+  } catch {
+    logger.error('publish_persistence_failed', requestId);
+    return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
+  }
 
+  try {
     await options.repository.create({
       id,
       giftFile: createGiftFile(gift),
       createdAt: (options.now ?? (() => new Date()))().toISOString(),
     });
-
-    return jsonResponse({
-      id,
-      url: publicUrl,
-    }, 201, allowedOrigin ?? undefined);
   } catch {
-    if (audioKey) await options.giftAssets?.delete(audioKey).catch(() => undefined);
-    (options.logger ?? silentLogger).error('publish_persistence_failed', requestId);
-    return jsonResponse({ error: API_ERROR_MESSAGE }, 500, allowedOrigin ?? undefined);
+    if (audioKey && options.giftAssets) {
+      try {
+        await options.giftAssets.delete(audioKey);
+      } catch {
+        logger.error('gift_asset_cleanup_failed', requestId);
+      }
+    }
+    logger.error('publish_persistence_failed', requestId);
+    return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
   }
+
+  return jsonResponse({
+    id,
+    url: createPublicGiftUrl(options.runtimeConfig, id),
+  }, 201, allowedOrigin ?? undefined);
 }
 
 async function serveGiftAudio(options: PublishAppOptions, id: string): Promise<Response> {
