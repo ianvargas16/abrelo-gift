@@ -6,6 +6,7 @@ import { parseRuntimeConfig } from './runtimeConfig.js';
 interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  GIFT_ASSETS: R2Bucket;
   ENVIRONMENT: string;
   PUBLIC_BASE_URL: string;
   ALLOWED_ORIGINS: string;
@@ -25,6 +26,7 @@ function getPublishApp(env: Env): ReturnType<typeof createPublishApp> {
   const app = createPublishApp({
     repository: new D1PublishedGiftRepository(env.DB),
     assets: env.ASSETS,
+    giftAssets: env.GIFT_ASSETS,
     runtimeConfig,
     logger,
   });

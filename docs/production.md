@@ -153,6 +153,8 @@ Start with a rule matching exactly:
 - initial threshold: 10 requests per 10 minutes per IP
 - initial action: monitor first, then use a managed challenge or temporary block after observing legitimate traffic
 
+When custom audio publishing is enabled, apply the same edge protection to multipart `POST /api/gifts`, monitor request-body size near 5 MiB, and investigate bursts of failed uploads. Do not use D1 as a per-request upload rate limiter: that turns abuse protection into a database cost-amplification path.
+
 Monitor rejection rates and shared-network behavior before tightening. IP limits can affect families, schools, offices, and carrier NAT users. When accounts exist, replace coarse anonymous characteristics with authenticated user-based limits. Keep the Worker 64 KiB limit, strict GiftFile validation, method restrictions, exact CORS, generic errors, and no-list behavior enabled.
 
 ## Production data safety

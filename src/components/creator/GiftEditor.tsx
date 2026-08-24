@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
+import { MAX_GIFT_AUDIO_BYTES, isGiftAudioMimeType } from '../../models/giftAudio';
 import type { GiftConfig, MemorySection } from '../../models/giftConfig';
-import type { GiftAtmosphere } from '../../models/giftAtmosphere';
 import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
 import { readMemoryImageFile } from './readMemoryImageFile';
 import type { GiftProject } from '../../projects/giftProject';
@@ -10,7 +10,6 @@ import { CreationGuide } from './CreationGuide';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { getThemeMood, ThemeMoodPicker } from './ThemeMoodPicker';
-import { AtmospherePicker, getAtmosphereOption } from './AtmospherePicker';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -50,19 +49,12 @@ export function GiftEditor({
   onDeleteProject,
 }: GiftEditorProps) {
   const [memoryError, setMemoryError] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioError, setAudioError] = useState('');
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
   const setLetter = <K extends keyof GiftConfig['letter']>(key: K, value: GiftConfig['letter'][K]) => onChange({ ...gift, letter: { ...gift.letter, [key]: value } });
   const setVoucher = <K extends keyof GiftConfig['gift']>(key: K, value: GiftConfig['gift'][K]) => onChange({ ...gift, gift: { ...gift.gift, [key]: value } });
-  const setAtmosphere = (atmosphere: GiftAtmosphere | undefined) => {
-    if (atmosphere) {
-      onChange({ ...gift, atmosphere });
-      return;
-    }
-
-    const { atmosphere: _removedAtmosphere, ...giftWithoutAtmosphere } = gift;
-    onChange(giftWithoutAtmosphere);
-  };
   const memories: MemorySection = gift.memories ?? { enabled: false, title: '', items: [] };
   const setMemories = (nextMemories: MemorySection) => onChange({ ...gift, memories: nextMemories });
   const recipientLabel = gift.recipientName.trim() || 'Para ti';
@@ -74,7 +66,6 @@ export function GiftEditor({
   const hasMessage = Boolean(gift.letter.message.trim());
   const hasGift = Boolean(gift.gift.title.trim());
   const activeTheme = getThemeMood(gift.theme);
-  const activeAtmosphere = getAtmosphereOption(gift.atmosphere);
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -387,7 +378,7 @@ export function GiftEditor({
                   <span>06</span>
                   <div>
                     <h3>Presencia</h3>
-                    <p>Elige el ánimo visual y, si quieres, una capa sonora discreta.</p>
+                    <p>Elige el ánimo visual y decide si quieres añadir un audio personal.</p>
                   </div>
                 </div>
 
@@ -395,12 +386,14 @@ export function GiftEditor({
                 <ThemeMoodPicker value={gift.theme} onChange={(theme) => setRoot('theme', theme)} />
 
                 <div className="sound-atmosphere-intro">
-                  <div>
-                    <span className="field-label">Sonido opcional</span>
-                    <p>Empieza únicamente cuando la persona toque el sello. Nunca se reproduce al abrir el enlace.</p>
-                  </div>
+                  <div><span className="field-label">Audio especial (opcional)</span><p>Agrega una canción, mensaje de voz o audio especial para acompañar la sorpresa.</p></div>
+                  {audioFile && <p>{audioFile.name} · {(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>}
+                  <label className="file-button">{audioFile ? 'Reemplazar audio' : 'Subir audio'}
+                    <input type="file" accept="audio/mpeg,audio/mp4" onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ''; if (!file) return; if (!isGiftAudioMimeType(file.type)) { setAudioError('Usa un archivo MP3 o M4A.'); return; } if (file.size > MAX_GIFT_AUDIO_BYTES) { setAudioError('El audio no puede superar 5 MB.'); return; } setAudioFile(file); setAudioError(''); }} />
+                  </label>
+                  {audioFile && <button type="button" className="ghost-button" onClick={() => setAudioFile(null)}>Quitar audio</button>}
+                  {audioError && <p className="memory-editor-error" role="alert">{audioError}</p>}
                 </div>
-                <AtmospherePicker value={gift.atmosphere} onChange={setAtmosphere} />
               </section>
             </div>
           </div>
@@ -446,7 +439,6 @@ export function GiftEditor({
                 <span className="ticket-inline-label">Atmósfera</span>
                 <strong>{activeTheme.label}</strong>
                 <small>{activeTheme.style}</small>
-                <span className="studio-preview-sound">{activeAtmosphere.mark} {activeAtmosphere.label}</span>
               </div>
 
               <p className="studio-preview-hint"><span aria-hidden="true">✦</span> Presiona el sello, abre el sobre y descubre el detalle.</p>
@@ -469,6 +461,7 @@ export function GiftEditor({
           gift={gift}
           publication={publication}
           onPublicationChange={onPublicationChange}
+          audioFile={audioFile}
         />
 
         <footer className="studio-footer">

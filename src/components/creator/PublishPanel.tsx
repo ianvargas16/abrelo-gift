@@ -17,9 +17,10 @@ interface PublishPanelProps {
   gift: GiftConfig;
   publication: CreatorPublication | null;
   onPublicationChange: (publication: CreatorPublication) => void;
+  audioFile?: File | null;
 }
 
-export function PublishPanel({ gift, publication, onPublicationChange }: PublishPanelProps) {
+export function PublishPanel({ gift, publication, onPublicationChange, audioFile }: PublishPanelProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
@@ -82,7 +83,7 @@ export function PublishPanel({ gift, publication, onPublicationChange }: Publish
     setCopyStatus('idle');
 
     try {
-      const publishedGift = await publishGift(gift);
+      const publishedGift = await publishGift(gift, { audioFile });
       onPublicationChange(createCreatorPublication(publishedGift, gift, publication?.shareMessage));
     } catch {
       setError('No pudimos publicar el regalo. Inténtalo de nuevo.');
