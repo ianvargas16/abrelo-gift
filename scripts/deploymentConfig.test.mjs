@@ -21,11 +21,19 @@ function database(name, id) {
   }];
 }
 
+function assetsBucket(name) {
+  return [{
+    binding: 'GIFT_ASSETS',
+    bucket_name: name,
+  }];
+}
+
 function createReadyConfig() {
   return {
     name: 'abrelo-publish-development',
     assets: assets(),
     d1_databases: database('abrelo-published-gifts', 'local'),
+    r2_buckets: assetsBucket('abrelo-gift-assets-development'),
     vars: {
       ENVIRONMENT: 'development',
       PUBLIC_BASE_URL: 'http://127.0.0.1:8787',
@@ -36,6 +44,7 @@ function createReadyConfig() {
         name: 'abrelo-publish-staging',
         assets: assets(),
         d1_databases: database('abrelo-published-gifts-staging', '11111111-1111-4111-8111-111111111111'),
+        r2_buckets: assetsBucket('abrelo-gift-assets-staging'),
         vars: {
           ENVIRONMENT: 'staging',
           PUBLIC_BASE_URL: 'https://abrelo-staging.example.workers.dev',
@@ -46,6 +55,7 @@ function createReadyConfig() {
         name: 'abrelo-publish-production',
         assets: assets(),
         d1_databases: database('abrelo-published-gifts-production', '22222222-2222-4222-8222-222222222222'),
+        r2_buckets: assetsBucket('abrelo-gift-assets-production'),
         vars: {
           ENVIRONMENT: 'production',
           PUBLIC_BASE_URL: 'https://gifts.example.com',
@@ -89,11 +99,25 @@ describe('deployment configuration preflight', () => {
     expect(() => validateWranglerStructure(config)).toThrow(/explicitly configure non-inheritable d1_databases/u);
   });
 
+  it('rejects a missing remote R2 binding', () => {
+    const config = createReadyConfig();
+    delete config.env.production.r2_buckets;
+
+    expect(() => validateWranglerStructure(config)).toThrow(/explicitly configure non-inheritable r2_buckets/u);
+  });
+
   it('rejects staging and production database reuse', () => {
     const config = createReadyConfig();
     config.env.production.d1_databases[0].database_id = '11111111-1111-4111-8111-111111111111';
 
     expect(() => validateWranglerStructure(config)).toThrow(/must not share a D1 database ID/u);
+  });
+
+  it('rejects staging and production R2 bucket reuse', () => {
+    const config = createReadyConfig();
+    config.env.production.r2_buckets[0].bucket_name = 'abrelo-gift-assets-staging';
+
+    expect(() => validateWranglerStructure(config)).toThrow(/must not share an R2 bucket name/u);
   });
 
   it('rejects reuse of the same normalized remote Creator origins', () => {

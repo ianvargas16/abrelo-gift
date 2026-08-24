@@ -30,6 +30,7 @@ Abre `http://localhost:1420`.
 
 Para probar publicación local con D1, consulta [`docs/publishing.md`](docs/publishing.md).
 Para preparar staging o producción, consulta [`docs/production.md`](docs/production.md); los deploys remotos permanecen bloqueados hasta configurar recursos reales.
+La arquitectura de despliegue, los límites entre D1/R2 y los flujos futuros de assets privados están definidos en [`docs/deployment-architecture.md`](docs/deployment-architecture.md).
 
 ## Ejecutar con Tauri
 

@@ -13,6 +13,10 @@ Creator
   -> D1PublishedGiftRepository
   -> Cloudflare D1
 
+Future optional binary media
+  -> private Cloudflare R2 (`GIFT_ASSETS`)
+  -> Worker-owned recipient asset route
+
 Recipient
   -> GET /g/<opaque-id>
   -> Worker loads immutable GiftFile snapshot
@@ -33,6 +37,8 @@ published_gifts(id TEXT PRIMARY KEY, gift_json TEXT NOT NULL, created_at TEXT NO
 The canonical complete GiftFile is stored in `gift_json`. Names, messages, titles, and other personal content are not copied into searchable columns or indexes.
 
 Remote staging and production use separate Wrangler environments and separate D1 databases. Provisioning, migration, deployment, smoke testing, rollback, and abuse controls are documented in [`production.md`](production.md). No account ID, API token, or secret belongs in the repository.
+
+Optional binary assets are reserved for a private, environment-specific `GIFT_ASSETS` R2 bucket. The current API stays JSON-only; a future upload flow will retain that compatibility and serve recipient assets through the Worker rather than public R2 URLs. See [`deployment-architecture.md`](deployment-architecture.md) for the full boundary.
 
 ## Configuration
 
