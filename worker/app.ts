@@ -5,9 +5,8 @@ import {
   generateOpaqueGiftId,
   injectPublicMetadataIntoRuntimeHtml,
   injectGiftFileIntoRuntimeHtml,
-  parseCanonicalGiftFile,
-  readGiftRequestBody,
 } from './giftPublishing';
+import { getGiftAudioKey, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
 import { createRequestId, type OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository } from './publishedGiftRepository';
 import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
@@ -15,10 +14,16 @@ import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
 interface RuntimeAssets {
   fetch(request: Request): Promise<Response>;
 }
+interface GiftAssets {
+  put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object>;
+  get(key: string): Promise<R2ObjectBody | null>;
+  delete(key: string): Promise<void>;
+}
 
 export interface PublishAppOptions {
   repository: PublishedGiftRepository;
   assets: RuntimeAssets;
+  giftAssets?: GiftAssets;
   runtimeConfig: RuntimeConfig;
   logger?: OperationalLogger;
   requestIdFactory?: () => string;
@@ -28,7 +33,7 @@ export interface PublishAppOptions {
 const API_ERROR_MESSAGE = 'No pudimos publicar el regalo.';
 const SECURITY_HEADERS: Record<string, string> = {
   'Cache-Control': 'private, no-store',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
@@ -165,49 +170,67 @@ async function publishGift(
   allowedOrigin: string | null,
   requestId: string,
 ): Promise<Response> {
-  if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
-    return jsonResponse({ error: API_ERROR_MESSAGE }, 415, allowedOrigin ?? undefined);
-  }
-
-  let body: string;
-
+  let parsed;
   try {
-    body = await readGiftRequestBody(request);
+    parsed = await parsePublishRequest(request);
   } catch (error) {
     if (error instanceof GiftPayloadTooLargeError) {
       return jsonResponse({ error: API_ERROR_MESSAGE }, 413, allowedOrigin ?? undefined);
     }
-
-    return jsonResponse({ error: API_ERROR_MESSAGE }, 400, allowedOrigin ?? undefined);
-  }
-
-  let giftFile;
-
-  try {
-    giftFile = parseCanonicalGiftFile(JSON.parse(body));
-  } catch {
+    if (error instanceof UnsupportedAudioError) return jsonResponse({ error: API_ERROR_MESSAGE }, 415, allowedOrigin ?? undefined);
     return jsonResponse({ error: API_ERROR_MESSAGE }, 400, allowedOrigin ?? undefined);
   }
 
   const id = generateOpaqueGiftId();
+  const audioKey = parsed.audio ? getGiftAudioKey(id) : null;
+  const logger = options.logger ?? silentLogger;
+  const gift = parsed.audio ? { ...parsed.giftFile.gift, audio: parsed.audio.metadata } : parsed.giftFile.gift;
 
   try {
-    const publicUrl = createPublicGiftUrl(options.runtimeConfig, id);
+    if (parsed.audio && audioKey) {
+      if (!options.giftAssets) throw new Error('gift asset storage unavailable');
+      await options.giftAssets.put(audioKey, parsed.audio.file.stream(), { httpMetadata: { contentType: parsed.audio.metadata.mimeType } });
+    }
+  } catch {
+    logger.error('publish_persistence_failed', requestId);
+    return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
+  }
 
+  try {
     await options.repository.create({
       id,
-      giftFile: createGiftFile(giftFile.gift),
+      giftFile: createGiftFile(gift),
       createdAt: (options.now ?? (() => new Date()))().toISOString(),
     });
-
-    return jsonResponse({
-      id,
-      url: publicUrl,
-    }, 201, allowedOrigin ?? undefined);
   } catch {
-    (options.logger ?? silentLogger).error('publish_persistence_failed', requestId);
-    return jsonResponse({ error: API_ERROR_MESSAGE }, 500, allowedOrigin ?? undefined);
+    if (audioKey && options.giftAssets) {
+      try {
+        await options.giftAssets.delete(audioKey);
+      } catch {
+        logger.error('gift_asset_cleanup_failed', requestId);
+      }
+    }
+    logger.error('publish_persistence_failed', requestId);
+    return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
   }
+
+  return jsonResponse({
+    id,
+    url: createPublicGiftUrl(options.runtimeConfig, id),
+  }, 201, allowedOrigin ?? undefined);
+}
+
+async function serveGiftAudio(options: PublishAppOptions, id: string): Promise<Response> {
+  if (!GIFT_ID_PATTERN.test(id)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+  try {
+    const snapshot = await options.repository.getById(id);
+    if (!snapshot?.giftFile.gift.audio) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const object = await options.giftAssets?.get(getGiftAudioKey(id));
+    if (!object) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const headers = new Headers({ 'Cache-Control': 'private, max-age=3600', 'Content-Type': snapshot.giftFile.gift.audio.mimeType, 'X-Content-Type-Options': 'nosniff' });
+    if (object.size) headers.set('Content-Length', String(object.size));
+    return new Response(object.body, { headers });
+  } catch { return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS }); }
 }
 
 export function createInvalidRuntimeConfigResponse(request: Request, requestId: string): Response {
@@ -263,6 +286,13 @@ export function createPublishApp(options: PublishAppOptions) {
     }
 
     const giftRoute = url.pathname.match(/^\/g\/([^/]+)$/u);
+
+    const audioRoute = url.pathname.match(/^\/g\/([^/]+)\/audio$/u);
+    if (audioRoute) {
+      const requestId = nextRequestId();
+      if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
+      return withRequestId(await serveGiftAudio(options, audioRoute[1]), requestId);
+    }
 
     if (giftRoute) {
       const requestId = nextRequestId();

@@ -1,5 +1,7 @@
 import { assertMemoryImageDataUrl, MAX_MEMORY_ITEMS } from './memoryMedia';
-import { isGiftAtmosphere, type GiftAtmosphere } from './giftAtmosphere';
+import { isGiftAudioMimeType, type GiftAudio } from './giftAudio';
+import type { GiftAtmosphere } from './giftAtmosphere';
+import { isGiftAtmosphere } from './giftAtmosphere';
 
 export const GIFT_FILE_SCHEMA = 'abrelo.gift';
 export const GIFT_FILE_VERSION = 1 as const;
@@ -43,6 +45,8 @@ export interface GiftConfig {
   recipientName: string;
   senderName: string;
   theme: ThemeId;
+  audio?: GiftAudio;
+  /** @deprecated Legacy field accepted only to preserve old local projects. */
   atmosphere?: GiftAtmosphere;
   intro: GiftIntro;
   letter: GiftLetter;
@@ -108,6 +112,12 @@ function assertTheme(value: unknown): ThemeId {
   }
 
   throw new Error('Tema inválido');
+}
+
+function parseGiftAudio(value: unknown): GiftAudio {
+  const source = assertRecord(value, 'Audio inválido');
+  if (!isGiftAudioMimeType(source.mimeType)) throw new Error('Audio inválido');
+  return { mimeType: source.mimeType };
 }
 
 function assertAtmosphere(value: unknown): GiftAtmosphere {
@@ -181,6 +191,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
   const gift = assertRecord(source.gift, 'Regalo inválido');
 
   const memories = source.memories === undefined ? undefined : parseMemorySection(source.memories);
+  const audio = source.audio === undefined ? undefined : parseGiftAudio(source.audio);
   const atmosphere = source.atmosphere === undefined ? undefined : assertAtmosphere(source.atmosphere);
 
   return {
@@ -188,6 +199,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
     recipientName: assertString(source.recipientName, 'recipientName'),
     senderName: assertString(source.senderName, 'senderName'),
     theme: assertTheme(source.theme),
+    ...(audio === undefined ? {} : { audio }),
     ...(atmosphere === undefined ? {} : { atmosphere }),
     intro: {
       eyebrow: assertString(intro.eyebrow, 'intro.eyebrow'),

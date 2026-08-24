@@ -8,6 +8,7 @@ export interface PublishedGift {
 interface PublishGiftOptions {
   apiBaseUrl?: string;
   fetcher?: typeof fetch;
+  audioFile?: File | null;
 }
 
 export class PublishGiftError extends Error {
@@ -66,12 +67,13 @@ export async function publishGift(
   const fetcher = options.fetcher ?? fetch;
 
   try {
+    const body = options.audioFile
+      ? (() => { const form = new FormData(); form.set('gift', JSON.stringify(createGiftFile(gift))); form.set('audio', options.audioFile); return form; })()
+      : JSON.stringify(createGiftFile(gift));
     const response = await fetcher(getPublishEndpoint(apiBaseUrl), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(createGiftFile(gift)),
+      ...(options.audioFile ? {} : { headers: { 'Content-Type': 'application/json' } }),
+      body,
     });
 
     if (!response.ok) {

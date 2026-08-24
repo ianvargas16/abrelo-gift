@@ -6,6 +6,7 @@ import { Letter } from './runtime/Letter';
 import { Memories } from './runtime/Memories';
 import { AtmosphereControl } from './runtime/AtmosphereControl';
 import { useGiftAtmosphere } from './runtime/useGiftAtmosphere';
+import { useGiftAudio } from './runtime/useGiftAudio';
 import {
   createSealHoldController,
   getRuntimeTransitionDelay,
@@ -48,7 +49,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   const [isMemoryRevealing, setIsMemoryRevealing] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   const prefersReducedMotionRef = useRef(prefersReducedMotion);
-  const giftAtmosphere = useGiftAtmosphere(gift.atmosphere);
+  const giftAudio = useGiftAudio(Boolean(gift.audio));
   prefersReducedMotionRef.current = prefersReducedMotion;
   const holdController = useRef<SealHoldController | null>(null);
   const feedbackTimer = useRef<number | null>(null);
@@ -136,7 +137,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     const started = holdController.current?.start() ?? false;
     if (started) {
       setIsHolding(true);
-      giftAtmosphere.activate();
+      giftAudio.activate();
     }
     return started;
   };
@@ -208,7 +209,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   if (stage === 'revealed') {
     return (
       <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
-        {giftAtmosphere.isActive && <AtmosphereControl isMuted={giftAtmosphere.isMuted} onToggle={giftAtmosphere.toggleMuted} />}
+        {giftAudio.isActive && <AtmosphereControl isMuted={giftAudio.isMuted} onToggle={giftAudio.toggleMuted} />}
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
@@ -216,7 +217,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   return (
     <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
-      {giftAtmosphere.isActive && <AtmosphereControl isMuted={giftAtmosphere.isMuted} onToggle={giftAtmosphere.toggleMuted} />}
+      {giftAudio.isActive && <AtmosphereControl isMuted={giftAudio.isMuted} onToggle={giftAudio.toggleMuted} />}
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />
