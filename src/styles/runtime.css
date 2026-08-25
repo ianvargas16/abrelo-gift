@@ -166,6 +166,26 @@
   line-height: 1.65;
 }
 
+.runtime-retry-button {
+  min-height: 2.75rem;
+  margin-top: var(--space-lg);
+  padding: 0.85rem 1.2rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-strong);
+  color: #fff9f5;
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.runtime-retry-button:hover {
+  transform: translateY(-1px);
+}
+
 .runtime-preparation {
   position: fixed;
   z-index: 100;
@@ -347,6 +367,10 @@
     transform var(--runtime-card-extraction-duration, var(--motion-paper)) var(--ease-standard),
     opacity var(--runtime-card-extraction-duration, var(--motion-paper)) var(--ease-standard);
   will-change: transform;
+}
+
+.envelope.is-interacting {
+  transform: scale(0.985) rotateX(var(--envelope-rotate-x)) rotateY(var(--envelope-rotate-y));
 }
 
 .envelope.state-extracting {
@@ -969,6 +993,104 @@
   animation: reveal-background var(--motion-deliberate) var(--ease-deliberate) both;
 }
 
+.gift-audio-control {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--space-md));
+  right: var(--space-md);
+  z-index: 12;
+  min-width: min(20rem, calc(100vw - (var(--space-md) * 2)));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--color-page-ink) 15%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-page) 82%, transparent);
+  color: var(--color-page-ink);
+  box-shadow: var(--shadow-floating-surface);
+  backdrop-filter: blur(18px);
+  animation: audio-control-arrive var(--motion-standard) var(--ease-deliberate) both;
+}
+
+.gift-audio-control-mark {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  font-size: 1rem;
+}
+
+.gift-audio-control > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+}
+
+.gift-audio-control small,
+.gift-audio-control strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gift-audio-control small {
+  color: var(--color-page-ink-muted);
+  font-family: var(--font-label);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gift-audio-control strong {
+  font-size: 0.78rem;
+}
+
+.gift-audio-control button {
+  min-height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-page-ink) 16%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
+  color: var(--color-page-ink);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.gift-audio-control button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.gift-audio-control.is-playing .gift-audio-control-mark {
+  animation: audio-playing-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes audio-control-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes audio-playing-pulse {
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+}
+
 @keyframes reveal-background {
   from {
     opacity: 0;
@@ -1435,6 +1557,12 @@
   .gift-letter {
     padding: clamp(1.4rem, 6vw, 2rem);
   }
+
+  .gift-audio-control {
+    left: clamp(0.85rem, 4vw, 1.15rem);
+    right: clamp(0.85rem, 4vw, 1.15rem);
+    min-width: 0;
+  }
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
@@ -1478,6 +1606,8 @@
   .ticket,
   .ticket-interaction,
   .ticket-shell,
+  .gift-audio-control,
+  .gift-audio-control-mark,
   .envelope-flap,
   .letter-peek {
     animation: none;
@@ -1488,6 +1618,10 @@
   .envelope {
     transform: none;
     transition: none;
+  }
+
+  .envelope.is-interacting {
+    transform: none;
   }
 
   .wax-seal.is-released {

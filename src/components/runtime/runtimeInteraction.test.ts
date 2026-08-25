@@ -3,9 +3,11 @@ import { isSealActivationKey } from './WaxSeal';
 import {
   createPointerOwnership,
   createSealHoldController,
+  getRuntimePhase,
   getRuntimeTransitionDelay,
   isEligibleHoldPointer,
   runtimePresentationTiming,
+  shouldShowGiftAudioControl,
   transitionRuntimeStage,
 } from './runtimeInteraction';
 
@@ -115,6 +117,16 @@ describe('seal hold interaction', () => {
     expect(transitionRuntimeStage('revealed', 'reset')).toBe('sealed');
   });
 
+  it('prevents accidental double activation while opening', () => {
+    const harness = createHoldHarness();
+
+    expect(harness.controller.start()).toBe(true);
+    expect(harness.controller.start()).toBe(false);
+    harness.advance(1000);
+    expect(harness.controller.start()).toBe(false);
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+  });
+
   it('uses Enter and Space as equivalent keyboard hold inputs', () => {
     expect(isSealActivationKey('Enter')).toBe(true);
     expect(isSealActivationKey(' ')).toBe(true);
@@ -161,5 +173,21 @@ describe('Runtime stage transitions', () => {
   it('removes presentation delays when reduced motion is requested', () => {
     expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, false)).toBe(820);
     expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, true)).toBe(0);
+  });
+
+  it('exposes the recipient journey as closed, opening, then revealed', () => {
+    expect(getRuntimePhase('sealed')).toBe('closed');
+    expect(getRuntimePhase('unsealed')).toBe('opening');
+    expect(getRuntimePhase('opened')).toBe('opening');
+    expect(getRuntimePhase('letter')).toBe('opening');
+    expect(getRuntimePhase('memories')).toBe('opening');
+    expect(getRuntimePhase('revealed')).toBe('revealed');
+  });
+
+  it('shows audio controls only after reveal and only for configured audio', () => {
+    expect(shouldShowGiftAudioControl('sealed', true)).toBe(false);
+    expect(shouldShowGiftAudioControl('letter', true)).toBe(false);
+    expect(shouldShowGiftAudioControl('revealed', true)).toBe(true);
+    expect(shouldShowGiftAudioControl('revealed', false)).toBe(false);
   });
 });

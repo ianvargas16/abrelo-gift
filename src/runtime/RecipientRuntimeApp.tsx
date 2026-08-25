@@ -34,6 +34,7 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
   }, []);
 
   const theme = bootstrap.status === 'ready' ? `theme-${bootstrap.gift.theme}` : 'theme-rose';
+  const retry = () => window.location.reload();
 
   return <>
     {bootstrap.status === 'ready' ? (
@@ -42,8 +43,9 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
       <main className="runtime-failure theme-rose">
         <section className="runtime-failure-card" role="alert">
           <span className="runtime-failure-mark" aria-hidden="true">✦</span>
-          <h1>Este regalo no está disponible.</h1>
-          <p>Revisa el enlace o inténtalo de nuevo más tarde.</p>
+          <h1>Este regalo ya no está disponible.</h1>
+          <p>Puede ser un problema temporal. Inténtalo de nuevo en un momento.</p>
+          <button type="button" className="runtime-retry-button" onClick={retry}>Volver a intentar</button>
         </section>
       </main>
     )}

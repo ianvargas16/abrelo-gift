@@ -2,15 +2,16 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { hasGiftMemories, type GiftConfig } from '../models/giftConfig';
 import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
+import { GiftAudioControl } from './runtime/GiftAudioControl';
 import { Letter } from './runtime/Letter';
 import { Memories } from './runtime/Memories';
-import { AtmosphereControl } from './runtime/AtmosphereControl';
-import { useGiftAtmosphere } from './runtime/useGiftAtmosphere';
 import { useGiftAudio } from './runtime/useGiftAudio';
 import {
   createSealHoldController,
+  getRuntimePhase,
   getRuntimeTransitionDelay,
   runtimePresentationTiming,
+  shouldShowGiftAudioControl,
   transitionRuntimeStage,
   type RuntimeStage,
   type SealHoldController,
@@ -208,16 +209,25 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   if (stage === 'revealed') {
     return (
-      <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
-        {giftAudio.isActive && <AtmosphereControl isMuted={giftAudio.isMuted} onToggle={giftAudio.toggleMuted} />}
+      <main
+        className={`experience theme-${gift.theme} stage-${stage}`}
+        data-runtime-phase={getRuntimePhase(stage)}
+        style={runtimeMotionStyle}
+      >
+        {shouldShowGiftAudioControl(stage, Boolean(gift.audio)) && (
+          <GiftAudioControl status={giftAudio.status} onToggle={giftAudio.togglePlayback} />
+        )}
         <GiftReveal gift={gift} onRestart={reset} />
       </main>
     );
   }
 
   return (
-    <main className={`experience theme-${gift.theme} stage-${stage}`} style={runtimeMotionStyle}>
-      {giftAudio.isActive && <AtmosphereControl isMuted={giftAudio.isMuted} onToggle={giftAudio.toggleMuted} />}
+    <main
+      className={`experience theme-${gift.theme} stage-${stage}`}
+      data-runtime-phase={getRuntimePhase(stage)}
+      style={runtimeMotionStyle}
+    >
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />
@@ -235,6 +245,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
               recipientName={recipientName}
               state={envelopeState}
               isShaking={failedAttempt}
+              isInteracting={isHolding}
               seal={stage === 'sealed' || stage === 'unsealed' ? (
                 <WaxSeal
                   progress={stage === 'unsealed' ? 1 : progress}
