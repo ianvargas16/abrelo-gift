@@ -1,7 +1,7 @@
-import { MAX_GIFT_AUDIO_BYTES, isGiftAudioMimeType, type GiftAudio } from '../src/models/giftAudio';
+import { MAX_AUDIO_SIZE, isGiftAudioMimeType, type GiftAudio } from '../src/models/giftAudio';
 import { MAX_GIFT_FILE_BYTES, GiftPayloadTooLargeError, parseCanonicalGiftFile, readGiftRequestBody } from './giftPublishing';
 
-export const MAX_MULTIPART_BYTES = MAX_GIFT_AUDIO_BYTES + MAX_GIFT_FILE_BYTES + (128 * 1024);
+export const MAX_MULTIPART_BYTES = MAX_AUDIO_SIZE + MAX_GIFT_FILE_BYTES + (128 * 1024);
 
 export interface ParsedPublishRequest {
   giftFile: ReturnType<typeof parseCanonicalGiftFile>;
@@ -9,24 +9,8 @@ export interface ParsedPublishRequest {
 }
 
 export class UnsupportedAudioError extends Error {}
+export class AudioTooLargeError extends Error {}
 export class MalformedPublishRequestError extends Error {}
-
-function isMp3Signature(bytes: Uint8Array): boolean {
-  return (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33)
-    || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
-}
-
-function isMp4AudioSignature(bytes: Uint8Array): boolean {
-  if (bytes.length < 12 || String.fromCharCode(...bytes.slice(4, 8)) !== 'ftyp') return false;
-
-  const brand = String.fromCharCode(...bytes.slice(8, 12));
-  return brand === 'M4A ' || brand === 'M4B ' || brand === 'isom' || brand === 'iso2' || brand === 'mp41' || brand === 'mp42';
-}
-
-async function hasSupportedAudioSignature(file: File): Promise<boolean> {
-  const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
-  return file.type === 'audio/mpeg' ? isMp3Signature(bytes) : isMp4AudioSignature(bytes);
-}
 
 async function readBoundedBody(request: Request, maxBytes: number): Promise<Uint8Array> {
   const declaredLength = Number(request.headers.get('content-length') ?? 0);
@@ -77,9 +61,8 @@ export async function parsePublishRequest(request: Request): Promise<ParsedPubli
   if (audios.length === 0) return { giftFile };
   const file = audios[0][1];
   if (!(file instanceof File)) throw new MalformedPublishRequestError();
-  if (file.size > MAX_GIFT_AUDIO_BYTES) throw new GiftPayloadTooLargeError();
+  if (file.size > MAX_AUDIO_SIZE) throw new AudioTooLargeError();
   if (!isGiftAudioMimeType(file.type)) throw new UnsupportedAudioError();
-  if (!await hasSupportedAudioSignature(file)) throw new UnsupportedAudioError();
   return { giftFile, audio: { file, metadata: { mimeType: file.type } } };
 }
 

@@ -1,5 +1,7 @@
-export const MAX_GIFT_AUDIO_BYTES = 5 * 1024 * 1024;
-export const giftAudioMimeTypes = ['audio/mpeg', 'audio/mp4'] as const;
+export const MAX_AUDIO_SIZE = 5 * 1024 * 1024;
+// Keep the original export for Creator validation compatibility.
+export const MAX_GIFT_AUDIO_BYTES = MAX_AUDIO_SIZE;
+export const giftAudioMimeTypes = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'] as const;
 
 export type GiftAudioMimeType = typeof giftAudioMimeTypes[number];
 

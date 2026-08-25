@@ -434,7 +434,7 @@ describe('publish Worker', () => {
     expect(giftAssets.putCalls).toBe(0);
   });
 
-  it('publishes one valid multipart audio asset and keeps internal storage details private', async () => {
+  it('publishes valid multipart audio, creates metadata, and keeps internal storage details private', async () => {
     const { app, repository, giftAssets } = createTestContext();
     const response = await app(multipartPublishRequest([
       ['gift', JSON.stringify(createGiftFile(defaultGift))],
@@ -463,7 +463,8 @@ describe('publish Worker', () => {
     ]));
 
     expect(exact.status).toBe(201);
-    expect(oversized.status).toBe(413);
+    expect(oversized.status).toBe(400);
+    expect(await oversized.json()).toEqual({ error: 'Audio demasiado grande' });
     expect(rejected.giftAssets.putCalls).toBe(0);
     expect((rejected.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
   });
@@ -484,23 +485,44 @@ describe('publish Worker', () => {
     expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
   });
 
-  it('rejects unsupported or mismatched audio MIME types before writes', async () => {
+  it('rejects unsupported audio MIME types before writes', async () => {
     const unsupported = createTestContext();
     const unsupportedResponse = await unsupported.app(multipartPublishRequest([
       ['gift', JSON.stringify(createGiftFile(defaultGift))],
-      ['audio', new File([new Uint8Array([0x49, 0x44, 0x33])], 'gift.wav', { type: 'audio/wav' })],
-    ]));
-    const mismatched = createTestContext();
-    const mismatchedResponse = await mismatched.app(multipartPublishRequest([
-      ['gift', JSON.stringify(createGiftFile(defaultGift))],
-      ['audio', new File(['not an mp3'], 'gift.mp3', { type: 'audio/mpeg' })],
+      ['audio', new File(['not audio'], 'gift.pdf', { type: 'application/pdf' })],
     ]));
 
-    expect(unsupportedResponse.status).toBe(415);
-    expect(mismatchedResponse.status).toBe(415);
-    expect(unsupported.giftAssets.putCalls + mismatched.giftAssets.putCalls).toBe(0);
+    expect(unsupportedResponse.status).toBe(400);
+    expect(await unsupportedResponse.json()).toEqual({ error: 'Tipo de audio no permitido' });
+    expect(unsupported.giftAssets.putCalls).toBe(0);
     expect((unsupported.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
-    expect((mismatched.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('accepts the allowed WAV MIME variants without inspecting binary media', async () => {
+    for (const mimeType of ['audio/wav', 'audio/x-wav'] as const) {
+      const { app, repository, giftAssets } = createTestContext();
+      const response = await app(multipartPublishRequest([
+        ['gift', JSON.stringify(createGiftFile(defaultGift))],
+        ['audio', createAudioFile(32, mimeType)],
+      ]));
+      const { id } = await response.json() as { id: string };
+
+      expect(response.status).toBe(201);
+      expect((await repository.getById(id))?.giftFile.gift.audio).toEqual({ mimeType });
+      expect(giftAssets.putCalls).toBe(1);
+    }
+  });
+
+  it('rejects multipart audio fields that do not contain a file before writes', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', 'not a file'],
+    ]));
+
+    expect(response.status).toBe(400);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
   });
 
   it('rejects duplicate audio parts and unexpected multipart fields before writes', async () => {
