@@ -910,6 +910,7 @@ textarea:focus-visible {
 
 .field-grid {
   display: grid;
+  align-items: start;
   gap: var(--space-md);
 }
 
