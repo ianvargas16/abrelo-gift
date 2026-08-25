@@ -6,7 +6,7 @@ import {
   injectPublicMetadataIntoRuntimeHtml,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
-import { getGiftAudioKey, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
+import { AudioTooLargeError, getGiftAudioKey, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
 import { createRequestId, type OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository } from './publishedGiftRepository';
 import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
@@ -174,10 +174,15 @@ async function publishGift(
   try {
     parsed = await parsePublishRequest(request);
   } catch (error) {
+    if (error instanceof AudioTooLargeError) {
+      return jsonResponse({ error: 'Audio demasiado grande' }, 400, allowedOrigin ?? undefined);
+    }
     if (error instanceof GiftPayloadTooLargeError) {
       return jsonResponse({ error: API_ERROR_MESSAGE }, 413, allowedOrigin ?? undefined);
     }
-    if (error instanceof UnsupportedAudioError) return jsonResponse({ error: API_ERROR_MESSAGE }, 415, allowedOrigin ?? undefined);
+    if (error instanceof UnsupportedAudioError) {
+      return jsonResponse({ error: 'Tipo de audio no permitido' }, 400, allowedOrigin ?? undefined);
+    }
     return jsonResponse({ error: API_ERROR_MESSAGE }, 400, allowedOrigin ?? undefined);
   }
 
