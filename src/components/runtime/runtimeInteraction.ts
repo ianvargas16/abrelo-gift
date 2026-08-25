@@ -1,4 +1,5 @@
 export type RuntimeStage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'memories' | 'revealed';
+export type RuntimePhase = 'closed' | 'opening' | 'revealed';
 
 export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | 'show-memories' | 'reveal-gift' | 'reset';
 
@@ -9,6 +10,16 @@ export const runtimePresentationTiming = {
   giftReveal: 720,
   ticketRevealDelay: 180,
 } as const;
+
+export function getRuntimePhase(stage: RuntimeStage): RuntimePhase {
+  if (stage === 'sealed') return 'closed';
+  if (stage === 'revealed') return 'revealed';
+  return 'opening';
+}
+
+export function shouldShowGiftAudioControl(stage: RuntimeStage, hasAudio: boolean): boolean {
+  return stage === 'revealed' && hasAudio;
+}
 
 export function transitionRuntimeStage(stage: RuntimeStage, event: RuntimeEvent): RuntimeStage {
   if (event === 'reset') return 'sealed';

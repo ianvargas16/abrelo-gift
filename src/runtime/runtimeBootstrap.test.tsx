@@ -69,6 +69,10 @@ describe('recipient Runtime bootstrap', () => {
     );
 
     expect(markup).toContain('Hay algo para ti');
+    expect(markup).toContain('data-runtime-phase="closed"');
+    expect(markup).toContain('state-sealed');
+    expect(markup).not.toContain('ticket-stage');
+    expect(markup).not.toContain('gift-audio-control');
     expect(markup).not.toContain('Este regalo no está disponible');
     expect(markup).toContain('Preparando algo para ti');
     expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);
@@ -84,9 +88,9 @@ describe('recipient Runtime bootstrap', () => {
       <RecipientRuntimeApp bootstrap={{ status: 'error', reason: 'invalid' }} />,
     );
 
-    expect(markup).toContain('Este regalo no está disponible');
+    expect(markup).toContain('Este regalo ya no está disponible');
+    expect(markup).toContain('Volver a intentar');
     expect(markup).not.toMatch(/Creator|GiftConfig|JSON|schema|versión/i);
     expect(markup).not.toMatch(/vencido|eliminado|nunca existió/i);
-    expect(markup).not.toContain('button');
   });
 });

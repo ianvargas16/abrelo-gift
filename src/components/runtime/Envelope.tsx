@@ -6,10 +6,11 @@ interface EnvelopeProps {
   recipientName: string;
   state: EnvelopeState;
   isShaking: boolean;
+  isInteracting?: boolean;
   seal?: ReactNode;
 }
 
-export function Envelope({ recipientName, state, isShaking, seal }: EnvelopeProps) {
+export function Envelope({ recipientName, state, isShaking, isInteracting = false, seal }: EnvelopeProps) {
   const label = recipientName.trim();
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse') return;
@@ -27,7 +28,7 @@ export function Envelope({ recipientName, state, isShaking, seal }: EnvelopeProp
 
   return (
     <div
-      className={`envelope state-${state} ${isShaking ? 'shake' : ''}`}
+      className={`envelope state-${state} ${isShaking ? 'shake' : ''} ${isInteracting ? 'is-interacting' : ''}`}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetPerspective}
       style={{ '--envelope-rotate-x': '0deg', '--envelope-rotate-y': '0deg' } as CSSProperties}
