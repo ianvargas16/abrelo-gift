@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { GiftConfig } from '../../models/giftConfig';
+import { hasGiftPersonalizationErrors, type GiftConfig } from '../../models/giftConfig';
 import {
   createCreatorPublication,
   hasUnpublishedChanges as checkUnpublishedChanges,
@@ -18,9 +18,10 @@ interface PublishPanelProps {
   publication: CreatorPublication | null;
   onPublicationChange: (publication: CreatorPublication) => void;
   audioFile?: File | null;
+  hasPersonalizationDraftError?: boolean;
 }
 
-export function PublishPanel({ gift, publication, onPublicationChange, audioFile }: PublishPanelProps) {
+export function PublishPanel({ gift, publication, onPublicationChange, audioFile, hasPersonalizationDraftError = false }: PublishPanelProps) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
@@ -28,6 +29,7 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
   const [qrDataUrl, setQrDataUrl] = useState('');
   const publishingLock = useRef(false);
   const hasUnpublishedChanges = checkUnpublishedChanges(publication, gift);
+  const hasInvalidPersonalization = hasPersonalizationDraftError || hasGiftPersonalizationErrors(gift);
 
   useEffect(() => {
     if (copyStatus === 'idle') {
@@ -73,7 +75,10 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
   }, [publication]);
 
   const handlePublish = async () => {
-    if (publishingLock.current) {
+    if (publishingLock.current || hasInvalidPersonalization) {
+      if (hasInvalidPersonalization) {
+        setError('Revisa el título y el mensaje antes de publicar.');
+      }
       return;
     }
 
@@ -199,13 +204,16 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
           </div>
         )}
 
-        {error && <p className="publish-error" role="alert">{error}</p>}
+        {hasInvalidPersonalization && (
+          <p className="publish-error" role="alert">Revisa el título y el mensaje antes de publicar.</p>
+        )}
+        {!hasInvalidPersonalization && error && <p className="publish-error" role="alert">{error}</p>}
 
         <button
           type="button"
           className="primary-button publish-button"
           onClick={handlePublish}
-          disabled={isPublishing}
+          disabled={isPublishing || hasInvalidPersonalization}
         >
           {isPublishing
             ? 'Publicando…'

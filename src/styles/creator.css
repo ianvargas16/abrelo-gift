@@ -966,23 +966,65 @@ textarea:focus-visible {
   line-height: 1.45;
 }
 
+.gift-personalization-fields {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.gift-personalization-section {
+  position: relative;
+}
+
+.field-meta {
+  min-width: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  color: var(--color-ink-subtle);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.field-meta span:first-child {
+  min-width: 0;
+}
+
+.field-meta span:last-child {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-meta.is-error {
+  color: var(--color-accent-strong);
+}
+
+.field.is-invalid input,
+.field.is-invalid textarea {
+  border-color: color-mix(in srgb, var(--color-accent-strong) 48%, var(--color-border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
+.gift-personalization-theme {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.gift-personalization-theme > div > p {
+  margin: 0.3rem 0 0;
+  color: var(--color-ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .theme-mood-picker {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-sm);
 }
 
-.theme-picker-intro {
-  margin: 0;
-  color: var(--color-ink-muted);
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
 .sound-atmosphere-intro {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-lg);
-  border-top: 1px solid color-mix(in srgb, var(--color-ink) 8%, transparent);
+  margin-top: 0;
 }
 
 .sound-atmosphere-intro p {

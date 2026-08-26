@@ -26,6 +26,22 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).not.toContain('<p>');
   });
 
+  it('renders personalized multiline messages as escaped plain text', () => {
+    const markup = renderToStaticMarkup(
+      <Letter
+        title="Una carta para ti"
+        message={'Primera línea.\n<script>alert("no")</script>\nÚltima línea.'}
+        senderName="Jean"
+        isRevealing={false}
+        onReveal={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain('Una carta para ti');
+    expect(markup).toContain('Primera línea.\n&lt;script&gt;alert(&quot;no&quot;)&lt;/script&gt;\nÚltima línea.');
+    expect(markup).not.toContain('<script>');
+  });
+
   it('omits empty optional voucher details and editor terminology', () => {
     const gift = {
       ...defaultGift,

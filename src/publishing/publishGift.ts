@@ -1,4 +1,4 @@
-import { createGiftFile, type GiftConfig } from '../models/giftConfig';
+import { assertValidGiftPersonalization, createGiftFile, type GiftConfig } from '../models/giftConfig';
 
 export interface PublishedGift {
   id: string;
@@ -67,6 +67,7 @@ export async function publishGift(
   const fetcher = options.fetcher ?? fetch;
 
   try {
+    assertValidGiftPersonalization(gift);
     const body = options.audioFile
       ? (() => { const form = new FormData(); form.set('gift', JSON.stringify(createGiftFile(gift))); form.set('audio', options.audioFile); return form; })()
       : JSON.stringify(createGiftFile(gift));

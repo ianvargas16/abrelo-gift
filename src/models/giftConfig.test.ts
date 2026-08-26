@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
-import { createGiftFile, GIFT_FILE_SCHEMA, GIFT_FILE_VERSION, hasGiftMemories, parseGiftFile } from './giftConfig';
+import {
+  createGiftFile,
+  GIFT_FILE_SCHEMA,
+  GIFT_FILE_VERSION,
+  hasGiftMemories,
+  MAX_GIFT_MESSAGE_CHARACTERS,
+  MAX_GIFT_TITLE_CHARACTERS,
+  parseCreatorGiftConfig,
+  parseGiftFile,
+  validateGiftPersonalization,
+} from './giftConfig';
 import { assertMemoryImageFile, MAX_MEMORY_IMAGE_BYTES, MAX_MEMORY_ITEMS } from './memoryMedia';
 
 const memoryImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
@@ -62,6 +72,55 @@ describe('parseGiftFile', () => {
     };
 
     expect(parseGiftFile(createGiftFile(giftWithEmptyFields))).toEqual(giftWithEmptyFields);
+  });
+
+  it('round-trips the existing title, multiline message, and theme as canonical personalization', () => {
+    const personalizedGift = {
+      ...defaultGift,
+      theme: 'midnight' as const,
+      intro: { ...defaultGift.intro, title: 'Una noche para recordar' },
+      letter: { ...defaultGift.letter, message: 'Primera línea.\n\nY una segunda para guardar.' },
+    };
+
+    expect(parseGiftFile(createGiftFile(personalizedGift))).toEqual(personalizedGift);
+    expect(createGiftFile(personalizedGift).gift).toMatchObject({
+      theme: 'midnight',
+      intro: { title: 'Una noche para recordar' },
+      letter: { message: 'Primera línea.\n\nY una segunda para guardar.' },
+    });
+  });
+
+  it('centralizes Creator limits while keeping historical Runtime snapshots readable', () => {
+    const longTitleGift = {
+      ...defaultGift,
+      intro: { ...defaultGift.intro, title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS + 1) },
+    };
+    const longMessageGift = {
+      ...defaultGift,
+      letter: { ...defaultGift.letter, message: 'M'.repeat(MAX_GIFT_MESSAGE_CHARACTERS + 1) },
+    };
+
+    expect(validateGiftPersonalization(longTitleGift).title).toContain(String(MAX_GIFT_TITLE_CHARACTERS));
+    expect(validateGiftPersonalization(longMessageGift).message).toContain(String(MAX_GIFT_MESSAGE_CHARACTERS));
+    expect(parseGiftFile(createGiftFile(longTitleGift))).toEqual(longTitleGift);
+    expect(parseGiftFile(createGiftFile(longMessageGift))).toEqual(longMessageGift);
+    expect(() => parseCreatorGiftConfig(createGiftFile(longTitleGift))).toThrow(/80 caracteres/);
+    expect(() => parseCreatorGiftConfig(createGiftFile(longMessageGift))).toThrow(/500 caracteres/);
+    expect(validateGiftPersonalization(defaultGift)).toEqual({});
+  });
+
+  it('accepts exact personalization limits and rejects unknown themes', () => {
+    const boundaryGift = {
+      ...defaultGift,
+      intro: { ...defaultGift.intro, title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS) },
+      letter: { ...defaultGift.letter, message: 'M'.repeat(MAX_GIFT_MESSAGE_CHARACTERS) },
+    };
+
+    expect(parseGiftFile(createGiftFile(boundaryGift))).toEqual(boundaryGift);
+    expect(() => parseGiftFile({
+      ...createGiftFile(defaultGift),
+      gift: { ...defaultGift, theme: 'neon' },
+    })).toThrow(/Tema inválido/);
   });
 
   it('round-trips an optional configured atmosphere and keeps older gifts silent', () => {

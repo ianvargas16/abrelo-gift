@@ -7,9 +7,10 @@ import type { GiftProject } from '../../projects/giftProject';
 import type { CreatorPublication } from '../../publishing/creatorPublication';
 import type { GiftTemplate } from '../../templates/giftTemplates';
 import { CreationGuide } from './CreationGuide';
+import { GiftPersonalizationFields } from './GiftPersonalizationFields';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
-import { getThemeMood, ThemeMoodPicker } from './ThemeMoodPicker';
+import { getThemeMood } from './ThemeMoodPicker';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -51,6 +52,7 @@ export function GiftEditor({
   const [memoryError, setMemoryError] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioError, setAudioError] = useState('');
+  const [hasPersonalizationDraftError, setHasPersonalizationDraftError] = useState(false);
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
   const setLetter = <K extends keyof GiftConfig['letter']>(key: K, value: GiftConfig['letter'][K]) => onChange({ ...gift, letter: { ...gift.letter, [key]: value } });
@@ -150,22 +152,37 @@ export function GiftEditor({
             />
 
             <div className="studio-form">
-              <section className="studio-section">
+              <section className="studio-section gift-personalization-section">
                 <div className="studio-section-heading">
                   <span>01</span>
                   <div>
+                    <h3>Personaliza tu regalo</h3>
+                    <p>Define la voz y el tono que acompañarán toda la sorpresa.</p>
+                  </div>
+                </div>
+
+                <GiftPersonalizationFields
+                  key={project.id}
+                  gift={gift}
+                  onTitleChange={(title) => setIntro('title', title)}
+                  onMessageChange={(message) => setLetter('message', message)}
+                  onThemeChange={(theme) => setRoot('theme', theme)}
+                  onValidityChange={setHasPersonalizationDraftError}
+                />
+              </section>
+
+              <section className="studio-section">
+                <div className="studio-section-heading">
+                  <span>02</span>
+                  <div>
                     <h3>Llegada</h3>
-                    <p>El texto inicial antes de tocar el sobre.</p>
+                    <p>Los pequeños detalles antes de tocar el sobre.</p>
                   </div>
                 </div>
 
                 <label className="field">
                   <span>Fecha / detalle superior</span>
                   <input value={gift.intro.eyebrow} onChange={(event) => setIntro('eyebrow', event.target.value)} />
-                </label>
-                <label className="field">
-                  <span>Título de bienvenida</span>
-                  <input value={gift.intro.title} onChange={(event) => setIntro('title', event.target.value)} />
                 </label>
                 <label className="field">
                   <span>Indicación del sello</span>
@@ -175,7 +192,7 @@ export function GiftEditor({
 
               <section className="studio-section">
                 <div className="studio-section-heading">
-                  <span>02</span>
+                  <span>03</span>
                   <div>
                     <h3>Personas</h3>
                     <p>Quién recibe el regalo y quién lo entrega.</p>
@@ -201,7 +218,7 @@ export function GiftEditor({
 
               <section className="studio-section">
                 <div className="studio-section-heading">
-                  <span>03</span>
+                  <span>04</span>
                   <div>
                     <h3>Carta</h3>
                     <p>El mensaje personal antes de descubrir la sorpresa.</p>
@@ -219,21 +236,11 @@ export function GiftEditor({
                   </label>
                 </div>
 
-                <label className={`field ${!hasMessage ? 'is-guided-empty' : ''}`}>
-                  <span>Mensaje</span>
-                  <textarea
-                    rows={6}
-                    value={gift.letter.message}
-                    aria-describedby={!hasMessage ? 'message-guidance' : undefined}
-                    onChange={(event) => setLetter('message', event.target.value)}
-                  />
-                  {!hasMessage && <small id="message-guidance" className="field-guidance">Una frase sincera basta para transformar este momento.</small>}
-                </label>
               </section>
 
               <section className="studio-section">
                 <div className="studio-section-heading">
-                  <span>04</span>
+                  <span>05</span>
                   <div>
                     <h3>Recuerdos</h3>
                     <p>Un pequeño álbum para detenerse antes de descubrir el regalo final.</p>
@@ -339,7 +346,7 @@ export function GiftEditor({
 
               <section className="studio-section">
                 <div className="studio-section-heading">
-                  <span>05</span>
+                  <span>06</span>
                   <div>
                     <h3>Vale por…</h3>
                     <p>La pieza final: más ticket impreso que formulario.</p>
@@ -375,18 +382,15 @@ export function GiftEditor({
 
               <section className="studio-section">
                 <div className="studio-section-heading">
-                  <span>06</span>
+                  <span>07</span>
                   <div>
-                    <h3>Presencia</h3>
-                    <p>Elige el ánimo visual y decide si quieres añadir un audio personal.</p>
+                    <h3>Audio especial</h3>
+                    <p>Si quieres, acompaña la sorpresa con una canción o un mensaje de voz.</p>
                   </div>
                 </div>
 
-                <p className="theme-picker-intro">Esta elección se refleja al instante en el sobre, el papel y el ticket de tu vista previa.</p>
-                <ThemeMoodPicker value={gift.theme} onChange={(theme) => setRoot('theme', theme)} />
-
                 <div className="sound-atmosphere-intro">
-                  <div><span className="field-label">Audio especial (opcional)</span><p>Agrega una canción, mensaje de voz o audio especial para acompañar la sorpresa.</p></div>
+                  <div><span className="field-label">Archivo opcional</span><p>Agrega una canción, mensaje de voz o audio especial para acompañar la sorpresa.</p></div>
                   {audioFile && <p>{audioFile.name} · {(audioFile.size / 1024 / 1024).toFixed(1)} MB</p>}
                   <label className="file-button">{audioFile ? 'Reemplazar audio' : 'Subir audio'}
                     <input type="file" accept="audio/mpeg,audio/mp4" onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ''; if (!file) return; if (!isGiftAudioMimeType(file.type)) { setAudioError('Usa un archivo MP3 o M4A.'); return; } if (file.size > MAX_GIFT_AUDIO_BYTES) { setAudioError('El audio no puede superar 5 MB.'); return; } setAudioFile(file); setAudioError(''); }} />
@@ -462,6 +466,7 @@ export function GiftEditor({
           publication={publication}
           onPublicationChange={onPublicationChange}
           audioFile={audioFile}
+          hasPersonalizationDraftError={hasPersonalizationDraftError}
         />
 
         <footer className="studio-footer">

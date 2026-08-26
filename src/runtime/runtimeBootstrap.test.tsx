@@ -16,6 +16,50 @@ describe('recipient Runtime bootstrap', () => {
     expect(result).toEqual({ status: 'ready', gift: defaultGift });
   });
 
+  it('keeps a pre-personalization-flow GiftFile compatible with Runtime rendering', () => {
+    const legacyGiftFile = {
+      schema: GIFT_FILE_SCHEMA,
+      version: 1,
+      gift: {
+        version: 1,
+        recipientName: 'Sofía',
+        senderName: 'Jean',
+        theme: 'sage',
+        intro: {
+          eyebrow: 'Un detalle para hoy',
+          title: 'Hay algo para ti',
+          envelopeHint: 'Mantén presionado el sello',
+        },
+        letter: {
+          title: 'Una carta para ti',
+          message: 'Este mensaje ya formaba parte del regalo original.',
+        },
+        gift: {
+          type: 'voucher',
+          title: 'Una cena especial',
+          description: 'Elige el lugar que prefieras.',
+          finePrint: '',
+          code: '',
+        },
+      },
+    };
+
+    const bootstrap = parseRuntimeGiftPayload(JSON.stringify(legacyGiftFile));
+    expect(bootstrap).toMatchObject({
+      status: 'ready',
+      gift: {
+        theme: 'sage',
+        intro: { title: 'Hay algo para ti' },
+        letter: { message: 'Este mensaje ya formaba parte del regalo original.' },
+      },
+    });
+
+    const markup = renderToStaticMarkup(<RecipientRuntimeApp bootstrap={bootstrap} />);
+    expect(markup).toContain('Hay algo para ti');
+    expect(markup).toContain('theme-sage');
+    expect(markup).toContain('data-runtime-phase="closed"');
+  });
+
   it('accepts a published GiftFile with local memory data URLs', () => {
     const giftWithMemories = {
       ...defaultGift,
@@ -76,6 +120,21 @@ describe('recipient Runtime bootstrap', () => {
     expect(markup).not.toContain('Este regalo no está disponible');
     expect(markup).toContain('Preparando algo para ti');
     expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);
+  });
+
+  it('renders the canonical personalized title and selected theme in the closed Runtime state', () => {
+    const gift = {
+      ...defaultGift,
+      theme: 'midnight' as const,
+      intro: { ...defaultGift.intro, title: 'Una noche para recordar' },
+    };
+    const markup = renderToStaticMarkup(
+      <RecipientRuntimeApp bootstrap={{ status: 'ready', gift }} />,
+    );
+
+    expect(markup).toContain('Una noche para recordar');
+    expect(markup).toContain('theme-midnight');
+    expect(markup).toContain('data-runtime-phase="closed"');
   });
 
   it('skips the preparation delay when reduced motion is preferred', () => {

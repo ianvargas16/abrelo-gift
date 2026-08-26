@@ -5,6 +5,8 @@ import { isGiftAtmosphere } from './giftAtmosphere';
 
 export const GIFT_FILE_SCHEMA = 'abrelo.gift';
 export const GIFT_FILE_VERSION = 1 as const;
+export const MAX_GIFT_TITLE_CHARACTERS = 80;
+export const MAX_GIFT_MESSAGE_CHARACTERS = 500;
 
 export type ThemeId = 'rose' | 'midnight' | 'sage' | 'sunset';
 export type GiftType = 'voucher';
@@ -58,6 +60,11 @@ export interface GiftFile {
   schema: typeof GIFT_FILE_SCHEMA;
   version: typeof GIFT_FILE_VERSION;
   gift: GiftConfig;
+}
+
+export interface GiftPersonalizationErrors {
+  title?: string;
+  message?: string;
 }
 
 interface LegacyGiftConfig {
@@ -249,7 +256,7 @@ function isStructuredGiftConfigRecord(source: Record<string, unknown>): boolean 
   return 'intro' in source || 'letter' in source;
 }
 
-export function normalizeGiftConfig(gift: GiftConfig): GiftConfig {
+export function normalizeGiftConfigVersion(gift: GiftConfig): GiftConfig {
   return {
     ...gift,
     version: GIFT_FILE_VERSION,
@@ -258,6 +265,28 @@ export function normalizeGiftConfig(gift: GiftConfig): GiftConfig {
 
 export function hasGiftMemories(gift: GiftConfig): boolean {
   return gift.memories?.enabled === true && gift.memories.items.length > 0;
+}
+
+export function validateGiftPersonalization(gift: Pick<GiftConfig, 'intro' | 'letter'>): GiftPersonalizationErrors {
+  return {
+    ...(gift.intro.title.length > MAX_GIFT_TITLE_CHARACTERS
+      ? { title: `El título puede tener hasta ${MAX_GIFT_TITLE_CHARACTERS} caracteres.` }
+      : {}),
+    ...(gift.letter.message.length > MAX_GIFT_MESSAGE_CHARACTERS
+      ? { message: `El mensaje puede tener hasta ${MAX_GIFT_MESSAGE_CHARACTERS} caracteres.` }
+      : {}),
+  };
+}
+
+export function hasGiftPersonalizationErrors(gift: Pick<GiftConfig, 'intro' | 'letter'>): boolean {
+  return Object.keys(validateGiftPersonalization(gift)).length > 0;
+}
+
+export function assertValidGiftPersonalization(gift: Pick<GiftConfig, 'intro' | 'letter'>): void {
+  const errors = validateGiftPersonalization(gift);
+
+  if (errors.title) throw new Error(errors.title);
+  if (errors.message) throw new Error(errors.message);
 }
 
 export function normalizeLegacyGiftConfig(legacyGift: LegacyGiftConfig): GiftConfig {
@@ -297,14 +326,20 @@ export function parseGiftFile(value: unknown): GiftConfig {
       throw new Error(`Versión de regalo no soportada: ${String(source.version)}`);
     }
 
-    return normalizeGiftConfig(parseStructuredGiftConfig(source.gift));
+    return normalizeGiftConfigVersion(parseStructuredGiftConfig(source.gift));
   }
 
   if (isStructuredGiftConfigRecord(source)) {
-    return normalizeGiftConfig(parseStructuredGiftConfig(source));
+    return normalizeGiftConfigVersion(parseStructuredGiftConfig(source));
   }
 
   return normalizeLegacyGiftConfig(parseLegacyGiftConfig(source));
+}
+
+export function parseCreatorGiftConfig(value: unknown): GiftConfig {
+  const gift = parseGiftFile(value);
+  assertValidGiftPersonalization(gift);
+  return gift;
 }
 
 export function createGiftDownloadName(gift: GiftConfig): string {

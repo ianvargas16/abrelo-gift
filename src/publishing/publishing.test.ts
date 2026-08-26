@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
-import { createGiftFile } from '../models/giftConfig';
+import {
+  createGiftFile,
+  MAX_GIFT_MESSAGE_CHARACTERS,
+  MAX_GIFT_TITLE_CHARACTERS,
+  parseCreatorGiftConfig,
+} from '../models/giftConfig';
 import {
   createCreatorPublication,
   hasUnpublishedChanges,
@@ -34,6 +39,52 @@ describe('Creator publishing client', () => {
 
     expect(fetcher).toHaveBeenCalledWith('http://127.0.0.1:8787/api/gifts', expect.objectContaining({ method: 'POST' }));
     expect(result).toEqual({ id: publishedId, url: publishedUrl });
+  });
+
+  it('publishes personalization through the unchanged GiftFile JSON contract', async () => {
+    const personalizedGift = {
+      ...defaultGift,
+      theme: 'sage' as const,
+      intro: { ...defaultGift.intro, title: 'Para una tarde distinta' },
+      letter: { ...defaultGift.letter, message: 'Una primera línea.\nY otra que también importa.' },
+    };
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual(createGiftFile(personalizedGift));
+      return Response.json({ id: publishedId, url: publishedUrl }, { status: 201 });
+    });
+
+    await expect(publishGift(personalizedGift, { fetcher })).resolves.toEqual({ id: publishedId, url: publishedUrl });
+  });
+
+  it('rejects invalid personalization before making a publication request', async () => {
+    const fetcher = vi.fn();
+    const invalidGift = {
+      ...defaultGift,
+      intro: { ...defaultGift.intro, title: 'T'.repeat(81) },
+    };
+
+    await expect(publishGift(invalidGift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects a manually modified GiftFile at import and publication boundaries', async () => {
+    const fetcher = vi.fn();
+    const manipulatedGift = {
+      ...defaultGift,
+      intro: {
+        ...defaultGift.intro,
+        title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS + 1),
+      },
+      letter: {
+        ...defaultGift.letter,
+        message: 'M'.repeat(MAX_GIFT_MESSAGE_CHARACTERS + 1),
+      },
+    };
+    const manipulatedFile = createGiftFile(manipulatedGift);
+
+    expect(() => parseCreatorGiftConfig(manipulatedFile)).toThrow(/80 caracteres/);
+    await expect(publishGift(manipulatedGift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('rejects malformed API responses with user-facing errors', async () => {
