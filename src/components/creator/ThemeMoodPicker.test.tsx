@@ -1,19 +1,22 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import { getThemeMood, ThemeMoodPicker } from './ThemeMoodPicker';
+import { resolveTheme } from '../../themes/themeRegistry';
+import { ThemeMoodPicker } from './ThemeMoodPicker';
 
 describe('ThemeMoodPicker', () => {
   it('keeps the four persisted theme IDs available with distinct presentation details', () => {
-    expect(getThemeMood('rose').mood).toBe('Romántico');
-    expect(getThemeMood('midnight').intensity).toBe('Envolvente');
-    expect(getThemeMood('sage').style).toContain('Calma natural');
-    expect(getThemeMood('sunset').label).toBe('Atardecer');
+    expect(resolveTheme('rose').mood).toBe('Romántico');
+    expect(resolveTheme('midnight').intensity).toBe('Envolvente');
+    expect(resolveTheme('sage').description).toContain('papel natural');
+    expect(resolveTheme('sunset').name).toBe('Atardecer');
   });
 
   it('marks the current GiftConfig theme as selected', () => {
     const markup = renderToStaticMarkup(<ThemeMoodPicker value="midnight" onChange={vi.fn()} />);
 
     expect(markup).toContain('Medianoche');
+    expect(markup).toContain('Contraste profundo y luz suave');
+    expect(markup).toContain('--swatch:#8091d7');
     expect(markup).toContain('aria-pressed="true"');
     expect(markup).toContain('Elegido');
   });

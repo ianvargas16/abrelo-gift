@@ -1207,32 +1207,16 @@ textarea:focus-visible {
 
 .theme-choice.selected {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--color-accent) 45%, rgba(59, 44, 47, 0.1));
-  background: color-mix(in srgb, var(--color-paper) 84%, white);
+  border-color: color-mix(in srgb, var(--swatch) 52%, rgba(59, 44, 47, 0.1));
+  background: color-mix(in srgb, var(--swatch) 7%, white);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 14%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--swatch) 18%, transparent),
     var(--shadow-floating-surface);
 }
 
 .theme-choice.selected .theme-choice-state small {
-  color: var(--color-accent-strong);
+  color: color-mix(in srgb, var(--swatch) 82%, black);
   font-weight: 700;
-}
-
-.theme-swatch-rose {
-  --swatch: #7f3656;
-}
-
-.theme-swatch-midnight {
-  --swatch: #5667af;
-}
-
-.theme-swatch-sage {
-  --swatch: #6d7f66;
-}
-
-.theme-swatch-sunset {
-  --swatch: #b36244;
 }
 
 .memory-editor-intro {

@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, type CSSProperties } from 'react';
 import { MAX_GIFT_AUDIO_BYTES, isGiftAudioMimeType } from '../../models/giftAudio';
 import type { GiftConfig, MemorySection } from '../../models/giftConfig';
 import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
@@ -10,7 +10,7 @@ import { CreationGuide } from './CreationGuide';
 import { GiftPersonalizationFields } from './GiftPersonalizationFields';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
-import { getThemeMood } from './ThemeMoodPicker';
+import { getThemeCssVariables, resolveTheme } from '../../themes/themeRegistry';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -67,7 +67,8 @@ export function GiftEditor({
   const hasRecipient = Boolean(gift.recipientName.trim());
   const hasMessage = Boolean(gift.letter.message.trim());
   const hasGift = Boolean(gift.gift.title.trim());
-  const activeTheme = getThemeMood(gift.theme);
+  const activeTheme = resolveTheme(gift.theme);
+  const activeThemeStyle = getThemeCssVariables(activeTheme) as CSSProperties;
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -411,7 +412,7 @@ export function GiftEditor({
               <p>Una mirada rápida al tono, el papel y los detalles de tu regalo.</p>
             </div>
 
-            <div className={`studio-preview-card theme-${gift.theme}`}>
+            <div className={`studio-preview-card ${activeTheme.className}`} style={activeThemeStyle}>
               <div className="studio-preview-meta">
                 <span className="preview-meta-label">{activeTheme.mood} · {activeTheme.intensity}</span>
                 <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Recorrer experiencia</button>
@@ -441,8 +442,8 @@ export function GiftEditor({
 
               <div className="studio-preview-mood">
                 <span className="ticket-inline-label">Atmósfera</span>
-                <strong>{activeTheme.label}</strong>
-                <small>{activeTheme.style}</small>
+                <strong>{activeTheme.name}</strong>
+                <small>{activeTheme.description}</small>
               </div>
 
               <p className="studio-preview-hint"><span aria-hidden="true">✦</span> Presiona el sello, abre el sobre y descubre el detalle.</p>

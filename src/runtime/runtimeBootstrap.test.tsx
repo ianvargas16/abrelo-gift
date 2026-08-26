@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA } from '../models/giftConfig';
+import { resolveTheme } from '../themes/themeRegistry';
 import {
   getRecipientPreparationDuration,
   RECIPIENT_PREPARATION_DURATION,
@@ -134,6 +135,8 @@ describe('recipient Runtime bootstrap', () => {
 
     expect(markup).toContain('Una noche para recordar');
     expect(markup).toContain('theme-midnight');
+    expect(markup).toContain(`--color-page:${resolveTheme('midnight').tokens.page}`);
+    expect(markup).toContain(`--color-paper:${resolveTheme('midnight').tokens.paper}`);
     expect(markup).toContain('data-runtime-phase="closed"');
   });
 

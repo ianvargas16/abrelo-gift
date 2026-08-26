@@ -1,14 +1,16 @@
+import { resolveThemeId, type ThemeId } from '../themes/themeRegistry';
 import { assertMemoryImageDataUrl, MAX_MEMORY_ITEMS } from './memoryMedia';
 import { isGiftAudioMimeType, type GiftAudio } from './giftAudio';
 import type { GiftAtmosphere } from './giftAtmosphere';
 import { isGiftAtmosphere } from './giftAtmosphere';
+
+export type { ThemeId } from '../themes/themeRegistry';
 
 export const GIFT_FILE_SCHEMA = 'abrelo.gift';
 export const GIFT_FILE_VERSION = 1 as const;
 export const MAX_GIFT_TITLE_CHARACTERS = 80;
 export const MAX_GIFT_MESSAGE_CHARACTERS = 500;
 
-export type ThemeId = 'rose' | 'midnight' | 'sage' | 'sunset';
 export type GiftType = 'voucher';
 
 export interface GiftIntro {
@@ -114,11 +116,7 @@ function assertNonEmptyString(value: unknown, fieldName: string): string {
 }
 
 function assertTheme(value: unknown): ThemeId {
-  if (value === 'rose' || value === 'midnight' || value === 'sage' || value === 'sunset') {
-    return value;
-  }
-
-  throw new Error('Tema inválido');
+  return resolveThemeId(value);
 }
 
 function parseGiftAudio(value: unknown): GiftAudio {

@@ -69,7 +69,7 @@ html,
 body,
 #root {
   width: 100%;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100%;
   margin: 0;
 }
@@ -96,91 +96,6 @@ button {
 button:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 3px;
-}
-
-.theme-rose {
-  --color-page: #efe6df;
-  --color-surface: rgba(255, 251, 247, 0.74);
-  --color-surface-elevated: rgba(255, 251, 247, 0.88);
-  --color-paper: #f8f1ea;
-  --color-paper-secondary: #ead8cc;
-  --color-page-ink: #261d21;
-  --color-page-ink-muted: #675c61;
-  --color-page-ink-subtle: #9a8d91;
-  --color-paper-ink: #261d21;
-  --color-paper-ink-muted: #675c61;
-  --color-paper-ink-subtle: #75686d;
-  --color-border: rgba(68, 45, 55, 0.14);
-  --color-accent: #7f3656;
-  --color-accent-strong: #5d243f;
-  --color-focus: #c58aa5;
-  --theme-glow: rgba(127, 54, 86, 0.12);
-}
-
-.theme-midnight {
-  --color-page: #171a24;
-  --color-surface: rgba(29, 33, 45, 0.74);
-  --color-surface-elevated: rgba(37, 42, 58, 0.9);
-  --color-paper: #eff1f5;
-  --color-paper-secondary: #d4d8e4;
-  --color-page-ink: #eff2fb;
-  --color-page-ink-muted: #bcc4da;
-  --color-page-ink-subtle: #8b93a8;
-  --color-paper-ink: #202536;
-  --color-paper-ink-muted: #596174;
-  --color-paper-ink-subtle: #656d80;
-  --color-border: rgba(214, 223, 242, 0.12);
-  --color-accent: #8091d7;
-  --color-accent-strong: #5667af;
-  --color-focus: #9eb0f1;
-  --theme-glow: rgba(128, 145, 215, 0.18);
-}
-
-.theme-sage {
-  --color-page: #ece9de;
-  --color-surface: rgba(249, 248, 242, 0.74);
-  --color-surface-elevated: rgba(250, 249, 244, 0.88);
-  --color-paper: #f7f4ec;
-  --color-paper-secondary: #dce0d1;
-  --color-page-ink: #242a24;
-  --color-page-ink-muted: #5f655e;
-  --color-page-ink-subtle: #8f968e;
-  --color-paper-ink: #242a24;
-  --color-paper-ink-muted: #5f655e;
-  --color-paper-ink-subtle: #697068;
-  --color-border: rgba(55, 65, 56, 0.13);
-  --color-accent: #6d7f66;
-  --color-accent-strong: #495641;
-  --color-focus: #98aa92;
-  --theme-glow: rgba(109, 127, 102, 0.12);
-}
-
-.theme-sunset {
-  --color-page: #efe3d5;
-  --color-surface: rgba(255, 250, 243, 0.74);
-  --color-surface-elevated: rgba(255, 250, 243, 0.9);
-  --color-paper: #fcf3e9;
-  --color-paper-secondary: #eccfb2;
-  --color-page-ink: #2b211e;
-  --color-page-ink-muted: #66554c;
-  --color-page-ink-subtle: #9b8778;
-  --color-paper-ink: #2b211e;
-  --color-paper-ink-muted: #66554c;
-  --color-paper-ink-subtle: #786458;
-  --color-border: rgba(74, 52, 40, 0.12);
-  --color-accent: #b36244;
-  --color-accent-strong: #874730;
-  --color-focus: #cf8a69;
-  --theme-glow: rgba(179, 98, 68, 0.14);
-}
-
-.theme-rose,
-.theme-midnight,
-.theme-sage,
-.theme-sunset {
-  --color-ink: var(--color-page-ink);
-  --color-ink-muted: var(--color-page-ink-muted);
-  --color-ink-subtle: var(--color-page-ink-subtle);
 }
 
 .ghost-button {
