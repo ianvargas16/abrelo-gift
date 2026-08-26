@@ -256,7 +256,7 @@ function isStructuredGiftConfigRecord(source: Record<string, unknown>): boolean 
   return 'intro' in source || 'letter' in source;
 }
 
-export function normalizeGiftConfig(gift: GiftConfig): GiftConfig {
+export function normalizeGiftConfigVersion(gift: GiftConfig): GiftConfig {
   return {
     ...gift,
     version: GIFT_FILE_VERSION,
@@ -326,17 +326,17 @@ export function parseGiftFile(value: unknown): GiftConfig {
       throw new Error(`Versión de regalo no soportada: ${String(source.version)}`);
     }
 
-    return normalizeGiftConfig(parseStructuredGiftConfig(source.gift));
+    return normalizeGiftConfigVersion(parseStructuredGiftConfig(source.gift));
   }
 
   if (isStructuredGiftConfigRecord(source)) {
-    return normalizeGiftConfig(parseStructuredGiftConfig(source));
+    return normalizeGiftConfigVersion(parseStructuredGiftConfig(source));
   }
 
   return normalizeLegacyGiftConfig(parseLegacyGiftConfig(source));
 }
 
-export function parseCreatorGiftImport(value: unknown): GiftConfig {
+export function parseCreatorGiftConfig(value: unknown): GiftConfig {
   const gift = parseGiftFile(value);
   assertValidGiftPersonalization(gift);
   return gift;

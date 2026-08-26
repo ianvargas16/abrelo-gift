@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { defaultGift } from './config/defaultGift';
-import { createGiftDownloadName, createGiftFile, parseCreatorGiftImport } from './models/giftConfig';
+import { createGiftDownloadName, createGiftFile, parseCreatorGiftConfig } from './models/giftConfig';
 import { getCurrentRoute, navigateToRoute } from './lib/routes';
 import { ProjectRepository } from './projects/projectRepository';
 import { CreatorView } from './views/CreatorView';
@@ -52,7 +52,7 @@ export default function App() {
   const importGift = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
-      const importedGift = parseCreatorGiftImport(parsed);
+      const importedGift = parseCreatorGiftConfig(parsed);
       setProjectStore((current) => repository.createImported(current, importedGift));
     } catch {
       window.alert('No pude importar ese archivo. Usa un .gift.json exportado por Ábrelo.');

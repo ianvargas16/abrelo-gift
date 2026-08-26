@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
-import { createGiftFile } from '../models/giftConfig';
+import {
+  createGiftFile,
+  MAX_GIFT_MESSAGE_CHARACTERS,
+  MAX_GIFT_TITLE_CHARACTERS,
+  parseCreatorGiftConfig,
+} from '../models/giftConfig';
 import {
   createCreatorPublication,
   hasUnpublishedChanges,
@@ -59,6 +64,26 @@ describe('Creator publishing client', () => {
     };
 
     await expect(publishGift(invalidGift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('rejects a manually modified GiftFile at import and publication boundaries', async () => {
+    const fetcher = vi.fn();
+    const manipulatedGift = {
+      ...defaultGift,
+      intro: {
+        ...defaultGift.intro,
+        title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS + 1),
+      },
+      letter: {
+        ...defaultGift.letter,
+        message: 'M'.repeat(MAX_GIFT_MESSAGE_CHARACTERS + 1),
+      },
+    };
+    const manipulatedFile = createGiftFile(manipulatedGift);
+
+    expect(() => parseCreatorGiftConfig(manipulatedFile)).toThrow(/80 caracteres/);
+    await expect(publishGift(manipulatedGift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
     expect(fetcher).not.toHaveBeenCalled();
   });
 

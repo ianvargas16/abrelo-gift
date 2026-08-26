@@ -1,5 +1,9 @@
 import { LEGACY_GIFT_DRAFT_STORAGE_KEY, readLegacyGiftDraft } from '../lib/giftDraftStore';
-import { parseGiftFile, type GiftConfig } from '../models/giftConfig';
+import {
+  assertValidGiftPersonalization,
+  parseCreatorGiftConfig,
+  type GiftConfig,
+} from '../models/giftConfig';
 import { parseCreatorPublication, type CreatorPublication } from '../publishing/creatorPublication';
 import {
   PROJECT_STORAGE_VERSION,
@@ -88,7 +92,7 @@ function parseProject(value: unknown): GiftProject {
   return {
     id: assertNonEmptyString(value.id, 'project.id'),
     name: typeof value.name === 'string' ? value.name : DEFAULT_PROJECT_NAME,
-    gift: parseGiftFile(value.gift),
+    gift: parseCreatorGiftConfig(value.gift),
     createdAt: assertTimestamp(value.createdAt, 'project.createdAt'),
     updatedAt: assertTimestamp(value.updatedAt, 'project.updatedAt'),
     ...(publication ? { publication } : {}),
@@ -217,6 +221,7 @@ export class ProjectRepository {
   }
 
   saveGift(store: GiftProjectStore, projectId: string, gift: GiftConfig): GiftProjectStore {
+    assertValidGiftPersonalization(gift);
     const project = this.requireProject(store, projectId);
     if (sameGift(project.gift, gift)) {
       return store;
@@ -297,6 +302,7 @@ export class ProjectRepository {
   }
 
   private createProject(gift: GiftConfig, name: string): GiftProject {
+    assertValidGiftPersonalization(gift);
     const timestamp = this.now();
     return {
       id: this.createId(),

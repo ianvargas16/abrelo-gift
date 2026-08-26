@@ -41,12 +41,20 @@ export function GiftPersonalizationFields({
 
   const changeTitle = (title: string) => {
     setTitleDraft(title);
-    if (title.length <= MAX_GIFT_TITLE_CHARACTERS) onTitleChange(title);
+    const errors = validateGiftPersonalization({
+      intro: { ...gift.intro, title },
+      letter: { ...gift.letter, message: messageDraft },
+    });
+    if (!errors.title) onTitleChange(title);
   };
 
   const changeMessage = (message: string) => {
     setMessageDraft(message);
-    if (message.length <= MAX_GIFT_MESSAGE_CHARACTERS) onMessageChange(message);
+    const errors = validateGiftPersonalization({
+      intro: { ...gift.intro, title: titleDraft },
+      letter: { ...gift.letter, message },
+    });
+    if (!errors.message) onMessageChange(message);
   };
 
   return (

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
 import { LEGACY_GIFT_DRAFT_STORAGE_KEY } from '../lib/giftDraftStore';
-import { createGiftFile } from '../models/giftConfig';
+import {
+  createGiftFile,
+  MAX_GIFT_MESSAGE_CHARACTERS,
+  MAX_GIFT_TITLE_CHARACTERS,
+} from '../models/giftConfig';
 import { createCreatorPublication, hasUnpublishedChanges } from '../publishing/creatorPublication';
 import { getGiftTemplate } from '../templates/giftTemplates';
 import {
@@ -250,6 +254,58 @@ describe('ProjectRepository', () => {
     expect(imported.publication).toBeUndefined();
     expect(createGiftFile(imported.gift)).toEqual({ schema: 'abrelo.gift', version: 1, gift: importedGift });
     expect(JSON.stringify(createGiftFile(imported.gift))).not.toContain(imported.id);
+  });
+
+  it('does not persist manipulated imports or invalid Creator edits', () => {
+    const { repository, storage } = createRepository();
+    const store = repository.load(defaultGift).store;
+    const invalidTitleGift = {
+      ...defaultGift,
+      intro: {
+        ...defaultGift.intro,
+        title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS + 1),
+      },
+    };
+    const invalidMessageGift = {
+      ...defaultGift,
+      letter: {
+        ...defaultGift.letter,
+        message: 'M'.repeat(MAX_GIFT_MESSAGE_CHARACTERS + 1),
+      },
+    };
+
+    expect(() => repository.createImported(store, invalidTitleGift)).toThrow(/80 caracteres/);
+    expect(() => repository.saveGift(store, store.activeProjectId, invalidMessageGift)).toThrow(/500 caracteres/);
+    expect(store.projects).toHaveLength(1);
+    expect(store.projects[0].gift).toEqual(defaultGift);
+    expect(storage.getItem(PROJECT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('rejects invalid stored personalization while recovering valid sibling projects', () => {
+    const { repository, storage } = createRepository();
+    const validStore = repository.load(defaultGift).store;
+    const invalidProject = {
+      ...validStore.projects[0],
+      id: 'invalid-personalization',
+      gift: {
+        ...defaultGift,
+        intro: {
+          ...defaultGift.intro,
+          title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS + 1),
+        },
+      },
+    };
+    storage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
+      ...validStore,
+      projects: [...validStore.projects, invalidProject],
+      activeProjectId: invalidProject.id,
+    }));
+
+    const recovered = repository.load(defaultGift);
+    expect(recovered.warning).toBeNull();
+    expect(recovered.store.projects).toHaveLength(1);
+    expect(recovered.store.projects[0].gift).toEqual(defaultGift);
+    expect(recovered.store.activeProjectId).toBe(validStore.activeProjectId);
   });
 
   it('persists a new project created from a template without storing template metadata', () => {

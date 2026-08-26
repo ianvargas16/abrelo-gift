@@ -7,7 +7,7 @@ import {
   hasGiftMemories,
   MAX_GIFT_MESSAGE_CHARACTERS,
   MAX_GIFT_TITLE_CHARACTERS,
-  parseCreatorGiftImport,
+  parseCreatorGiftConfig,
   parseGiftFile,
   validateGiftPersonalization,
 } from './giftConfig';
@@ -104,8 +104,8 @@ describe('parseGiftFile', () => {
     expect(validateGiftPersonalization(longMessageGift).message).toContain(String(MAX_GIFT_MESSAGE_CHARACTERS));
     expect(parseGiftFile(createGiftFile(longTitleGift))).toEqual(longTitleGift);
     expect(parseGiftFile(createGiftFile(longMessageGift))).toEqual(longMessageGift);
-    expect(() => parseCreatorGiftImport(createGiftFile(longTitleGift))).toThrow(/80 caracteres/);
-    expect(() => parseCreatorGiftImport(createGiftFile(longMessageGift))).toThrow(/500 caracteres/);
+    expect(() => parseCreatorGiftConfig(createGiftFile(longTitleGift))).toThrow(/80 caracteres/);
+    expect(() => parseCreatorGiftConfig(createGiftFile(longMessageGift))).toThrow(/500 caracteres/);
     expect(validateGiftPersonalization(defaultGift)).toEqual({});
   });
 
