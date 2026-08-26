@@ -116,6 +116,28 @@ describe('ProjectRepository', () => {
     expect(duplicate.publication).toBeUndefined();
   });
 
+  it('persists and independently duplicates canonical personalization values', () => {
+    const { repository } = createRepository();
+    let store = repository.load(defaultGift).store;
+    const sourceId = store.activeProjectId;
+    const personalizedGift = {
+      ...defaultGift,
+      theme: 'sunset' as const,
+      intro: { ...defaultGift.intro, title: 'Una escapada para nosotros' },
+      letter: { ...defaultGift.letter, message: 'Primera parada.\nDespués, lo que queramos.' },
+    };
+
+    store = repository.saveGift(store, sourceId, personalizedGift);
+    repository.save(store);
+    const reloaded = repository.load(defaultGift).store;
+    const duplicated = repository.duplicate(reloaded, sourceId);
+    const duplicate = repository.get(duplicated, duplicated.activeProjectId)!;
+
+    expect(repository.get(reloaded, sourceId)?.gift).toEqual(personalizedGift);
+    expect(duplicate.gift).toEqual(personalizedGift);
+    expect(duplicate.gift).not.toBe(repository.get(reloaded, sourceId)?.gift);
+  });
+
   it('deletes non-active projects, selects another after deleting the active project, and recreates the final project', () => {
     const { repository } = createRepository();
     let store = repository.load(defaultGift).store;

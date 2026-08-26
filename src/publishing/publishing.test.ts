@@ -36,6 +36,32 @@ describe('Creator publishing client', () => {
     expect(result).toEqual({ id: publishedId, url: publishedUrl });
   });
 
+  it('publishes personalization through the unchanged GiftFile JSON contract', async () => {
+    const personalizedGift = {
+      ...defaultGift,
+      theme: 'sage' as const,
+      intro: { ...defaultGift.intro, title: 'Para una tarde distinta' },
+      letter: { ...defaultGift.letter, message: 'Una primera línea.\nY otra que también importa.' },
+    };
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual(createGiftFile(personalizedGift));
+      return Response.json({ id: publishedId, url: publishedUrl }, { status: 201 });
+    });
+
+    await expect(publishGift(personalizedGift, { fetcher })).resolves.toEqual({ id: publishedId, url: publishedUrl });
+  });
+
+  it('rejects invalid personalization before making a publication request', async () => {
+    const fetcher = vi.fn();
+    const invalidGift = {
+      ...defaultGift,
+      intro: { ...defaultGift.intro, title: 'T'.repeat(81) },
+    };
+
+    await expect(publishGift(invalidGift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed API responses with user-facing errors', async () => {
     await expect(publishGift(defaultGift, {
       fetcher: async () => Response.json({ id: '1', url: 'javascript:alert(1)' }),

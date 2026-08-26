@@ -78,6 +78,21 @@ describe('recipient Runtime bootstrap', () => {
     expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);
   });
 
+  it('renders the canonical personalized title and selected theme in the closed Runtime state', () => {
+    const gift = {
+      ...defaultGift,
+      theme: 'midnight' as const,
+      intro: { ...defaultGift.intro, title: 'Una noche para recordar' },
+    };
+    const markup = renderToStaticMarkup(
+      <RecipientRuntimeApp bootstrap={{ status: 'ready', gift }} />,
+    );
+
+    expect(markup).toContain('Una noche para recordar');
+    expect(markup).toContain('theme-midnight');
+    expect(markup).toContain('data-runtime-phase="closed"');
+  });
+
   it('skips the preparation delay when reduced motion is preferred', () => {
     expect(getRecipientPreparationDuration(false)).toBe(RECIPIENT_PREPARATION_DURATION);
     expect(getRecipientPreparationDuration(true)).toBe(0);
