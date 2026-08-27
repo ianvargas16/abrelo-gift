@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA } from '../models/giftConfig';
 import { resolveTheme } from '../themes/themeRegistry';
+import { RuntimeView } from '../views/RuntimeView';
 import {
+  getRecipientDisplayState,
   getRecipientPreparationDuration,
   RECIPIENT_PREPARATION_DURATION,
   RecipientRuntimeApp,
@@ -55,7 +57,8 @@ describe('recipient Runtime bootstrap', () => {
       },
     });
 
-    const markup = renderToStaticMarkup(<RecipientRuntimeApp bootstrap={bootstrap} />);
+    if (bootstrap.status !== 'ready') throw new Error('Expected a ready Runtime gift');
+    const markup = renderToStaticMarkup(<RuntimeView gift={bootstrap.gift} />);
     expect(markup).toContain('Hay algo para ti');
     expect(markup).toContain('theme-sage');
     expect(markup).toContain('data-runtime-phase="closed"');
@@ -124,10 +127,18 @@ describe('recipient Runtime bootstrap', () => {
     expect(result.status).toBe('ready');
   });
 
-  it('renders the shared Runtime for valid bootstrap data', () => {
+  it('renders an isolated preparation state before the Runtime becomes interactive', () => {
     const markup = renderToStaticMarkup(
       <RecipientRuntimeApp bootstrap={{ status: 'ready', gift: defaultGift }} />,
     );
+
+    expect(markup).toContain('Preparando algo para ti');
+    expect(markup).toContain('role="status"');
+    expect(markup).not.toContain('state-sealed');
+  });
+
+  it('renders the shared Runtime after preparation without Creator controls', () => {
+    const markup = renderToStaticMarkup(<RuntimeView gift={defaultGift} />);
 
     expect(markup).toContain('Hay algo para ti');
     expect(markup).toContain('data-runtime-phase="closed"');
@@ -136,7 +147,6 @@ describe('recipient Runtime bootstrap', () => {
     expect(markup).not.toContain('gift-audio-control');
     expect(markup).not.toContain('gift-background');
     expect(markup).not.toContain('Este regalo no está disponible');
-    expect(markup).toContain('Preparando algo para ti');
     expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);
   });
 
@@ -147,7 +157,7 @@ describe('recipient Runtime bootstrap', () => {
       intro: { ...defaultGift.intro, title: 'Una noche para recordar' },
     };
     const markup = renderToStaticMarkup(
-      <RecipientRuntimeApp bootstrap={{ status: 'ready', gift }} />,
+      <RuntimeView gift={gift} />,
     );
 
     expect(markup).toContain('Una noche para recordar');
@@ -162,12 +172,23 @@ describe('recipient Runtime bootstrap', () => {
     expect(getRecipientPreparationDuration(true)).toBe(0);
   });
 
+  it('resolves loading, ready, and error presentation states explicitly', () => {
+    const ready = { status: 'ready' as const, gift: defaultGift };
+    const error = { status: 'error' as const, reason: 'missing' as const };
+
+    expect(getRecipientDisplayState(ready, true)).toBe('loading');
+    expect(getRecipientDisplayState(ready, false)).toBe('ready');
+    expect(getRecipientDisplayState(error, true)).toBe('error');
+  });
+
   it('renders only recipient-safe copy when bootstrap fails', () => {
     const markup = renderToStaticMarkup(
       <RecipientRuntimeApp bootstrap={{ status: 'error', reason: 'invalid' }} />,
     );
 
     expect(markup).toContain('Este regalo ya no está disponible');
+    expect(markup).toContain('data-recipient-state="error"');
+    expect(markup).not.toContain('Preparando algo para ti');
     expect(markup).toContain('Volver a intentar');
     expect(markup).not.toMatch(/Creator|GiftConfig|JSON|schema|versión/i);
     expect(markup).not.toMatch(/vencido|eliminado|nunca existió/i);

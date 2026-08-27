@@ -7,10 +7,18 @@ interface EnvelopeProps {
   state: EnvelopeState;
   isShaking: boolean;
   isInteracting?: boolean;
+  isOpening?: boolean;
   seal?: ReactNode;
 }
 
-export function Envelope({ recipientName, state, isShaking, isInteracting = false, seal }: EnvelopeProps) {
+export function Envelope({
+  recipientName,
+  state,
+  isShaking,
+  isInteracting = false,
+  isOpening = false,
+  seal,
+}: EnvelopeProps) {
   const label = recipientName.trim();
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== 'mouse') return;
@@ -28,7 +36,7 @@ export function Envelope({ recipientName, state, isShaking, isInteracting = fals
 
   return (
     <div
-      className={`envelope state-${state} ${isShaking ? 'shake' : ''} ${isInteracting ? 'is-interacting' : ''}`}
+      className={`envelope state-${state} ${isShaking ? 'shake' : ''} ${isInteracting ? 'is-interacting' : ''} ${isOpening ? 'is-opening' : ''}`}
       onPointerMove={handlePointerMove}
       onPointerLeave={resetPerspective}
       style={{ '--envelope-rotate-x': '0deg', '--envelope-rotate-y': '0deg' } as CSSProperties}
@@ -37,6 +45,7 @@ export function Envelope({ recipientName, state, isShaking, isInteracting = fals
       <div className="envelope-back">
         <div className="envelope-lining" aria-hidden="true" />
       </div>
+      <div className="envelope-throat" aria-hidden="true" />
       <div className="letter-peek">
         {label && <small>Para</small>}
         <span>{label || 'Para ti'}</span>

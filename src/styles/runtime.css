@@ -230,6 +230,7 @@
   background:
     radial-gradient(circle at 50% 35%, var(--theme-glow), transparent 28%),
     var(--color-page);
+  animation: runtime-preparation-arrive var(--motion-standard) var(--ease-standard) both;
 }
 
 .runtime-preparation-card {
@@ -240,6 +241,17 @@
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
   background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
   box-shadow: var(--shadow-subtle-ui);
+  animation: runtime-preparation-breathe 1.8s var(--ease-standard) infinite;
+}
+
+@keyframes runtime-preparation-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes runtime-preparation-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.25rem); }
 }
 
 .runtime-preparation-mark {
@@ -406,6 +418,16 @@
   transform: scale(0.985) rotateX(var(--envelope-rotate-x)) rotateY(var(--envelope-rotate-y));
 }
 
+.envelope.is-opening {
+  animation: envelope-open-settle var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate) both;
+}
+
+@keyframes envelope-open-settle {
+  0% { transform: translateY(0) rotateX(var(--envelope-rotate-x)) rotateY(var(--envelope-rotate-y)); }
+  46% { transform: translateY(0.3rem) scale(0.992); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 .envelope.state-extracting {
   opacity: 0;
   transform: translateY(2.25rem) scale(0.93) rotate(-0.8deg);
@@ -419,6 +441,16 @@
   background: color-mix(in srgb, var(--theme-glow, rgba(127, 54, 86, 0.12)) 86%, transparent);
   filter: blur(14px);
   animation: envelope-shadow-rest 5.5s 1.2s ease-in-out infinite;
+}
+
+.envelope.is-opening .envelope-shadow {
+  animation: envelope-shadow-open var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate) both;
+}
+
+@keyframes envelope-shadow-open {
+  0% { opacity: 0.76; transform: scaleX(0.98); }
+  54% { opacity: 0.42; transform: translateY(0.35rem) scaleX(1.12); }
+  100% { opacity: 0.62; transform: scaleX(1.04); }
 }
 
 @keyframes envelope-shadow-rest {
@@ -437,6 +469,7 @@
 .envelope-back,
 .envelope-front,
 .envelope-flap,
+.envelope-throat,
 .letter-peek {
   position: absolute;
 }
@@ -455,6 +488,26 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.34), transparent 42%),
     linear-gradient(225deg, rgba(255, 255, 255, 0.18), transparent 36%);
+}
+
+.envelope-throat {
+  inset: 0.4rem 0.8rem auto;
+  height: 48%;
+  border-radius: 0.75rem 0.75rem 50% 50%;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-paper-ink) 18%, transparent), transparent 72%);
+  opacity: 0;
+  transform: scaleY(0.35);
+  transform-origin: top;
+  transition:
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate);
+  z-index: 1;
+}
+
+.envelope.state-opened .envelope-throat,
+.envelope.state-extracting .envelope-throat {
+  opacity: 0.72;
+  transform: scaleY(1);
 }
 
 .envelope-front {
@@ -518,13 +571,17 @@
   clip-path: polygon(0.95rem 0, calc(100% - 0.95rem) 0, 50% 100%);
   transform-origin: top center;
   z-index: 5;
-  transition: transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate), z-index var(--motion-fast) linear;
+  transition:
+    transform var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-deliberate),
+    filter var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-standard),
+    z-index var(--motion-fast) linear;
   backface-visibility: hidden;
 }
 
 .envelope.state-opened .envelope-flap,
 .envelope.state-extracting .envelope-flap {
   transform: rotateX(180deg);
+  filter: brightness(0.98);
   z-index: 1;
 }
 
@@ -549,6 +606,7 @@
 
 .envelope.state-opened .letter-peek {
   transform: translateY(-4.5rem);
+  transition-delay: 110ms, 0ms;
 }
 
 .envelope.state-extracting .letter-peek {
@@ -593,6 +651,16 @@
     box-shadow var(--motion-standard) var(--ease-standard);
 }
 
+.wax-seal.is-idle {
+  animation: wax-seal-invite 2.8s 1.1s var(--ease-standard) infinite;
+}
+
+@keyframes wax-seal-invite {
+  0%, 72%, 100% { transform: translate(-50%, -28%) scale(1) rotate(0); }
+  80% { transform: translate(-50%, -28%) scale(1.035) rotate(-1.2deg); }
+  89% { transform: translate(-50%, -28%) scale(1.015) rotate(1deg); }
+}
+
 .wax-seal-face {
   position: relative;
   width: 100%;
@@ -613,6 +681,15 @@
   font-size: 1.55rem;
   transform: scale(var(--mark-scale));
   transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.wax-seal-glint {
+  position: absolute;
+  inset: 0.18rem;
+  border-radius: 50%;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.32), transparent 34% 68%, rgba(255, 255, 255, 0.08));
+  opacity: calc(0.28 + (var(--hold-progress, 0) * 0.5));
+  pointer-events: none;
 }
 
 .wax-seal-crack {
@@ -636,8 +713,9 @@
 }
 
 .wax-seal.is-holding {
-  filter: saturate(1.12);
-  transform: translate(-50%, -28%) scale(var(--seal-scale));
+  animation: none;
+  filter: saturate(1.2) brightness(1.04);
+  transform: translate(-50%, -28%) scale(var(--seal-scale)) rotate(var(--seal-rotation));
   box-shadow:
     0 10px 18px color-mix(in srgb, var(--color-accent) 32%, transparent),
     0 0 0 var(--hold-ring) color-mix(in srgb, var(--color-accent) 12%, transparent);
@@ -717,6 +795,30 @@
 
 .interaction-copy span {
   font-size: 0.88rem;
+}
+
+.hold-progress {
+  width: min(100%, 13.5rem);
+  height: 0.3rem;
+  justify-self: center;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.hold-progress > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent-strong);
+  transform: scaleX(var(--hold-progress, 0));
+  transform-origin: left center;
+  transition: transform 40ms linear;
+}
+
+.hold-progress.is-active {
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .interaction-copy button {
@@ -1643,6 +1745,10 @@
   .ticket-shell,
   .gift-audio-control,
   .gift-audio-control-mark,
+  .runtime-preparation,
+  .runtime-preparation-card,
+  .wax-seal,
+  .envelope-throat,
   .envelope-flap,
   .letter-peek {
     animation: none;

@@ -1,5 +1,5 @@
 export type RuntimeStage = 'sealed' | 'unsealed' | 'opened' | 'letter' | 'memories' | 'revealed';
-export type RuntimePhase = 'closed' | 'opening' | 'revealed';
+export type RuntimePhase = 'closed' | 'opening' | 'opened' | 'revealed';
 
 export type RuntimeEvent = 'seal-complete' | 'open-envelope' | 'show-letter' | 'show-memories' | 'reveal-gift' | 'reset';
 
@@ -14,6 +14,7 @@ export const runtimePresentationTiming = {
 export function getRuntimePhase(stage: RuntimeStage): RuntimePhase {
   if (stage === 'sealed') return 'closed';
   if (stage === 'revealed') return 'revealed';
+  if (stage === 'letter' || stage === 'memories') return 'opened';
   return 'opening';
 }
 

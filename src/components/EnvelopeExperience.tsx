@@ -120,6 +120,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
         setIsHolding(false);
         setFailedAttempt(false);
         setIsSealReleasing(true);
+        giftAudio.completeReveal();
         setStage((current) => transitionRuntimeStage(current, 'seal-complete'));
         schedulePresentation(() => setIsSealReleasing(false), runtimePresentationTiming.sealRelease);
         navigator.vibrate?.(14);
@@ -127,6 +128,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
       onCancel: () => {
         setIsHolding(false);
         setFailedAttempt(true);
+        giftAudio.cancelGesture();
         clearTimer(feedbackTimer);
         feedbackTimer.current = window.setTimeout(() => setFailedAttempt(false), 650);
       },
@@ -145,7 +147,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     const started = holdController.current?.start() ?? false;
     if (started) {
       setIsHolding(true);
-      giftAudio.activate();
+      giftAudio.beginGesture();
     }
     return started;
   };
@@ -160,6 +162,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   const interruptHold = () => {
     holdController.current?.interrupt();
+    giftAudio.cancelGesture();
     clearTimer(feedbackTimer);
     setIsHolding(false);
     setFailedAttempt(false);
@@ -204,6 +207,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     clearTimer(feedbackTimer);
     clearTimer(transitionTimer);
     holdController.current?.reset();
+    giftAudio.resetReveal();
     setStage((current) => transitionRuntimeStage(current, 'reset'));
     setIsHolding(false);
     setFailedAttempt(false);
@@ -219,6 +223,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
       <main
         className={`experience ${theme.className} stage-${stage}`}
         data-runtime-phase={getRuntimePhase(stage)}
+        aria-busy={isRevealing || isMemoryRevealing}
         style={experienceStyle}
       >
         <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
@@ -234,6 +239,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     <main
       className={`experience ${theme.className} stage-${stage}`}
       data-runtime-phase={getRuntimePhase(stage)}
+      aria-busy={isSealReleasing || isEnvelopeOpening || isExtracting || isRevealing || isMemoryRevealing}
       style={experienceStyle}
     >
       <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
@@ -255,6 +261,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
               state={envelopeState}
               isShaking={failedAttempt}
               isInteracting={isHolding}
+              isOpening={isEnvelopeOpening}
               seal={stage === 'sealed' || stage === 'unsealed' ? (
                 <WaxSeal
                   progress={stage === 'unsealed' ? 1 : progress}
@@ -268,7 +275,21 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
             />
 
             <div className={`interaction-copy ${isExtracting ? 'is-extracting' : ''}`} aria-live="polite">
-              {stage === 'sealed' && <><strong>{sealHint}</strong><span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : 'El sello necesita una presión continua y tranquila.'}</span></>}
+              {stage === 'sealed' && <>
+                <strong>{sealHint}</strong>
+                <div
+                  className={`hold-progress ${isHolding ? 'is-active' : ''}`}
+                  role="progressbar"
+                  aria-live="off"
+                  aria-label="Progreso para abrir el sello"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(progress * 100)}
+                >
+                  <span style={{ '--hold-progress': progress } as CSSProperties} />
+                </div>
+                <span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : isHolding ? 'Sigue presionando…' : 'El sello necesita una presión continua y tranquila.'}</span>
+              </>}
               {stage === 'unsealed' && <><strong>{isSealReleasing ? 'El sello se está soltando.' : 'El sello cedió.'}</strong><button onClick={openEnvelope} disabled={isSealReleasing}>{isSealReleasing ? 'Un instante…' : 'Abrir el sobre'}</button></>}
               {stage === 'opened' && <><strong>{isEnvelopeOpening ? 'El sobre se está abriendo.' : 'Ahora sí.'}</strong><button onClick={extractLetter} disabled={isEnvelopeOpening || isExtracting}>{isEnvelopeOpening ? 'Abriendo el sobre…' : isExtracting ? 'Sacando la carta…' : 'Sacar la carta'}</button></>}
             </div>

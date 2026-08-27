@@ -175,13 +175,18 @@ describe('Runtime stage transitions', () => {
     expect(getRuntimeTransitionDelay(runtimePresentationTiming.cardExtraction, true)).toBe(0);
   });
 
-  it('exposes the recipient journey as closed, opening, then revealed', () => {
+  it('exposes the recipient journey as closed, opening, opened, then revealed', () => {
     expect(getRuntimePhase('sealed')).toBe('closed');
     expect(getRuntimePhase('unsealed')).toBe('opening');
     expect(getRuntimePhase('opened')).toBe('opening');
-    expect(getRuntimePhase('letter')).toBe('opening');
-    expect(getRuntimePhase('memories')).toBe('opening');
+    expect(getRuntimePhase('letter')).toBe('opened');
+    expect(getRuntimePhase('memories')).toBe('opened');
     expect(getRuntimePhase('revealed')).toBe('revealed');
+  });
+
+  it('keeps opened and revealed stages stable when repeated events arrive', () => {
+    expect(transitionRuntimeStage('letter', 'show-letter')).toBe('letter');
+    expect(transitionRuntimeStage('revealed', 'reveal-gift')).toBe('revealed');
   });
 
   it('shows audio controls only after reveal and only for configured audio', () => {
