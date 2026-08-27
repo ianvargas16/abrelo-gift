@@ -15,9 +15,9 @@ Recipient
   -> Worker + recipient Runtime shell
   -> GiftFile bootstrap
 
-Future optional media
+Optional media
   -> private R2 GIFT_ASSETS
-  -> Worker-owned GET /g/<opaque-id>/audio
+  -> Worker-owned GET /g/<opaque-id>/audio or /cover
 ```
 
 The Creator runs as a React/Vite application. The Worker owns the publish API, recipient routing, authorization boundary, and recipient Runtime shell. GitHub hosts source and CI; Wrangler validates, migrates, and deploys each Worker environment.
@@ -49,11 +49,13 @@ It does not store binary uploads or public media URLs that reveal internal stora
 
 ### R2
 
-`GIFT_ASSETS` is a private R2 binding for optional binary media. No R2 public bucket URL is part of the product contract. A future upload will use an internal key known only to the Worker; that key is never embedded in `GiftFile`, returned as a public URL, or exposed to a recipient.
+`GIFT_ASSETS` is a private R2 binding for optional binary media. No R2 public bucket URL is part of the product contract. Audio and cover uploads use internal keys derived from the server-generated opaque gift ID. Those keys are never embedded in `GiftFile`, returned as public URLs, logged, or exposed to a recipient.
+
+Published `GiftConfig` stores only the media metadata needed by Runtime: MIME type and byte size for a cover image, and MIME type for audio. Presence of that metadata selects a fixed Worker-owned route; it is intentionally not an R2 object locator. Current local memory photos remain in their existing compatible format and are outside this foundation milestone.
 
 ## Publishing and recipient assets
 
-The current publishing API remains JSON-only:
+The publishing API remains JSON-only when no new binary is attached:
 
 ```text
 POST /api/gifts
@@ -61,7 +63,7 @@ Content-Type: application/json
 GiftFile -> Worker -> D1 -> /g/<opaque-id>
 ```
 
-Gifts without binary media continue to use this exact flow. Custom audio will later add a separate upload path or a multipart variant while retaining JSON-only compatibility for existing clients.
+Gifts with audio or a cover image use a bounded multipart request containing canonical `gift` JSON plus at most one `audio` and one `coverImage` file. The Worker validates every part before writing, uploads private objects first, persists the immutable D1 snapshot last, and deletes every uploaded object if a later upload or D1 persistence fails. Gifts without newly attached binary media continue to use the original JSON flow.
 
 The intended recipient asset contract is:
 
@@ -71,6 +73,8 @@ GET /g/<opaque-id>/audio
   -> Worker resolves the private R2 object
   -> Worker streams a safe media response
 ```
+
+Cover images follow the equivalent `GET /g/<opaque-id>/cover` route. Both routes validate the opaque gift ID, require corresponding public metadata in the immutable snapshot, resolve an internal deterministic key, and stream with a safe allowlisted `Content-Type` and `X-Content-Type-Options: nosniff`.
 
 The route is owned by the same Worker as `/g/<opaque-id>`. It must not become an R2 public URL, a bucket listing, or a searchable media API.
 

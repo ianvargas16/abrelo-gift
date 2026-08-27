@@ -3,7 +3,8 @@ import { defaultGift } from '../src/config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA, parseGiftFile } from '../src/models/giftConfig';
 import { createPublishApp } from './app';
 import { MAX_GIFT_AUDIO_BYTES, type GiftAudioMimeType } from '../src/models/giftAudio';
-import { MAX_MULTIPART_BYTES } from './giftAudioPublishing';
+import { MAX_MULTIPART_BYTES } from './giftAssetPublishing';
+import { MAX_GIFT_IMAGE_BYTES, type GiftImageMimeType } from '../src/models/giftMedia';
 import {
   GIFT_ID_PATTERN,
   injectPublicMetadataIntoRuntimeHtml,
@@ -37,11 +38,12 @@ class MemoryGiftAssets {
   putCalls = 0;
   deleteCalls = 0;
   failPut = false;
+  failPutAt: number | null = null;
   failDelete = false;
 
   async put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object> {
     this.putCalls += 1;
-    if (this.failPut) throw new Error('R2 unavailable');
+    if (this.failPut || this.failPutAt === this.putCalls) throw new Error('R2 unavailable');
     const body = new Uint8Array(await new Response(value).arrayBuffer());
     this.objects.set(key, { body });
     return {} as R2Object;
@@ -125,6 +127,18 @@ function createAudioFile(size: number, mimeType: GiftAudioMimeType = 'audio/mpeg
     bytes.set([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20]);
   }
   return new File([bytes], mimeType === 'audio/mpeg' ? 'gift.mp3' : 'gift.m4a', { type: mimeType });
+}
+
+function createImageFile(size: number, mimeType: GiftImageMimeType = 'image/jpeg'): File {
+  const bytes = new Uint8Array(size);
+  if (mimeType === 'image/jpeg') {
+    bytes.set([0xff, 0xd8, 0xff, 0xe0]);
+  } else if (mimeType === 'image/png') {
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  } else {
+    bytes.set([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]);
+  }
+  return new File([bytes], `cover.${mimeType.split('/')[1]}`, { type: mimeType });
 }
 
 function multipartPublishRequest(
@@ -571,6 +585,23 @@ describe('publish Worker', () => {
     expect(giftAssets.deleteCalls).toBe(0);
   });
 
+  it('cleans an uploaded audio object when the following cover upload fails', async () => {
+    const giftAssets = new MemoryGiftAssets();
+    giftAssets.failPutAt = 2;
+    const { app, repository } = createTestContext({ giftAssets });
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+      ['coverImage', createImageFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect(giftAssets.putCalls).toBe(2);
+    expect(giftAssets.deleteCalls).toBe(1);
+    expect(giftAssets.objects.size).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
   it('cleans up the R2 object after a D1 failure', async () => {
     const giftAssets = new MemoryGiftAssets();
     const repository: PublishedGiftRepository = {
@@ -639,6 +670,111 @@ describe('publish Worker', () => {
     expect(response.headers.get('Content-Type')).toBe('audio/mp4');
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect(body.byteLength).toBe(32);
+    expect(response.url).not.toContain('gifts/');
+  });
+
+  it('publishes a valid cover image with public metadata and no private storage details', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(48, 'image/webp')],
+    ]));
+    const result = await response.json() as { id: string; url: string };
+    const snapshot = await repository.getById(result.id);
+
+    expect(response.status).toBe(201);
+    expect(snapshot?.giftFile.gift.coverImage).toEqual({ mimeType: 'image/webp', size: 48 });
+    expect(giftAssets.putCalls).toBe(1);
+    expect(JSON.stringify(snapshot?.giftFile)).not.toContain('gifts/');
+    expect(JSON.stringify(result)).not.toContain('abrelo-gift-assets');
+  });
+
+  it('accepts exactly 5 MiB cover images and rejects one byte more before writes', async () => {
+    const accepted = createTestContext();
+    const exact = await accepted.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(MAX_GIFT_IMAGE_BYTES)],
+    ]));
+    const rejected = createTestContext();
+    const oversized = await rejected.app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(MAX_GIFT_IMAGE_BYTES + 1)],
+    ]));
+
+    expect(exact.status).toBe(201);
+    expect(oversized.status).toBe(400);
+    expect(await oversized.json()).toEqual({ error: 'Imagen demasiado grande' });
+    expect(rejected.giftAssets.putCalls).toBe(0);
+    expect((rejected.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('rejects unsupported or signature-mismatched cover images before writes', async () => {
+    for (const file of [
+      new File(['not an image'], 'cover.pdf', { type: 'application/pdf' }),
+      new File(['not a jpeg'], 'cover.jpg', { type: 'image/jpeg' }),
+    ]) {
+      const context = createTestContext();
+      const response = await context.app(multipartPublishRequest([
+        ['gift', JSON.stringify(createGiftFile(defaultGift))],
+        ['coverImage', file],
+      ]));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: 'Tipo de imagen no permitido' });
+      expect(context.giftAssets.putCalls).toBe(0);
+      expect((context.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+    }
+  });
+
+  it('rejects duplicate cover image parts before writes', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(32)],
+      ['coverImage', createImageFile(32)],
+    ]));
+
+    expect(response.status).toBe(400);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('removes the uploaded cover image when D1 persistence fails', async () => {
+    const giftAssets = new MemoryGiftAssets();
+    const repository: PublishedGiftRepository = {
+      async create() { throw new Error('D1 unavailable'); },
+      async getById() { return null; },
+    };
+    const { app } = createTestContext({ repository, giftAssets });
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect(giftAssets.deleteCalls).toBe(1);
+    expect(giftAssets.objects.size).toBe(0);
+  });
+
+  it('serves cover images through safe Worker headers and returns 404 when absent', async () => {
+    const { app } = createTestContext();
+    const unknown = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}/cover`));
+    const silentGift = await publish(app);
+    const absent = await app(new Request(`${silentGift.result.url}/cover`));
+    const published = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(48, 'image/png')],
+    ]));
+    const { url } = await published.json() as { url: string };
+    const response = await app(new Request(`${url}/cover`));
+
+    expect(unknown.status).toBe(404);
+    expect(absent.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
+    expect(response.headers.get('Content-Disposition')).toBe('inline');
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect((await response.arrayBuffer()).byteLength).toBe(48);
     expect(response.url).not.toContain('gifts/');
   });
 });

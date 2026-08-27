@@ -13,6 +13,7 @@ import {
 } from './giftConfig';
 import { assertMemoryImageFile, MAX_MEMORY_IMAGE_BYTES, MAX_MEMORY_ITEMS } from './memoryMedia';
 import { THEME_IDS } from '../themes/themeRegistry';
+import { MAX_GIFT_IMAGE_BYTES } from './giftMedia';
 
 const memoryImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
 
@@ -136,6 +137,34 @@ describe('parseGiftFile', () => {
 
     expect(parseGiftFile(createGiftFile(giftWithAtmosphere))).toEqual(giftWithAtmosphere);
     expect(parseGiftFile(createGiftFile(defaultGift)).atmosphere).toBeUndefined();
+  });
+
+  it('round-trips cover image metadata without storing binary data or private keys', () => {
+    const giftWithCover = {
+      ...defaultGift,
+      coverImage: { mimeType: 'image/webp' as const, size: 245_760 },
+    };
+    const giftFile = createGiftFile(giftWithCover);
+
+    expect(parseGiftFile(giftFile)).toEqual(giftWithCover);
+    expect(JSON.stringify(giftFile)).not.toContain('base64');
+    expect(JSON.stringify(giftFile)).not.toContain('gifts/');
+    expect(JSON.stringify(giftFile)).not.toContain('bucket');
+    expect(parseGiftFile(createGiftFile(defaultGift)).coverImage).toBeUndefined();
+  });
+
+  it('rejects malformed, unsupported, or oversized cover metadata', () => {
+    for (const coverImage of [
+      { mimeType: 'image/gif', size: 1024 },
+      { mimeType: 'image/jpeg', size: 0 },
+      { mimeType: 'image/png', size: MAX_GIFT_IMAGE_BYTES + 1 },
+      { mimeType: 'image/webp', size: 1.5 },
+    ]) {
+      expect(() => parseGiftFile({
+        ...createGiftFile(defaultGift),
+        gift: { ...defaultGift, coverImage },
+      })).toThrow(/portada/i);
+    }
   });
 
   it('rejects an unsupported configured atmosphere', () => {

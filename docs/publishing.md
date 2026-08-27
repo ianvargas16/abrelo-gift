@@ -13,7 +13,7 @@ Creator
   -> D1PublishedGiftRepository
   -> Cloudflare D1
 
-Future optional binary media
+Optional binary media
   -> private Cloudflare R2 (`GIFT_ASSETS`)
   -> Worker-owned recipient asset route
 
@@ -38,13 +38,19 @@ The canonical complete GiftFile is stored in `gift_json`. Names, messages, title
 
 Remote staging and production use separate Wrangler environments and separate D1 databases. Provisioning, migration, deployment, smoke testing, rollback, and abuse controls are documented in [`production.md`](production.md). No account ID, API token, or secret belongs in the repository.
 
-Optional binary assets are reserved for a private, environment-specific `GIFT_ASSETS` R2 bucket. The current API stays JSON-only; a future upload flow will retain that compatibility and serve recipient assets through the Worker rather than public R2 URLs. See [`deployment-architecture.md`](deployment-architecture.md) for the full boundary.
+Optional binary assets use a private, environment-specific `GIFT_ASSETS` R2 bucket. The API stays JSON-only for gifts without newly attached files and uses multipart for one optional audio and one optional cover image. Recipient assets are served only through Worker routes rather than public R2 URLs. See [`deployment-architecture.md`](deployment-architecture.md) for the full boundary.
 
 ## Optional audio uploads
 
 `POST /api/gifts` remains JSON-only for silent gifts. Audio publishing uses multipart form data with exactly one `gift` JSON part and one optional `audio` part. The Worker accepts only `audio/mpeg`, `audio/mp4`, `audio/wav`, and `audio/x-wav`, limits audio to 5 MiB and the complete request to a bounded size, generates the private R2 key itself, and never returns keys or bucket URLs.
 
 The Worker validates multipart structure, audio presence, size, and MIME type before writing; binary media inspection is intentionally out of scope. It writes the private R2 object before the immutable D1 snapshot and deletes that object if snapshot persistence fails. A failed cleanup emits only a request-correlated operational event; operators must reconcile any resulting private orphan through controlled R2 operations. Recipient playback is available only through `GET /g/<opaque-id>/audio`; the bucket has no public access, listing, or search route.
+
+## Optional cover images
+
+Cover publishing reuses the same bounded multipart request and private bucket. The Worker accepts exactly one optional `coverImage` part, allows only JPEG, PNG, or WebP up to 5 MiB, and verifies a lightweight format signature before any write. Published `GiftConfig` stores only `{ mimeType, size }`; the private object key is derived server-side and never serialized.
+
+The recipient Runtime requests a configured cover through `GET /g/<opaque-id>/cover`. The Worker confirms the gift and metadata, resolves private storage, and streams the image with safe headers. Legacy gifts without cover metadata create no cover request and preserve their existing presentation. Upload and D1 failures share the audio rollback path so partially written media does not remain orphaned.
 
 ## Configuration
 
