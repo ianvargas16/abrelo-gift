@@ -18,7 +18,7 @@ import {
 } from './runtime/runtimeInteraction';
 import { WaxSeal } from './runtime/WaxSeal';
 import { getThemeCssVariables, resolveTheme } from '../themes/themeRegistry';
-import { GiftCoverImage } from './runtime/GiftCoverImage';
+import { GiftBackground } from './runtime/GiftBackground';
 
 interface EnvelopeExperienceProps {
   gift: GiftConfig;
@@ -221,7 +221,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
         data-runtime-phase={getRuntimePhase(stage)}
         style={experienceStyle}
       >
-        <GiftCoverImage hasCoverImage={Boolean(gift.coverImage)} />
+        <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
         {shouldShowGiftAudioControl(stage, Boolean(gift.audio)) && (
           <GiftAudioControl status={giftAudio.status} onToggle={giftAudio.togglePlayback} />
         )}
@@ -236,7 +236,7 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
       data-runtime-phase={getRuntimePhase(stage)}
       style={experienceStyle}
     >
-      <GiftCoverImage hasCoverImage={Boolean(gift.coverImage)} />
+      <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />

@@ -77,6 +77,22 @@ describe('recipient Runtime bootstrap', () => {
       .toEqual({ status: 'ready', gift: giftWithMemories });
   });
 
+  it('maps a Milestone 28 cover image to the runtime background without republishing', () => {
+    const legacyGiftFile = createGiftFile({ ...defaultGift }) as unknown as {
+      schema: string;
+      version: number;
+      gift: Record<string, unknown>;
+    };
+    legacyGiftFile.gift.coverImage = { mimeType: 'image/webp', size: 64_000 };
+
+    expect(parseRuntimeGiftPayload(JSON.stringify(legacyGiftFile))).toMatchObject({
+      status: 'ready',
+      gift: {
+        backgroundImage: { mimeType: 'image/webp', size: 64_000 },
+      },
+    });
+  });
+
   it('rejects malformed JSON safely', () => {
     expect(parseRuntimeGiftPayload('{not-json')).toEqual({ status: 'error', reason: 'invalid' });
   });
@@ -118,6 +134,7 @@ describe('recipient Runtime bootstrap', () => {
     expect(markup).toContain('state-sealed');
     expect(markup).not.toContain('ticket-stage');
     expect(markup).not.toContain('gift-audio-control');
+    expect(markup).not.toContain('gift-background');
     expect(markup).not.toContain('Este regalo no está disponible');
     expect(markup).toContain('Preparando algo para ti');
     expect(markup).not.toMatch(/Creator|editar|configuración|vista previa/i);

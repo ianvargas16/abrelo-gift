@@ -9,7 +9,7 @@ import {
 import {
   AudioTooLargeError,
   getGiftAudioKey,
-  getGiftCoverImageKey,
+  getGiftBackgroundImageKey,
   ImageTooLargeError,
   parsePublishRequest,
   UnsupportedAudioError,
@@ -202,12 +202,12 @@ async function publishGift(
 
   const id = generateOpaqueGiftId();
   const audioKey = parsed.audio ? getGiftAudioKey(id) : null;
-  const coverImageKey = parsed.coverImage ? getGiftCoverImageKey(id) : null;
+  const backgroundImageKey = parsed.backgroundImage ? getGiftBackgroundImageKey(id) : null;
   const logger = options.logger ?? silentLogger;
   const gift = {
     ...parsed.giftFile.gift,
     ...(parsed.audio ? { audio: parsed.audio.metadata } : {}),
-    ...(parsed.coverImage ? { coverImage: parsed.coverImage.metadata } : {}),
+    ...(parsed.backgroundImage ? { backgroundImage: parsed.backgroundImage.metadata } : {}),
   };
   const uploadedKeys: string[] = [];
 
@@ -228,10 +228,10 @@ async function publishGift(
       await options.giftAssets.put(audioKey, parsed.audio.file.stream(), { httpMetadata: { contentType: parsed.audio.metadata.mimeType } });
       uploadedKeys.push(audioKey);
     }
-    if (parsed.coverImage && coverImageKey) {
+    if (parsed.backgroundImage && backgroundImageKey) {
       if (!options.giftAssets) throw new Error('gift asset storage unavailable');
-      await options.giftAssets.put(coverImageKey, parsed.coverImage.file.stream(), { httpMetadata: { contentType: parsed.coverImage.metadata.mimeType } });
-      uploadedKeys.push(coverImageKey);
+      await options.giftAssets.put(backgroundImageKey, parsed.backgroundImage.file.stream(), { httpMetadata: { contentType: parsed.backgroundImage.metadata.mimeType } });
+      uploadedKeys.push(backgroundImageKey);
     }
   } catch {
     await cleanUpUploadedAssets();
@@ -270,13 +270,13 @@ async function serveGiftAudio(options: PublishAppOptions, id: string): Promise<R
   } catch { return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS }); }
 }
 
-async function serveGiftCoverImage(options: PublishAppOptions, id: string): Promise<Response> {
+async function serveGiftBackgroundImage(options: PublishAppOptions, id: string): Promise<Response> {
   if (!GIFT_ID_PATTERN.test(id)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
   try {
     const snapshot = await options.repository.getById(id);
-    const metadata = snapshot?.giftFile.gift.coverImage;
+    const metadata = snapshot?.giftFile.gift.backgroundImage;
     if (!metadata) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
-    const object = await options.giftAssets?.get(getGiftCoverImageKey(id));
+    const object = await options.giftAssets?.get(getGiftBackgroundImageKey(id));
     if (!object) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
     const headers = new Headers({
       'Cache-Control': 'private, max-age=3600',
@@ -352,11 +352,12 @@ export function createPublishApp(options: PublishAppOptions) {
       return withRequestId(await serveGiftAudio(options, audioRoute[1]), requestId);
     }
 
-    const coverImageRoute = url.pathname.match(/^\/g\/([^/]+)\/cover$/u);
-    if (coverImageRoute) {
+    // Keep `/cover` as the stable public asset route for gifts published by Milestone 28.
+    const backgroundImageRoute = url.pathname.match(/^\/g\/([^/]+)\/cover$/u);
+    if (backgroundImageRoute) {
       const requestId = nextRequestId();
       if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
-      return withRequestId(await serveGiftCoverImage(options, coverImageRoute[1]), requestId);
+      return withRequestId(await serveGiftBackgroundImage(options, backgroundImageRoute[1]), requestId);
     }
 
     if (giftRoute) {

@@ -139,22 +139,37 @@ describe('parseGiftFile', () => {
     expect(parseGiftFile(createGiftFile(defaultGift)).atmosphere).toBeUndefined();
   });
 
-  it('round-trips cover image metadata without storing binary data or private keys', () => {
-    const giftWithCover = {
+  it('round-trips background image metadata without storing binary data or private keys', () => {
+    const giftWithBackground = {
       ...defaultGift,
-      coverImage: { mimeType: 'image/webp' as const, size: 245_760 },
+      backgroundImage: { mimeType: 'image/webp' as const, size: 245_760 },
     };
-    const giftFile = createGiftFile(giftWithCover);
+    const giftFile = createGiftFile(giftWithBackground);
 
-    expect(parseGiftFile(giftFile)).toEqual(giftWithCover);
+    expect(parseGiftFile(giftFile)).toEqual(giftWithBackground);
     expect(JSON.stringify(giftFile)).not.toContain('base64');
     expect(JSON.stringify(giftFile)).not.toContain('gifts/');
     expect(JSON.stringify(giftFile)).not.toContain('bucket');
-    expect(parseGiftFile(createGiftFile(defaultGift)).coverImage).toBeUndefined();
+    expect(parseGiftFile(createGiftFile(defaultGift)).backgroundImage).toBeUndefined();
   });
 
-  it('rejects malformed, unsupported, or oversized cover metadata', () => {
-    for (const coverImage of [
+  it('migrates Milestone 28 cover metadata to the background image field', () => {
+    const legacyGiftFile = createGiftFile({ ...defaultGift }) as unknown as {
+      schema: string;
+      version: number;
+      gift: Record<string, unknown>;
+    };
+    legacyGiftFile.gift.coverImage = { mimeType: 'image/jpeg', size: 42_000 };
+
+    const parsed = parseGiftFile(legacyGiftFile);
+
+    expect(parsed.backgroundImage).toEqual({ mimeType: 'image/jpeg', size: 42_000 });
+    expect('coverImage' in parsed).toBe(false);
+  });
+
+  it('rejects malformed, unsupported, oversized, or ambiguous background metadata', () => {
+    for (const backgroundImage of [
+      null,
       { mimeType: 'image/gif', size: 1024 },
       { mimeType: 'image/jpeg', size: 0 },
       { mimeType: 'image/png', size: MAX_GIFT_IMAGE_BYTES + 1 },
@@ -162,9 +177,18 @@ describe('parseGiftFile', () => {
     ]) {
       expect(() => parseGiftFile({
         ...createGiftFile(defaultGift),
-        gift: { ...defaultGift, coverImage },
-      })).toThrow(/portada/i);
+        gift: { ...defaultGift, backgroundImage },
+      })).toThrow(/fondo/i);
     }
+
+    expect(() => parseGiftFile({
+      ...createGiftFile(defaultGift),
+      gift: {
+        ...defaultGift,
+        backgroundImage: { mimeType: 'image/png', size: 100 },
+        coverImage: { mimeType: 'image/png', size: 100 },
+      },
+    })).toThrow(/duplicada/i);
   });
 
   it('rejects an unsupported configured atmosphere', () => {

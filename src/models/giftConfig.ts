@@ -55,7 +55,7 @@ export interface GiftConfig {
   senderName: string;
   theme: ThemeId;
   audio?: GiftAudio;
-  coverImage?: GiftMediaAsset;
+  backgroundImage?: GiftMediaAsset;
   /** @deprecated Legacy field accepted only to preserve old local projects. */
   atmosphere?: GiftAtmosphere;
   intro: GiftIntro;
@@ -132,12 +132,12 @@ function parseGiftAudio(value: unknown): GiftAudio {
 }
 
 function parseGiftMediaAsset(value: unknown): GiftMediaAsset {
-  const source = assertRecord(value, 'Imagen de portada inválida');
+  const source = assertRecord(value, 'Imagen de fondo inválida');
   if (!isGiftImageMimeType(source.mimeType)) {
-    throw new Error('Imagen de portada inválida');
+    throw new Error('Imagen de fondo inválida');
   }
   if (!Number.isSafeInteger(source.size) || (source.size as number) <= 0 || (source.size as number) > MAX_GIFT_IMAGE_BYTES) {
-    throw new Error('Tamaño de portada inválido');
+    throw new Error('Tamaño de fondo inválido');
   }
 
   return {
@@ -218,7 +218,12 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
 
   const memories = source.memories === undefined ? undefined : parseMemorySection(source.memories);
   const audio = source.audio === undefined ? undefined : parseGiftAudio(source.audio);
-  const coverImage = source.coverImage === undefined ? undefined : parseGiftMediaAsset(source.coverImage);
+  if (source.backgroundImage !== undefined && source.coverImage !== undefined) {
+    throw new Error('Imagen de fondo duplicada');
+  }
+  // `coverImage` was published by Milestone 28 and remains a supported legacy alias.
+  const backgroundImageSource = source.backgroundImage !== undefined ? source.backgroundImage : source.coverImage;
+  const backgroundImage = backgroundImageSource === undefined ? undefined : parseGiftMediaAsset(backgroundImageSource);
   const atmosphere = source.atmosphere === undefined ? undefined : assertAtmosphere(source.atmosphere);
 
   return {
@@ -227,7 +232,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
     senderName: assertString(source.senderName, 'senderName'),
     theme: assertTheme(source.theme),
     ...(audio === undefined ? {} : { audio }),
-    ...(coverImage === undefined ? {} : { coverImage }),
+    ...(backgroundImage === undefined ? {} : { backgroundImage }),
     ...(atmosphere === undefined ? {} : { atmosphere }),
     intro: {
       eyebrow: assertString(intro.eyebrow, 'intro.eyebrow'),

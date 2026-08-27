@@ -12,7 +12,7 @@ export const MAX_MULTIPART_BYTES = MAX_AUDIO_SIZE + MAX_GIFT_IMAGE_BYTES + MAX_G
 export interface ParsedPublishRequest {
   giftFile: ReturnType<typeof parseCanonicalGiftFile>;
   audio?: { file: File; metadata: GiftAudio };
-  coverImage?: { file: File; metadata: GiftMediaAsset };
+  backgroundImage?: { file: File; metadata: GiftMediaAsset };
 }
 
 export class UnsupportedAudioError extends Error {}
@@ -105,11 +105,12 @@ export async function parsePublishRequest(request: Request): Promise<ParsedPubli
     if (!isGiftImageMimeType(file.type) || !(await hasSupportedImageSignature(file, file.type))) {
       throw new UnsupportedImageError();
     }
-    result.coverImage = { file, metadata: { mimeType: file.type, size: file.size } };
+    result.backgroundImage = { file, metadata: { mimeType: file.type, size: file.size } };
   }
 
   return result;
 }
 
 export function getGiftAudioKey(id: string): string { return `gifts/${id}/audio`; }
-export function getGiftCoverImageKey(id: string): string { return `gifts/${id}/cover`; }
+// Preserve the original object path so Milestone 28 assets need no storage migration.
+export function getGiftBackgroundImageKey(id: string): string { return `gifts/${id}/cover`; }
