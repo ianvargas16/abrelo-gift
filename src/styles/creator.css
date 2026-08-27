@@ -975,6 +975,21 @@ textarea:focus-visible {
   position: relative;
 }
 
+.gift-personalization-background {
+  display: grid;
+  gap: var(--space-sm);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.gift-personalization-background > div > p {
+  max-width: 52ch;
+  margin: var(--space-xs) 0 0;
+  color: var(--color-ink-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .field-meta {
   min-width: 0;
   display: flex;

@@ -22,6 +22,7 @@ import { GiftBackground } from './runtime/GiftBackground';
 
 interface EnvelopeExperienceProps {
   gift: GiftConfig;
+  backgroundImageUrl?: string;
 }
 
 const HOLD_MS = 1350;
@@ -40,7 +41,7 @@ function usePrefersReducedMotion() {
   return reducedMotion;
 }
 
-export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
+export function EnvelopeExperience({ gift, backgroundImageUrl }: EnvelopeExperienceProps) {
   const [stage, setStage] = useState<RuntimeStage>('sealed');
   const [progress, setProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
@@ -226,7 +227,10 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
         aria-busy={isRevealing || isMemoryRevealing}
         style={experienceStyle}
       >
-        <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
+        <GiftBackground
+          hasBackgroundImage={Boolean(gift.backgroundImage)}
+          sourceUrl={backgroundImageUrl}
+        />
         {shouldShowGiftAudioControl(stage, Boolean(gift.audio)) && (
           <GiftAudioControl status={giftAudio.status} onToggle={giftAudio.togglePlayback} />
         )}
@@ -242,7 +246,10 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
       aria-busy={isSealReleasing || isEnvelopeOpening || isExtracting || isRevealing || isMemoryRevealing}
       style={experienceStyle}
     >
-      <GiftBackground hasBackgroundImage={Boolean(gift.backgroundImage)} />
+      <GiftBackground
+        hasBackgroundImage={Boolean(gift.backgroundImage)}
+        sourceUrl={backgroundImageUrl}
+      />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <div className="experience-grain" aria-hidden="true" />

@@ -15,10 +15,27 @@ export default function App() {
   const [initialProjects] = useState(() => repository.load(defaultGift));
   const [projectStore, setProjectStore] = useState(initialProjects.store);
   const [storageError, setStorageError] = useState(initialProjects.warning ?? '');
+  const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
+  const [backgroundImagePreviewUrl, setBackgroundImagePreviewUrl] = useState('');
   const legacyMigrationPending = useRef(initialProjects.legacyMigrationPending);
   const [route, setRoute] = useState(() => getCurrentRoute(window.location.hash));
   const activeProject = repository.get(projectStore, projectStore.activeProjectId) ?? projectStore.projects[0];
   const gift = activeProject.gift;
+
+  useEffect(() => {
+    if (!backgroundImageFile) {
+      setBackgroundImagePreviewUrl('');
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(backgroundImageFile);
+    setBackgroundImagePreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [backgroundImageFile]);
+
+  useEffect(() => {
+    setBackgroundImageFile(null);
+  }, [activeProject.id]);
 
   useEffect(() => {
     try {
@@ -65,9 +82,15 @@ export default function App() {
       project={activeProject}
       projects={repository.list(projectStore)}
       storageError={storageError}
+      backgroundImageFile={backgroundImageFile}
+      backgroundImagePreviewUrl={backgroundImagePreviewUrl}
+      onBackgroundImageChange={setBackgroundImageFile}
       onChange={(nextGift: GiftConfig) => setProjectStore((current) => repository.saveGift(current, current.activeProjectId, nextGift))}
       onPreview={() => navigateToRoute('preview')}
-      onReset={() => setProjectStore((current) => repository.saveGift(current, current.activeProjectId, defaultGift))}
+      onReset={() => {
+        setBackgroundImageFile(null);
+        setProjectStore((current) => repository.saveGift(current, current.activeProjectId, defaultGift));
+      }}
       onExport={exportGift}
       onImport={importGift}
       publication={activeProject.publication ?? null}
@@ -79,7 +102,11 @@ export default function App() {
       onDeleteProject={(projectId: string) => setProjectStore((current) => repository.delete(current, projectId, defaultGift))}
     />
   ) : route === 'preview' ? (
-    <PreviewView gift={gift} onBackToCreator={() => navigateToRoute('creator')} />
+    <PreviewView
+      gift={gift}
+      backgroundImagePreviewUrl={backgroundImagePreviewUrl}
+      onBackToCreator={() => navigateToRoute('creator')}
+    />
   ) : (
     <RuntimeView gift={gift} />
   );

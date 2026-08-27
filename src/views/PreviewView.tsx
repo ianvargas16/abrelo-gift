@@ -3,10 +3,11 @@ import type { GiftConfig } from '../models/giftConfig';
 
 interface PreviewViewProps {
   gift: GiftConfig;
+  backgroundImagePreviewUrl?: string;
   onBackToCreator: () => void;
 }
 
-export function PreviewView({ gift, onBackToCreator }: PreviewViewProps) {
+export function PreviewView({ gift, backgroundImagePreviewUrl, onBackToCreator }: PreviewViewProps) {
   return (
     <div className="preview-shell">
       <div className="preview-chrome">
@@ -16,7 +17,7 @@ export function PreviewView({ gift, onBackToCreator }: PreviewViewProps) {
         </div>
         <button className="ghost-button preview-back-button" onClick={onBackToCreator}>← Volver a editar</button>
       </div>
-      <RuntimeView gift={gift} />
+      <RuntimeView gift={gift} backgroundImageUrl={backgroundImagePreviewUrl} />
     </div>
   );
 }
