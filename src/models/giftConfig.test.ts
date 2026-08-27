@@ -12,6 +12,7 @@ import {
   validateGiftPersonalization,
 } from './giftConfig';
 import { assertMemoryImageFile, MAX_MEMORY_IMAGE_BYTES, MAX_MEMORY_ITEMS } from './memoryMedia';
+import { THEME_IDS } from '../themes/themeRegistry';
 
 const memoryImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
 
@@ -90,6 +91,13 @@ describe('parseGiftFile', () => {
     });
   });
 
+  it('preserves every registered theme ID through GiftFile export and import', () => {
+    for (const theme of THEME_IDS) {
+      const themedGift = { ...defaultGift, theme };
+      expect(parseGiftFile(createGiftFile(themedGift)).theme).toBe(theme);
+    }
+  });
+
   it('centralizes Creator limits while keeping historical Runtime snapshots readable', () => {
     const longTitleGift = {
       ...defaultGift,
@@ -109,7 +117,7 @@ describe('parseGiftFile', () => {
     expect(validateGiftPersonalization(defaultGift)).toEqual({});
   });
 
-  it('accepts exact personalization limits and rejects unknown themes', () => {
+  it('accepts exact personalization limits and falls back safely for unknown themes', () => {
     const boundaryGift = {
       ...defaultGift,
       intro: { ...defaultGift.intro, title: 'T'.repeat(MAX_GIFT_TITLE_CHARACTERS) },
@@ -117,10 +125,10 @@ describe('parseGiftFile', () => {
     };
 
     expect(parseGiftFile(createGiftFile(boundaryGift))).toEqual(boundaryGift);
-    expect(() => parseGiftFile({
+    expect(parseGiftFile({
       ...createGiftFile(defaultGift),
       gift: { ...defaultGift, theme: 'neon' },
-    })).toThrow(/Tema inválido/);
+    }).theme).toBe('rose');
   });
 
   it('round-trips an optional configured atmosphere and keeps older gifts silent', () => {

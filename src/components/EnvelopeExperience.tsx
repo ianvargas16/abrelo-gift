@@ -17,6 +17,7 @@ import {
   type SealHoldController,
 } from './runtime/runtimeInteraction';
 import { WaxSeal } from './runtime/WaxSeal';
+import { getThemeCssVariables, resolveTheme } from '../themes/themeRegistry';
 
 interface EnvelopeExperienceProps {
   gift: GiftConfig;
@@ -61,6 +62,11 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
     '--runtime-card-extraction-duration': `${runtimePresentationTiming.cardExtraction}ms`,
     '--runtime-gift-reveal-duration': `${runtimePresentationTiming.giftReveal}ms`,
     '--runtime-ticket-reveal-delay': `${runtimePresentationTiming.ticketRevealDelay}ms`,
+  } as CSSProperties;
+  const theme = resolveTheme(gift.theme);
+  const experienceStyle = {
+    ...getThemeCssVariables(theme),
+    ...runtimeMotionStyle,
   } as CSSProperties;
   const recipientName = gift.recipientName.trim();
   const senderName = gift.senderName.trim();
@@ -210,9 +216,9 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
   if (stage === 'revealed') {
     return (
       <main
-        className={`experience theme-${gift.theme} stage-${stage}`}
+        className={`experience ${theme.className} stage-${stage}`}
         data-runtime-phase={getRuntimePhase(stage)}
-        style={runtimeMotionStyle}
+        style={experienceStyle}
       >
         {shouldShowGiftAudioControl(stage, Boolean(gift.audio)) && (
           <GiftAudioControl status={giftAudio.status} onToggle={giftAudio.togglePlayback} />
@@ -224,9 +230,9 @@ export function EnvelopeExperience({ gift }: EnvelopeExperienceProps) {
 
   return (
     <main
-      className={`experience theme-${gift.theme} stage-${stage}`}
+      className={`experience ${theme.className} stage-${stage}`}
       data-runtime-phase={getRuntimePhase(stage)}
-      style={runtimeMotionStyle}
+      style={experienceStyle}
     >
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { RuntimeView } from '../views/RuntimeView';
 import type { RuntimeBootstrapResult } from './runtimeBootstrap';
+import { getThemeCssVariables, resolveTheme, type ThemeDefinition } from '../themes/themeRegistry';
 
 interface RecipientRuntimeAppProps {
   bootstrap: RuntimeBootstrapResult;
@@ -12,9 +13,14 @@ export function getRecipientPreparationDuration(prefersReducedMotion: boolean): 
   return prefersReducedMotion ? 0 : RECIPIENT_PREPARATION_DURATION;
 }
 
-function RuntimePreparation({ theme }: { theme: string }) {
+function RuntimePreparation({ theme }: { theme: ThemeDefinition }) {
   return (
-    <div className={`runtime-preparation ${theme}`} role="status" aria-live="polite">
+    <div
+      className={`runtime-preparation ${theme.className}`}
+      style={getThemeCssVariables(theme) as CSSProperties}
+      role="status"
+      aria-live="polite"
+    >
       <div className="runtime-preparation-card">
         <span className="runtime-preparation-mark" aria-hidden="true">✦</span>
         <p>Preparando algo para ti</p>
@@ -33,14 +39,14 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
     return () => window.clearTimeout(timeout);
   }, []);
 
-  const theme = bootstrap.status === 'ready' ? `theme-${bootstrap.gift.theme}` : 'theme-rose';
+  const theme = resolveTheme(bootstrap.status === 'ready' ? bootstrap.gift.theme : undefined);
   const retry = () => window.location.reload();
 
   return <>
     {bootstrap.status === 'ready' ? (
       <RuntimeView gift={bootstrap.gift} />
     ) : (
-      <main className="runtime-failure theme-rose">
+      <main className={`runtime-failure ${theme.className}`} style={getThemeCssVariables(theme) as CSSProperties}>
         <section className="runtime-failure-card" role="alert">
           <span className="runtime-failure-mark" aria-hidden="true">✦</span>
           <h1>Este regalo ya no está disponible.</h1>
