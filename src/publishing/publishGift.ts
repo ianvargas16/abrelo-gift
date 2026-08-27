@@ -9,6 +9,7 @@ interface PublishGiftOptions {
   apiBaseUrl?: string;
   fetcher?: typeof fetch;
   audioFile?: File | null;
+  coverImageFile?: File | null;
 }
 
 export class PublishGiftError extends Error {
@@ -68,12 +69,19 @@ export async function publishGift(
 
   try {
     assertValidGiftPersonalization(gift);
-    const body = options.audioFile
-      ? (() => { const form = new FormData(); form.set('gift', JSON.stringify(createGiftFile(gift))); form.set('audio', options.audioFile); return form; })()
+    const hasMedia = Boolean(options.audioFile || options.coverImageFile);
+    const body = hasMedia
+      ? (() => {
+          const form = new FormData();
+          form.set('gift', JSON.stringify(createGiftFile(gift)));
+          if (options.audioFile) form.set('audio', options.audioFile);
+          if (options.coverImageFile) form.set('coverImage', options.coverImageFile);
+          return form;
+        })()
       : JSON.stringify(createGiftFile(gift));
     const response = await fetcher(getPublishEndpoint(apiBaseUrl), {
       method: 'POST',
-      ...(options.audioFile ? {} : { headers: { 'Content-Type': 'application/json' } }),
+      ...(hasMedia ? {} : { headers: { 'Content-Type': 'application/json' } }),
       body,
     });
 

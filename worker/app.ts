@@ -6,7 +6,15 @@ import {
   injectPublicMetadataIntoRuntimeHtml,
   injectGiftFileIntoRuntimeHtml,
 } from './giftPublishing';
-import { AudioTooLargeError, getGiftAudioKey, parsePublishRequest, UnsupportedAudioError } from './giftAudioPublishing';
+import {
+  AudioTooLargeError,
+  getGiftAudioKey,
+  getGiftCoverImageKey,
+  ImageTooLargeError,
+  parsePublishRequest,
+  UnsupportedAudioError,
+  UnsupportedImageError,
+} from './giftAssetPublishing';
 import { createRequestId, type OperationalLogger } from './operationalLogging';
 import type { PublishedGiftRepository } from './publishedGiftRepository';
 import { createPublicGiftUrl, type RuntimeConfig } from './runtimeConfig.js';
@@ -183,20 +191,50 @@ async function publishGift(
     if (error instanceof UnsupportedAudioError) {
       return jsonResponse({ error: 'Tipo de audio no permitido' }, 400, allowedOrigin ?? undefined);
     }
+    if (error instanceof ImageTooLargeError) {
+      return jsonResponse({ error: 'Imagen demasiado grande' }, 400, allowedOrigin ?? undefined);
+    }
+    if (error instanceof UnsupportedImageError) {
+      return jsonResponse({ error: 'Tipo de imagen no permitido' }, 400, allowedOrigin ?? undefined);
+    }
     return jsonResponse({ error: API_ERROR_MESSAGE }, 400, allowedOrigin ?? undefined);
   }
 
   const id = generateOpaqueGiftId();
   const audioKey = parsed.audio ? getGiftAudioKey(id) : null;
+  const coverImageKey = parsed.coverImage ? getGiftCoverImageKey(id) : null;
   const logger = options.logger ?? silentLogger;
-  const gift = parsed.audio ? { ...parsed.giftFile.gift, audio: parsed.audio.metadata } : parsed.giftFile.gift;
+  const gift = {
+    ...parsed.giftFile.gift,
+    ...(parsed.audio ? { audio: parsed.audio.metadata } : {}),
+    ...(parsed.coverImage ? { coverImage: parsed.coverImage.metadata } : {}),
+  };
+  const uploadedKeys: string[] = [];
+
+  const cleanUpUploadedAssets = async () => {
+    if (!options.giftAssets) return;
+    for (const key of uploadedKeys) {
+      try {
+        await options.giftAssets.delete(key);
+      } catch {
+        logger.error('gift_asset_cleanup_failed', requestId);
+      }
+    }
+  };
 
   try {
     if (parsed.audio && audioKey) {
       if (!options.giftAssets) throw new Error('gift asset storage unavailable');
       await options.giftAssets.put(audioKey, parsed.audio.file.stream(), { httpMetadata: { contentType: parsed.audio.metadata.mimeType } });
+      uploadedKeys.push(audioKey);
+    }
+    if (parsed.coverImage && coverImageKey) {
+      if (!options.giftAssets) throw new Error('gift asset storage unavailable');
+      await options.giftAssets.put(coverImageKey, parsed.coverImage.file.stream(), { httpMetadata: { contentType: parsed.coverImage.metadata.mimeType } });
+      uploadedKeys.push(coverImageKey);
     }
   } catch {
+    await cleanUpUploadedAssets();
     logger.error('publish_persistence_failed', requestId);
     return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
   }
@@ -208,13 +246,7 @@ async function publishGift(
       createdAt: (options.now ?? (() => new Date()))().toISOString(),
     });
   } catch {
-    if (audioKey && options.giftAssets) {
-      try {
-        await options.giftAssets.delete(audioKey);
-      } catch {
-        logger.error('gift_asset_cleanup_failed', requestId);
-      }
-    }
+    await cleanUpUploadedAssets();
     logger.error('publish_persistence_failed', requestId);
     return jsonResponse({ error: API_ERROR_MESSAGE }, 503, allowedOrigin ?? undefined);
   }
@@ -236,6 +268,27 @@ async function serveGiftAudio(options: PublishAppOptions, id: string): Promise<R
     if (object.size) headers.set('Content-Length', String(object.size));
     return new Response(object.body, { headers });
   } catch { return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS }); }
+}
+
+async function serveGiftCoverImage(options: PublishAppOptions, id: string): Promise<Response> {
+  if (!GIFT_ID_PATTERN.test(id)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+  try {
+    const snapshot = await options.repository.getById(id);
+    const metadata = snapshot?.giftFile.gift.coverImage;
+    if (!metadata) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const object = await options.giftAssets?.get(getGiftCoverImageKey(id));
+    if (!object) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const headers = new Headers({
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Disposition': 'inline',
+      'Content-Type': metadata.mimeType,
+      'X-Content-Type-Options': 'nosniff',
+    });
+    if (object.size) headers.set('Content-Length', String(object.size));
+    return new Response(object.body, { headers });
+  } catch {
+    return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+  }
 }
 
 export function createInvalidRuntimeConfigResponse(request: Request, requestId: string): Response {
@@ -297,6 +350,13 @@ export function createPublishApp(options: PublishAppOptions) {
       const requestId = nextRequestId();
       if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
       return withRequestId(await serveGiftAudio(options, audioRoute[1]), requestId);
+    }
+
+    const coverImageRoute = url.pathname.match(/^\/g\/([^/]+)\/cover$/u);
+    if (coverImageRoute) {
+      const requestId = nextRequestId();
+      if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
+      return withRequestId(await serveGiftCoverImage(options, coverImageRoute[1]), requestId);
     }
 
     if (giftRoute) {

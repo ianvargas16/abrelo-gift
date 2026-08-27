@@ -3,6 +3,11 @@ import { assertMemoryImageDataUrl, MAX_MEMORY_ITEMS } from './memoryMedia';
 import { isGiftAudioMimeType, type GiftAudio } from './giftAudio';
 import type { GiftAtmosphere } from './giftAtmosphere';
 import { isGiftAtmosphere } from './giftAtmosphere';
+import {
+  isGiftImageMimeType,
+  MAX_GIFT_IMAGE_BYTES,
+  type GiftMediaAsset,
+} from './giftMedia';
 
 export type { ThemeId } from '../themes/themeRegistry';
 
@@ -50,6 +55,7 @@ export interface GiftConfig {
   senderName: string;
   theme: ThemeId;
   audio?: GiftAudio;
+  coverImage?: GiftMediaAsset;
   /** @deprecated Legacy field accepted only to preserve old local projects. */
   atmosphere?: GiftAtmosphere;
   intro: GiftIntro;
@@ -125,6 +131,21 @@ function parseGiftAudio(value: unknown): GiftAudio {
   return { mimeType: source.mimeType };
 }
 
+function parseGiftMediaAsset(value: unknown): GiftMediaAsset {
+  const source = assertRecord(value, 'Imagen de portada inválida');
+  if (!isGiftImageMimeType(source.mimeType)) {
+    throw new Error('Imagen de portada inválida');
+  }
+  if (!Number.isSafeInteger(source.size) || (source.size as number) <= 0 || (source.size as number) > MAX_GIFT_IMAGE_BYTES) {
+    throw new Error('Tamaño de portada inválido');
+  }
+
+  return {
+    mimeType: source.mimeType,
+    size: source.size as number,
+  };
+}
+
 function assertAtmosphere(value: unknown): GiftAtmosphere {
   if (isGiftAtmosphere(value)) return value;
   throw new Error('Atmósfera sonora inválida');
@@ -197,6 +218,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
 
   const memories = source.memories === undefined ? undefined : parseMemorySection(source.memories);
   const audio = source.audio === undefined ? undefined : parseGiftAudio(source.audio);
+  const coverImage = source.coverImage === undefined ? undefined : parseGiftMediaAsset(source.coverImage);
   const atmosphere = source.atmosphere === undefined ? undefined : assertAtmosphere(source.atmosphere);
 
   return {
@@ -205,6 +227,7 @@ function parseStructuredGiftConfig(value: unknown): GiftConfig {
     senderName: assertString(source.senderName, 'senderName'),
     theme: assertTheme(source.theme),
     ...(audio === undefined ? {} : { audio }),
+    ...(coverImage === undefined ? {} : { coverImage }),
     ...(atmosphere === undefined ? {} : { atmosphere }),
     intro: {
       eyebrow: assertString(intro.eyebrow, 'intro.eyebrow'),

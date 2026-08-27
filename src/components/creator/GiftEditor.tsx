@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type CSSProperties } from 'react';
+import { useEffect, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { MAX_GIFT_AUDIO_BYTES, isGiftAudioMimeType } from '../../models/giftAudio';
 import type { GiftConfig, MemorySection } from '../../models/giftConfig';
 import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
@@ -11,6 +11,7 @@ import { GiftPersonalizationFields } from './GiftPersonalizationFields';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { getThemeCssVariables, resolveTheme } from '../../themes/themeRegistry';
+import { CoverImagePicker } from './CoverImagePicker';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -52,6 +53,9 @@ export function GiftEditor({
   const [memoryError, setMemoryError] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioError, setAudioError] = useState('');
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [coverImagePreviewUrl, setCoverImagePreviewUrl] = useState('');
+  const [coverImageError, setCoverImageError] = useState('');
   const [hasPersonalizationDraftError, setHasPersonalizationDraftError] = useState(false);
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
@@ -69,6 +73,22 @@ export function GiftEditor({
   const hasGift = Boolean(gift.gift.title.trim());
   const activeTheme = resolveTheme(gift.theme);
   const activeThemeStyle = getThemeCssVariables(activeTheme) as CSSProperties;
+
+  useEffect(() => {
+    if (!coverImageFile) {
+      setCoverImagePreviewUrl('');
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(coverImageFile);
+    setCoverImagePreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [coverImageFile]);
+
+  useEffect(() => {
+    setCoverImageFile(null);
+    setCoverImageError('');
+  }, [project.id]);
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -385,6 +405,30 @@ export function GiftEditor({
                 <div className="studio-section-heading">
                   <span>07</span>
                   <div>
+                    <h3>Imagen del regalo</h3>
+                    <p>Una portada opcional para dar contexto visual a la sorpresa.</p>
+                  </div>
+                </div>
+
+                <div className="cover-image-intro">
+                  <div>
+                    <span className="field-label">Portada opcional</span>
+                    <p>Usa una imagen JPG, PNG o WebP de hasta 5 MB.</p>
+                  </div>
+                  <CoverImagePicker
+                    file={coverImageFile}
+                    previewUrl={coverImagePreviewUrl}
+                    error={coverImageError}
+                    onChange={setCoverImageFile}
+                    onError={setCoverImageError}
+                  />
+                </div>
+              </section>
+
+              <section className="studio-section">
+                <div className="studio-section-heading">
+                  <span>08</span>
+                  <div>
                     <h3>Audio especial</h3>
                     <p>Si quieres, acompaña la sorpresa con una canción o un mensaje de voz.</p>
                   </div>
@@ -412,7 +456,8 @@ export function GiftEditor({
               <p>Una mirada rápida al tono, el papel y los detalles de tu regalo.</p>
             </div>
 
-            <div className={`studio-preview-card ${activeTheme.className}`} style={activeThemeStyle}>
+            <div className={`studio-preview-card ${activeTheme.className} ${coverImagePreviewUrl ? 'has-cover-image' : ''}`} style={activeThemeStyle}>
+              {coverImagePreviewUrl && <img className="studio-preview-cover" src={coverImagePreviewUrl} alt="" />}
               <div className="studio-preview-meta">
                 <span className="preview-meta-label">{activeTheme.mood} · {activeTheme.intensity}</span>
                 <button className="ghost-button studio-inline-preview-button" onClick={onPreview}>Recorrer experiencia</button>
@@ -467,6 +512,7 @@ export function GiftEditor({
           publication={publication}
           onPublicationChange={onPublicationChange}
           audioFile={audioFile}
+          coverImageFile={coverImageFile}
           hasPersonalizationDraftError={hasPersonalizationDraftError}
         />
 

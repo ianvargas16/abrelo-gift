@@ -56,6 +56,23 @@ describe('Creator publishing client', () => {
     await expect(publishGift(personalizedGift, { fetcher })).resolves.toEqual({ id: publishedId, url: publishedUrl });
   });
 
+  it('publishes optional cover and audio files without embedding either binary in GiftFile JSON', async () => {
+    const audioFile = new File(['audio'], 'message.mp3', { type: 'audio/mpeg' });
+    const coverImageFile = new File(['image'], 'cover.webp', { type: 'image/webp' });
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.body).toBeInstanceOf(FormData);
+      const form = init?.body as FormData;
+      expect(form.get('audio')).toBe(audioFile);
+      expect(form.get('coverImage')).toBe(coverImageFile);
+      expect(JSON.parse(String(form.get('gift')))).toEqual(createGiftFile(defaultGift));
+      expect(String(form.get('gift'))).not.toContain('base64');
+      return Response.json({ id: publishedId, url: publishedUrl }, { status: 201 });
+    });
+
+    await expect(publishGift(defaultGift, { fetcher, audioFile, coverImageFile }))
+      .resolves.toEqual({ id: publishedId, url: publishedUrl });
+  });
+
   it('rejects invalid personalization before making a publication request', async () => {
     const fetcher = vi.fn();
     const invalidGift = {
