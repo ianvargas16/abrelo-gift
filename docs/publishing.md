@@ -38,7 +38,7 @@ The canonical complete GiftFile is stored in `gift_json`. Names, messages, title
 
 Remote staging and production use separate Wrangler environments and separate D1 databases. Provisioning, migration, deployment, smoke testing, rollback, and abuse controls are documented in [`production.md`](production.md). No account ID, API token, or secret belongs in the repository.
 
-Optional binary assets use a private, environment-specific `GIFT_ASSETS` R2 bucket. The API stays JSON-only for gifts without newly attached files and uses multipart for one optional audio and one optional cover image. Recipient assets are served only through Worker routes rather than public R2 URLs. See [`deployment-architecture.md`](deployment-architecture.md) for the full boundary.
+Optional binary assets use a private, environment-specific `GIFT_ASSETS` R2 bucket. The API stays JSON-only for gifts without newly attached files and uses multipart for one optional audio and one optional background image. Recipient assets are served only through Worker routes rather than public R2 URLs. See [`deployment-architecture.md`](deployment-architecture.md) for the full boundary.
 
 ## Optional audio uploads
 
@@ -46,11 +46,11 @@ Optional binary assets use a private, environment-specific `GIFT_ASSETS` R2 buck
 
 The Worker validates multipart structure, audio presence, size, and MIME type before writing; binary media inspection is intentionally out of scope. It writes the private R2 object before the immutable D1 snapshot and deletes that object if snapshot persistence fails. A failed cleanup emits only a request-correlated operational event; operators must reconcile any resulting private orphan through controlled R2 operations. Recipient playback is available only through `GET /g/<opaque-id>/audio`; the bucket has no public access, listing, or search route.
 
-## Optional cover images
+## Optional background images
 
-Cover publishing reuses the same bounded multipart request and private bucket. The Worker accepts exactly one optional `coverImage` part, allows only JPEG, PNG, or WebP up to 5 MiB, and verifies a lightweight format signature before any write. Published `GiftConfig` stores only `{ mimeType, size }`; the private object key is derived server-side and never serialized.
+Background publishing reuses the same bounded multipart request and private bucket. The Worker accepts exactly one optional `coverImage` part to preserve the Milestone 28 API contract, allows only JPEG, PNG, or WebP up to 5 MiB, and verifies a lightweight format signature before any write. New published `GiftConfig` snapshots store this metadata under `backgroundImage`; the parser maps the former `coverImage` field to it for already-published gifts. The private object key is derived server-side and never serialized.
 
-The recipient Runtime requests a configured cover through `GET /g/<opaque-id>/cover`. The Worker confirms the gift and metadata, resolves private storage, and streams the image with safe headers. Legacy gifts without cover metadata create no cover request and preserve their existing presentation. Upload and D1 failures share the audio rollback path so partially written media does not remain orphaned.
+The recipient Runtime requests a configured background through the stable `GET /g/<opaque-id>/cover` route. The Worker confirms the gift and metadata, resolves private storage, and streams the image with safe headers. Gifts without background metadata create no image request and preserve their themed presentation. Upload and D1 failures share the audio rollback path so partially written media does not remain orphaned.
 
 ## Configuration
 

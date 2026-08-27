@@ -673,7 +673,7 @@ describe('publish Worker', () => {
     expect(response.url).not.toContain('gifts/');
   });
 
-  it('publishes a valid cover image with public metadata and no private storage details', async () => {
+  it('publishes a valid background image with public metadata and no private storage details', async () => {
     const { app, repository, giftAssets } = createTestContext();
     const response = await app(multipartPublishRequest([
       ['gift', JSON.stringify(createGiftFile(defaultGift))],
@@ -683,13 +683,13 @@ describe('publish Worker', () => {
     const snapshot = await repository.getById(result.id);
 
     expect(response.status).toBe(201);
-    expect(snapshot?.giftFile.gift.coverImage).toEqual({ mimeType: 'image/webp', size: 48 });
+    expect(snapshot?.giftFile.gift.backgroundImage).toEqual({ mimeType: 'image/webp', size: 48 });
     expect(giftAssets.putCalls).toBe(1);
     expect(JSON.stringify(snapshot?.giftFile)).not.toContain('gifts/');
     expect(JSON.stringify(result)).not.toContain('abrelo-gift-assets');
   });
 
-  it('accepts exactly 5 MiB cover images and rejects one byte more before writes', async () => {
+  it('accepts exactly 5 MiB background images and rejects one byte more before writes', async () => {
     const accepted = createTestContext();
     const exact = await accepted.app(multipartPublishRequest([
       ['gift', JSON.stringify(createGiftFile(defaultGift))],
@@ -708,7 +708,7 @@ describe('publish Worker', () => {
     expect((rejected.repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
   });
 
-  it('rejects unsupported or signature-mismatched cover images before writes', async () => {
+  it('rejects unsupported or signature-mismatched background images before writes', async () => {
     for (const file of [
       new File(['not an image'], 'cover.pdf', { type: 'application/pdf' }),
       new File(['not a jpeg'], 'cover.jpg', { type: 'image/jpeg' }),
@@ -726,7 +726,7 @@ describe('publish Worker', () => {
     }
   });
 
-  it('rejects duplicate cover image parts before writes', async () => {
+  it('rejects duplicate background image parts before writes', async () => {
     const { app, repository, giftAssets } = createTestContext();
     const response = await app(multipartPublishRequest([
       ['gift', JSON.stringify(createGiftFile(defaultGift))],
@@ -739,7 +739,7 @@ describe('publish Worker', () => {
     expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
   });
 
-  it('removes the uploaded cover image when D1 persistence fails', async () => {
+  it('removes the uploaded background image when D1 persistence fails', async () => {
     const giftAssets = new MemoryGiftAssets();
     const repository: PublishedGiftRepository = {
       async create() { throw new Error('D1 unavailable'); },
@@ -756,7 +756,7 @@ describe('publish Worker', () => {
     expect(giftAssets.objects.size).toBe(0);
   });
 
-  it('serves cover images through safe Worker headers and returns 404 when absent', async () => {
+  it('serves background images through the compatible route and returns 404 when absent', async () => {
     const { app } = createTestContext();
     const unknown = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}/cover`));
     const silentGift = await publish(app);
@@ -776,5 +776,35 @@ describe('publish Worker', () => {
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect((await response.arrayBuffer()).byteLength).toBe(48);
     expect(response.url).not.toContain('gifts/');
+  });
+
+  it('serves a Milestone 28 stored image as a background without republishing', async () => {
+    const id = 'L'.repeat(22);
+    const legacyGiftFile = createGiftFile({ ...defaultGift }) as unknown as {
+      schema: string;
+      version: number;
+      gift: Record<string, unknown>;
+    };
+    legacyGiftFile.gift.coverImage = { mimeType: 'image/jpeg', size: 4 };
+    const normalizedGiftFile = createGiftFile(parseGiftFile(legacyGiftFile));
+    const repository: PublishedGiftRepository = {
+      async create() {},
+      async getById(requestedId) {
+        return requestedId === id
+          ? { id, giftFile: normalizedGiftFile, createdAt: '2026-08-20T12:00:00.000Z' }
+          : null;
+      },
+    };
+    const giftAssets = new MemoryGiftAssets();
+    giftAssets.objects.set(`gifts/${id}/cover`, { body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]) });
+    const { app } = createTestContext({ repository, giftAssets });
+
+    const recipientPage = await app(new Request(`https://gifts.example/g/${id}`));
+    const background = await app(new Request(`https://gifts.example/g/${id}/cover`));
+
+    expect(recipientPage.status).toBe(200);
+    expect(await recipientPage.text()).toContain('"backgroundImage"');
+    expect(background.status).toBe(200);
+    expect(background.headers.get('Content-Type')).toBe('image/jpeg');
   });
 });

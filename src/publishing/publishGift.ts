@@ -9,7 +9,7 @@ interface PublishGiftOptions {
   apiBaseUrl?: string;
   fetcher?: typeof fetch;
   audioFile?: File | null;
-  coverImageFile?: File | null;
+  backgroundImageFile?: File | null;
 }
 
 export class PublishGiftError extends Error {
@@ -69,13 +69,14 @@ export async function publishGift(
 
   try {
     assertValidGiftPersonalization(gift);
-    const hasMedia = Boolean(options.audioFile || options.coverImageFile);
+    const hasMedia = Boolean(options.audioFile || options.backgroundImageFile);
     const body = hasMedia
       ? (() => {
           const form = new FormData();
           form.set('gift', JSON.stringify(createGiftFile(gift)));
           if (options.audioFile) form.set('audio', options.audioFile);
-          if (options.coverImageFile) form.set('coverImage', options.coverImageFile);
+          // Keep the established multipart field name for clients deployed with Milestone 28.
+          if (options.backgroundImageFile) form.set('coverImage', options.backgroundImageFile);
           return form;
         })()
       : JSON.stringify(createGiftFile(gift));

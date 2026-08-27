@@ -51,7 +51,7 @@ It does not store binary uploads or public media URLs that reveal internal stora
 
 `GIFT_ASSETS` is a private R2 binding for optional binary media. No R2 public bucket URL is part of the product contract. Audio and cover uploads use internal keys derived from the server-generated opaque gift ID. Those keys are never embedded in `GiftFile`, returned as public URLs, logged, or exposed to a recipient.
 
-Published `GiftConfig` stores only the media metadata needed by Runtime: MIME type and byte size for a cover image, and MIME type for audio. Presence of that metadata selects a fixed Worker-owned route; it is intentionally not an R2 object locator. Current local memory photos remain in their existing compatible format and are outside this foundation milestone.
+Published `GiftConfig` stores only the media metadata needed by Runtime: MIME type and byte size for an optional background image, and MIME type for audio. Presence of that metadata selects a fixed Worker-owned route; it is intentionally not an R2 object locator. The `/cover` path remains the stable transport route for background images published since Milestone 28. Current local memory photos remain in their existing compatible format and are outside this foundation milestone.
 
 ## Publishing and recipient assets
 
@@ -63,7 +63,7 @@ Content-Type: application/json
 GiftFile -> Worker -> D1 -> /g/<opaque-id>
 ```
 
-Gifts with audio or a cover image use a bounded multipart request containing canonical `gift` JSON plus at most one `audio` and one `coverImage` file. The Worker validates every part before writing, uploads private objects first, persists the immutable D1 snapshot last, and deletes every uploaded object if a later upload or D1 persistence fails. Gifts without newly attached binary media continue to use the original JSON flow.
+Gifts with audio or a background image use a bounded multipart request containing canonical `gift` JSON plus at most one `audio` and one legacy-named `coverImage` transport part. The field name remains stable for deployed Creator compatibility; the canonical GiftConfig field is `backgroundImage`. The Worker validates every part before writing, uploads private objects first, persists the immutable D1 snapshot last, and deletes every uploaded object if a later upload or D1 persistence fails. Gifts without newly attached binary media continue to use the original JSON flow.
 
 The intended recipient asset contract is:
 
@@ -74,7 +74,7 @@ GET /g/<opaque-id>/audio
   -> Worker streams a safe media response
 ```
 
-Cover images follow the equivalent `GET /g/<opaque-id>/cover` route. Both routes validate the opaque gift ID, require corresponding public metadata in the immutable snapshot, resolve an internal deterministic key, and stream with a safe allowlisted `Content-Type` and `X-Content-Type-Options: nosniff`.
+Background images use the compatible `GET /g/<opaque-id>/cover` route. Both routes validate the opaque gift ID, require corresponding public metadata in the immutable snapshot, resolve an internal deterministic key, and stream with a safe allowlisted `Content-Type` and `X-Content-Type-Options: nosniff`.
 
 The route is owned by the same Worker as `/g/<opaque-id>`. It must not become an R2 public URL, a bucket listing, or a searchable media API.
 
