@@ -13,13 +13,23 @@ export function getRecipientPreparationDuration(prefersReducedMotion: boolean): 
   return prefersReducedMotion ? 0 : RECIPIENT_PREPARATION_DURATION;
 }
 
+export function getRecipientDisplayState(
+  bootstrap: RuntimeBootstrapResult,
+  isPreparing: boolean,
+): 'loading' | 'error' | 'ready' {
+  if (bootstrap.status === 'error') return 'error';
+  return isPreparing ? 'loading' : 'ready';
+}
+
 function RuntimePreparation({ theme }: { theme: ThemeDefinition }) {
   return (
     <div
       className={`runtime-preparation ${theme.className}`}
+      data-recipient-state="loading"
       style={getThemeCssVariables(theme) as CSSProperties}
       role="status"
       aria-live="polite"
+      aria-busy="true"
     >
       <div className="runtime-preparation-card">
         <span className="runtime-preparation-mark" aria-hidden="true">✦</span>
@@ -30,20 +40,30 @@ function RuntimePreparation({ theme }: { theme: ThemeDefinition }) {
 }
 
 export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
-  const [isPreparing, setIsPreparing] = useState(true);
+  const [isPreparing, setIsPreparing] = useState(bootstrap.status === 'ready');
 
   useEffect(() => {
+    if (bootstrap.status === 'error') {
+      setIsPreparing(false);
+      return;
+    }
+
+    setIsPreparing(true);
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const duration = getRecipientPreparationDuration(prefersReducedMotion);
     const timeout = window.setTimeout(() => setIsPreparing(false), duration);
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [bootstrap.status]);
 
   const theme = resolveTheme(bootstrap.status === 'ready' ? bootstrap.gift.theme : undefined);
   const retry = () => window.location.reload();
+  const displayState = getRecipientDisplayState(bootstrap, isPreparing);
 
-  return <>
-    {bootstrap.status === 'ready' ? (
+  if (displayState === 'loading') return <RuntimePreparation theme={theme} />;
+
+  return (
+    <div data-recipient-state={displayState}>
+      {bootstrap.status === 'ready' ? (
       <RuntimeView gift={bootstrap.gift} />
     ) : (
       <main className={`runtime-failure ${theme.className}`} style={getThemeCssVariables(theme) as CSSProperties}>
@@ -55,6 +75,6 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
         </section>
       </main>
     )}
-    {isPreparing && <RuntimePreparation theme={theme} />}
-  </>;
+    </div>
+  );
 }

@@ -5,6 +5,7 @@ import { Envelope } from './Envelope';
 import { Letter } from './Letter';
 import { Memories } from './Memories';
 import { VoucherTicket } from './VoucherTicket';
+import { WaxSeal } from './WaxSeal';
 
 describe('Runtime empty-field presentation', () => {
   it('uses a neutral envelope label without duplicating Para', () => {
@@ -132,5 +133,24 @@ describe('Runtime empty-field presentation', () => {
     expect(renderMemory({ image, caption: 'Una mesa junto a la ventana.', alt: 'Dos copas sobre una mesa.' })).toContain('alt="Dos copas sobre una mesa."');
     expect(renderMemory({ image, caption: 'Una mesa junto a la ventana.' })).toContain('alt="Una mesa junto a la ventana."');
     expect(renderMemory({ image })).toContain('alt="Recuerdo personal"');
+  });
+});
+
+describe('Runtime seal presentation', () => {
+  it('exposes a clear pressed state while preserving the hold interaction', () => {
+    const markup = renderToStaticMarkup(
+      <WaxSeal
+        progress={0.48}
+        status="holding"
+        onStart={() => true}
+        onRelease={() => undefined}
+        onCancel={() => undefined}
+        onInterrupt={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('is-holding');
+    expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain('--hold-progress:0.48');
   });
 });

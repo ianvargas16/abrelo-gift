@@ -29,6 +29,8 @@ export function WaxSeal({ progress, status, onStart, onRelease, onCancel, onInte
     '--mark-scale': 1 - progress * 0.08,
     '--crack-opacity': Math.min(0.72, Math.max(0, (progress - 0.52) * 3)),
     '--hold-ring': `${progress * 0.38}rem`,
+    '--hold-progress': progress,
+    '--seal-rotation': `${progress * -2}deg`,
   } as CSSProperties;
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
@@ -121,6 +123,7 @@ export function WaxSeal({ progress, status, onStart, onRelease, onCancel, onInte
       onKeyUp={handleKeyUp}
       onBlur={handleBlur}
       aria-label="Mantén presionado para romper el sello"
+      aria-pressed={status === 'holding'}
       disabled={status === 'released'}
       style={sealStyle}
     >
@@ -129,6 +132,7 @@ export function WaxSeal({ progress, status, onStart, onRelease, onCancel, onInte
         <i className="wax-seal-crack wax-seal-crack-one" />
         <i className="wax-seal-crack wax-seal-crack-two" />
       </span>
+      <span className="wax-seal-glint" aria-hidden="true" />
     </button>
   );
 }
