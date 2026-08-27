@@ -9,6 +9,9 @@ interface CreatorViewProps {
   project: GiftProject;
   projects: GiftProject[];
   storageError: string;
+  backgroundImageFile: File | null;
+  backgroundImagePreviewUrl: string;
+  onBackgroundImageChange: (file: File | null) => void;
   onChange: (gift: GiftConfig) => void;
   onPreview: () => void;
   onReset: () => void;

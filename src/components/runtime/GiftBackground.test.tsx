@@ -20,4 +20,15 @@ describe('recipient gift background', () => {
     expect(configured).toContain(`src="${giftPath}/cover"`);
     expect(legacy).toBe('');
   });
+
+  it('uses a Creator preview URL without requiring published background metadata', () => {
+    const markup = renderToStaticMarkup(
+      <GiftBackground hasBackgroundImage={false} pathname="/preview" sourceUrl="blob:personalized-background" />,
+    );
+
+    expect(markup).toContain('class="gift-background"');
+    expect(markup).toContain('class="gift-background-overlay"');
+    expect(markup).toContain('src="blob:personalized-background"');
+    expect(markup).not.toContain('/cover');
+  });
 });

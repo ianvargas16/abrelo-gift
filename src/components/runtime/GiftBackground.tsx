@@ -12,14 +12,16 @@ export function getGiftBackgroundImageUrl(hasBackgroundImage: boolean, pathname:
 interface GiftBackgroundProps {
   hasBackgroundImage: boolean;
   pathname?: string;
+  sourceUrl?: string;
 }
 
 export function GiftBackground({
   hasBackgroundImage,
   pathname = typeof window === 'undefined' ? '' : window.location.pathname,
+  sourceUrl,
 }: GiftBackgroundProps) {
   const [hasFailed, setHasFailed] = useState(false);
-  const source = getGiftBackgroundImageUrl(hasBackgroundImage, pathname);
+  const source = sourceUrl || getGiftBackgroundImageUrl(hasBackgroundImage, pathname);
 
   if (!source || hasFailed) return null;
 

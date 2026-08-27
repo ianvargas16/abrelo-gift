@@ -18,6 +18,9 @@ interface GiftEditorProps {
   project: GiftProject;
   projects: GiftProject[];
   storageError: string;
+  backgroundImageFile: File | null;
+  backgroundImagePreviewUrl: string;
+  onBackgroundImageChange: (file: File | null) => void;
   onChange: (gift: GiftConfig) => void;
   onPreview: () => void;
   onReset: () => void;
@@ -37,6 +40,9 @@ export function GiftEditor({
   project,
   projects,
   storageError,
+  backgroundImageFile,
+  backgroundImagePreviewUrl,
+  onBackgroundImageChange,
   onChange,
   onPreview,
   onReset,
@@ -53,8 +59,6 @@ export function GiftEditor({
   const [memoryError, setMemoryError] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioError, setAudioError] = useState('');
-  const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
-  const [backgroundImagePreviewUrl, setBackgroundImagePreviewUrl] = useState('');
   const [backgroundImageError, setBackgroundImageError] = useState('');
   const [hasPersonalizationDraftError, setHasPersonalizationDraftError] = useState(false);
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
@@ -75,18 +79,6 @@ export function GiftEditor({
   const activeThemeStyle = getThemeCssVariables(activeTheme) as CSSProperties;
 
   useEffect(() => {
-    if (!backgroundImageFile) {
-      setBackgroundImagePreviewUrl('');
-      return undefined;
-    }
-
-    const objectUrl = URL.createObjectURL(backgroundImageFile);
-    setBackgroundImagePreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [backgroundImageFile]);
-
-  useEffect(() => {
-    setBackgroundImageFile(null);
     setBackgroundImageError('');
   }, [project.id]);
 
@@ -190,6 +182,20 @@ export function GiftEditor({
                   onThemeChange={(theme) => setRoot('theme', theme)}
                   onValidityChange={setHasPersonalizationDraftError}
                 />
+
+                <div className="gift-personalization-background">
+                  <div>
+                    <span className="field-label">Fondo del regalo</span>
+                    <p>Personaliza la atmósfera detrás del sobre con una imagen JPG, PNG o WebP de hasta 5 MB.</p>
+                  </div>
+                  <BackgroundImagePicker
+                    file={backgroundImageFile}
+                    previewUrl={backgroundImagePreviewUrl}
+                    error={backgroundImageError}
+                    onChange={onBackgroundImageChange}
+                    onError={setBackgroundImageError}
+                  />
+                </div>
               </section>
 
               <section className="studio-section">
@@ -404,30 +410,6 @@ export function GiftEditor({
               <section className="studio-section">
                 <div className="studio-section-heading">
                   <span>07</span>
-                  <div>
-                    <h3>Fondo del regalo</h3>
-                    <p>Personaliza la atmósfera de tu sorpresa con una imagen.</p>
-                  </div>
-                </div>
-
-                <div className="background-image-intro">
-                  <div>
-                    <span className="field-label">Imagen de fondo opcional</span>
-                    <p>Se verá detrás del sobre. Usa JPG, PNG o WebP de hasta 5 MB.</p>
-                  </div>
-                  <BackgroundImagePicker
-                    file={backgroundImageFile}
-                    previewUrl={backgroundImagePreviewUrl}
-                    error={backgroundImageError}
-                    onChange={setBackgroundImageFile}
-                    onError={setBackgroundImageError}
-                  />
-                </div>
-              </section>
-
-              <section className="studio-section">
-                <div className="studio-section-heading">
-                  <span>08</span>
                   <div>
                     <h3>Audio especial</h3>
                     <p>Si quieres, acompaña la sorpresa con una canción o un mensaje de voz.</p>
