@@ -1,4 +1,10 @@
-import { assertValidGiftPersonalization, createGiftFile, type GiftConfig } from '../models/giftConfig';
+import {
+  assertValidGiftPersonalization,
+  createGiftFile,
+  getOrderedMemories,
+  isStructuredMemoryItem,
+  type GiftConfig,
+} from '../models/giftConfig';
 
 export interface PublishedGift {
   id: string;
@@ -10,6 +16,7 @@ interface PublishGiftOptions {
   fetcher?: typeof fetch;
   audioFile?: File | null;
   backgroundImageFile?: File | null;
+  memoryImageFiles?: Record<string, File>;
 }
 
 export class PublishGiftError extends Error {
@@ -69,7 +76,14 @@ export async function publishGift(
 
   try {
     assertValidGiftPersonalization(gift);
-    const hasMedia = Boolean(options.audioFile || options.backgroundImageFile);
+    const structuredMemories = gift.memories
+      ? getOrderedMemories(gift.memories).filter(isStructuredMemoryItem)
+      : [];
+    const memoryFiles = structuredMemories
+      .map((item) => options.memoryImageFiles?.[item.id])
+      .filter((file): file is File => Boolean(file));
+    if (memoryFiles.length !== structuredMemories.length) throw new PublishGiftError();
+    const hasMedia = Boolean(options.audioFile || options.backgroundImageFile || memoryFiles.length > 0);
     const body = hasMedia
       ? (() => {
           const form = new FormData();
@@ -77,6 +91,7 @@ export async function publishGift(
           if (options.audioFile) form.set('audio', options.audioFile);
           // Keep the established multipart field name for clients deployed with Milestone 28.
           if (options.backgroundImageFile) form.set('coverImage', options.backgroundImageFile);
+          for (const memoryFile of memoryFiles) form.append('memory', memoryFile);
           return form;
         })()
       : JSON.stringify(createGiftFile(gift));

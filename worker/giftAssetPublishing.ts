@@ -5,14 +5,17 @@ import {
   type GiftMediaAsset,
   type GiftImageMimeType,
 } from '../src/models/giftMedia';
+import { getOrderedMemories, isStructuredMemoryItem, type MemoryItem } from '../src/models/giftConfig';
+import { MAX_MEMORY_ITEMS } from '../src/models/memoryMedia';
 import { MAX_GIFT_FILE_BYTES, GiftPayloadTooLargeError, parseCanonicalGiftFile, readGiftRequestBody } from './giftPublishing';
 
-export const MAX_MULTIPART_BYTES = MAX_AUDIO_SIZE + MAX_GIFT_IMAGE_BYTES + MAX_GIFT_FILE_BYTES + (192 * 1024);
+export const MAX_MULTIPART_BYTES = MAX_AUDIO_SIZE + (MAX_GIFT_IMAGE_BYTES * (MAX_MEMORY_ITEMS + 1)) + MAX_GIFT_FILE_BYTES + (512 * 1024);
 
 export interface ParsedPublishRequest {
   giftFile: ReturnType<typeof parseCanonicalGiftFile>;
   audio?: { file: File; metadata: GiftAudio };
   backgroundImage?: { file: File; metadata: GiftMediaAsset };
+  memories: Array<{ file: File; item: MemoryItem }>;
 }
 
 export class UnsupportedAudioError extends Error {}
@@ -65,7 +68,12 @@ export async function parsePublishRequest(request: Request): Promise<ParsedPubli
   const contentType = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
   if (contentType === 'application/json') {
     const body = await readGiftRequestBody(request);
-    return { giftFile: parseCanonicalGiftFile(JSON.parse(body)) };
+    const giftFile = parseCanonicalGiftFile(JSON.parse(body));
+    const structuredMemories = giftFile.gift.memories
+      ? getOrderedMemories(giftFile.gift.memories).filter(isStructuredMemoryItem)
+      : [];
+    if (structuredMemories.length > 0) throw new MalformedPublishRequestError();
+    return { giftFile, memories: [] };
   }
   if (contentType !== 'multipart/form-data') throw new MalformedPublishRequestError();
 
@@ -78,17 +86,22 @@ export async function parsePublishRequest(request: Request): Promise<ParsedPubli
   } catch { throw new MalformedPublishRequestError(); }
 
   const entries = [...form.entries()];
-  const allowedFields = new Set(['gift', 'audio', 'coverImage']);
+  const allowedFields = new Set(['gift', 'audio', 'coverImage', 'memory']);
   if (entries.some(([name]) => !allowedFields.has(name))) throw new MalformedPublishRequestError();
   const gifts = entries.filter(([name]) => name === 'gift');
   const audios = entries.filter(([name]) => name === 'audio');
   const coverImages = entries.filter(([name]) => name === 'coverImage');
-  if (gifts.length !== 1 || audios.length > 1 || coverImages.length > 1 || typeof gifts[0][1] !== 'string') {
+  const memoryImages = entries.filter(([name]) => name === 'memory');
+  if (gifts.length !== 1 || audios.length > 1 || coverImages.length > 1 || memoryImages.length > MAX_MEMORY_ITEMS || typeof gifts[0][1] !== 'string') {
     throw new MalformedPublishRequestError();
   }
   if (new TextEncoder().encode(gifts[0][1] as string).byteLength > MAX_GIFT_FILE_BYTES) throw new GiftPayloadTooLargeError();
   const giftFile = parseCanonicalGiftFile(JSON.parse(gifts[0][1] as string));
-  const result: ParsedPublishRequest = { giftFile };
+  const structuredMemories = giftFile.gift.memories
+    ? getOrderedMemories(giftFile.gift.memories).filter(isStructuredMemoryItem)
+    : [];
+  if (memoryImages.length !== structuredMemories.length) throw new MalformedPublishRequestError();
+  const result: ParsedPublishRequest = { giftFile, memories: [] };
 
   if (audios.length === 1) {
     const file = audios[0][1];
@@ -108,9 +121,26 @@ export async function parsePublishRequest(request: Request): Promise<ParsedPubli
     result.backgroundImage = { file, metadata: { mimeType: file.type, size: file.size } };
   }
 
+  for (const [index, entry] of memoryImages.entries()) {
+    const file = entry[1];
+    const item = structuredMemories[index];
+    if (!(file instanceof File) || file.size <= 0 || !item) throw new MalformedPublishRequestError();
+    if (file.size > MAX_GIFT_IMAGE_BYTES) throw new ImageTooLargeError();
+    if (!isGiftImageMimeType(file.type)
+      || file.type !== item.image.mimeType
+      || file.size !== item.image.size
+      || !(await hasSupportedImageSignature(file, file.type))) {
+      throw new UnsupportedImageError();
+    }
+    result.memories.push({ file, item });
+  }
+
   return result;
 }
 
 export function getGiftAudioKey(id: string): string { return `gifts/${id}/audio`; }
 // Preserve the original object path so Milestone 28 assets need no storage migration.
 export function getGiftBackgroundImageKey(id: string): string { return `gifts/${id}/cover`; }
+export function getGiftMemoryImageKey(id: string, memoryId: string): string {
+  return `gifts/${id}/memories/${memoryId}`;
+}

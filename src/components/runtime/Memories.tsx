@@ -1,33 +1,48 @@
 import { useState } from 'react';
-import type { MemorySection } from '../../models/giftConfig';
+import {
+  getOrderedMemories,
+  isStructuredMemoryItem,
+  type CompatibleMemoryItem,
+  type MemorySection,
+} from '../../models/giftConfig';
 
 interface MemoriesProps {
   memories: MemorySection;
+  imageUrls?: Record<string, string>;
   isRevealing: boolean;
   onReveal: () => void;
 }
 
-export function Memories({ memories, isRevealing, onReveal }: MemoriesProps) {
+export function getMemoryImageUrl(memory: CompatibleMemoryItem, imageUrls?: Record<string, string>): string {
+  if (!isStructuredMemoryItem(memory)) return memory.image;
+  if (imageUrls?.[memory.id]) return imageUrls[memory.id];
+  const giftPath = typeof window === 'undefined' ? '' : window.location.pathname.replace(/\/$/u, '');
+  return `${giftPath}/memories/${encodeURIComponent(memory.id)}`;
+}
+
+export function Memories({ memories, imageUrls, isRevealing, onReveal }: MemoriesProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const activeMemory = memories.items[activeIndex];
+  const orderedMemories = getOrderedMemories(memories);
+  const activeMemory = orderedMemories[activeIndex];
   const title = memories.title?.trim() || 'Unos recuerdos para guardar';
   const caption = activeMemory.caption?.trim();
   const momentTitle = caption || 'Un instante para guardar';
   const alt = activeMemory.alt?.trim() || caption || 'Recuerdo personal';
   const hasPrevious = activeIndex > 0;
-  const hasNext = activeIndex < memories.items.length - 1;
+  const hasNext = activeIndex < orderedMemories.length - 1;
+  const imageUrl = getMemoryImageUrl(activeMemory, imageUrls);
 
   return (
     <section className={`memories-stage ${isRevealing ? 'is-revealing' : ''}`} aria-labelledby="memories-title">
       <article className="memory-keepsake">
         <div className="memory-keepsake-header">
           <span className="memory-album-title">{title}</span>
-          <span className="memory-page-count">{String(activeIndex + 1).padStart(2, '0')} / {String(memories.items.length).padStart(2, '0')}</span>
+          <span className="memory-page-count">{String(activeIndex + 1).padStart(2, '0')} / {String(orderedMemories.length).padStart(2, '0')}</span>
         </div>
 
-        <div className="memory-album-page" key={`${activeMemory.image.slice(0, 48)}-${activeIndex}`} aria-live="polite">
+        <div className="memory-album-page" key={isStructuredMemoryItem(activeMemory) ? activeMemory.id : `${activeMemory.image.slice(0, 48)}-${activeIndex}`} aria-live="polite">
           <div className="memory-photo-frame">
-            <img src={activeMemory.image} alt={alt} />
+            <img src={imageUrl} alt={alt} />
           </div>
 
           <div className="memory-keepsake-copy">

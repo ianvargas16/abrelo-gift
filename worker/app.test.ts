@@ -141,6 +141,25 @@ function createImageFile(size: number, mimeType: GiftImageMimeType = 'image/jpeg
   return new File([bytes], `cover.${mimeType.split('/')[1]}`, { type: mimeType });
 }
 
+function giftWithStructuredMemories(count = 2) {
+  return {
+    ...defaultGift,
+    memories: {
+      enabled: true,
+      title: 'Momentos',
+      items: Array.from({ length: count }, (_, index) => {
+        const id = `memoryAsset${String(index + 1).padStart(16, '0')}`;
+        return {
+          id,
+          image: { id, mimeType: 'image/jpeg' as const, size: 32 },
+          order: index,
+          caption: `Momento ${index + 1}`,
+        };
+      }),
+    },
+  };
+}
+
 function multipartPublishRequest(
   entries: Array<[string, string | File]>,
   body?: BodyInit,
@@ -155,6 +174,70 @@ function multipartPublishRequest(
 }
 
 describe('publish Worker', () => {
+  it('publishes ordered memory assets and serves them through Worker routes', async () => {
+    const { app, repository, giftAssets } = createTestContext();
+    const gift = giftWithStructuredMemories();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(gift))],
+      ['memory', createImageFile(32)],
+      ['memory', createImageFile(32)],
+    ]));
+    const result = await response.json() as { id: string; url: string };
+
+    expect(response.status).toBe(201);
+    expect((await repository.getById(result.id))?.giftFile.gift.memories).toEqual(gift.memories);
+    expect(giftAssets.objects.size).toBe(2);
+    const memoryResponse = await app(new Request(`${result.url}/memories/${gift.memories.items[0].id}`));
+    expect(memoryResponse.status).toBe(200);
+    expect(memoryResponse.headers.get('Content-Type')).toBe('image/jpeg');
+    expect(memoryResponse.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect(JSON.stringify(result)).not.toContain('gifts/');
+  });
+
+  it('rejects missing, extra, and mismatched memory files before storage writes', async () => {
+    const gift = giftWithStructuredMemories(1);
+    const cases: Array<Array<[string, string | File]>> = [
+      [['gift', JSON.stringify(createGiftFile(gift))]],
+      [
+        ['gift', JSON.stringify(createGiftFile(gift))],
+        ['memory', createImageFile(32)],
+        ['memory', createImageFile(32)],
+      ],
+      [
+        ['gift', JSON.stringify(createGiftFile(gift))],
+        ['memory', createImageFile(33)],
+      ],
+    ];
+
+    for (const entries of cases) {
+      const repository = new MemoryPublishedGiftRepository();
+      const { app, giftAssets } = createTestContext({ repository });
+      const response = await app(multipartPublishRequest(entries));
+      expect(response.status).toBe(400);
+      expect(repository.createCalls).toBe(0);
+      expect(giftAssets.putCalls).toBe(0);
+    }
+  });
+
+  it('rolls back all memory objects when persistence fails', async () => {
+    const giftAssets = new MemoryGiftAssets();
+    const repository: PublishedGiftRepository = {
+      async create() { throw new Error('D1 unavailable'); },
+      async getById() { return null; },
+    };
+    const { app } = createTestContext({ repository, giftAssets });
+    const gift = giftWithStructuredMemories();
+    const response = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(gift))],
+      ['memory', createImageFile(32)],
+      ['memory', createImageFile(32)],
+    ]));
+
+    expect(response.status).toBe(503);
+    expect(giftAssets.putCalls).toBe(2);
+    expect(giftAssets.deleteCalls).toBe(2);
+    expect(giftAssets.objects.size).toBe(0);
+  });
   it('publishes a valid canonical GiftFile', async () => {
     const { app, repository } = createTestContext();
     const { response, result } = await publish(app);

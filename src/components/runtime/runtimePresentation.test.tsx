@@ -3,11 +3,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../../config/defaultGift';
 import { Envelope } from './Envelope';
 import { Letter } from './Letter';
-import { Memories } from './Memories';
+import { getMemoryImageUrl, Memories } from './Memories';
 import { VoucherTicket } from './VoucherTicket';
 import { WaxSeal } from './WaxSeal';
 
 describe('Runtime empty-field presentation', () => {
+  it('resolves structured memories without exposing storage keys', () => {
+    const memory = {
+      id: 'memoryAsset000000000001',
+      image: { id: 'memoryAsset000000000001', mimeType: 'image/jpeg' as const, size: 1024 },
+      order: 0,
+    };
+
+    expect(getMemoryImageUrl(memory, { [memory.id]: 'blob:creator-preview' })).toBe('blob:creator-preview');
+    expect(getMemoryImageUrl({ image: 'data:image/jpeg;base64,/9j/AAAA' })).toContain('data:image/jpeg');
+  });
   it('uses a neutral envelope label without duplicating Para', () => {
     const markup = renderToStaticMarkup(
       <Envelope recipientName="" state="sealed" isShaking={false} />,

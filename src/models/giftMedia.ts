@@ -9,6 +9,16 @@ export interface GiftMediaAsset {
   size: number;
 }
 
+export const GIFT_MEDIA_ASSET_ID_PATTERN = /^[A-Za-z0-9_-]{16,64}$/u;
+
+export interface GiftMemoryAsset extends GiftMediaAsset {
+  id: string;
+}
+
+export function isGiftMediaAssetId(value: unknown): value is string {
+  return typeof value === 'string' && GIFT_MEDIA_ASSET_ID_PATTERN.test(value);
+}
+
 export function isGiftImageMimeType(value: unknown): value is GiftImageMimeType {
   return typeof value === 'string' && giftImageMimeTypes.includes(value as GiftImageMimeType);
 }

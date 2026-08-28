@@ -4,8 +4,10 @@ import { isGiftAudioMimeType, type GiftAudio } from './giftAudio';
 import type { GiftAtmosphere } from './giftAtmosphere';
 import { isGiftAtmosphere } from './giftAtmosphere';
 import {
+  isGiftMediaAssetId,
   isGiftImageMimeType,
   MAX_GIFT_IMAGE_BYTES,
+  type GiftMemoryAsset,
   type GiftMediaAsset,
 } from './giftMedia';
 
@@ -29,16 +31,26 @@ export interface GiftLetter {
   message: string;
 }
 
-export interface MemoryItem {
+export interface LegacyMemoryItem {
   image: string;
   caption?: string;
   alt?: string;
 }
 
+export interface MemoryItem {
+  id: string;
+  image: GiftMemoryAsset;
+  order: number;
+  caption?: string;
+  alt?: string;
+}
+
+export type CompatibleMemoryItem = MemoryItem | LegacyMemoryItem;
+
 export interface MemorySection {
   enabled: boolean;
   title?: string;
-  items: MemoryItem[];
+  items: CompatibleMemoryItem[];
 }
 
 export interface VoucherGiftContent {
@@ -171,7 +183,7 @@ function parseMemorySection(value: unknown): MemorySection {
   }
 
   const title = source.title === undefined ? undefined : assertString(source.title, 'memories.title');
-  const items = source.items.map((item, index) => {
+  const items = source.items.map((item, index): CompatibleMemoryItem => {
     const memory = assertRecord(item, `Recuerdo inválido: memories.items.${index}`);
     const caption = memory.caption === undefined
       ? undefined
@@ -180,12 +192,46 @@ function parseMemorySection(value: unknown): MemorySection {
       ? undefined
       : assertString(memory.alt, `memories.items.${index}.alt`);
 
+    if (typeof memory.image === 'object' || memory.order !== undefined) {
+      const asset = assertRecord(memory.image, `Referencia inválida: memories.items.${index}.image`);
+      if (!isGiftMediaAssetId(memory.id) || !isGiftMediaAssetId(asset.id) || memory.id !== asset.id) {
+        throw new Error(`Identificador inválido: memories.items.${index}.id`);
+      }
+      if (!isGiftImageMimeType(asset.mimeType)) {
+        throw new Error(`Tipo inválido: memories.items.${index}.image.mimeType`);
+      }
+      if (!Number.isSafeInteger(asset.size) || (asset.size as number) <= 0 || (asset.size as number) > MAX_GIFT_IMAGE_BYTES) {
+        throw new Error(`Tamaño inválido: memories.items.${index}.image.size`);
+      }
+      if (!Number.isSafeInteger(memory.order) || (memory.order as number) < 0) {
+        throw new Error(`Orden inválido: memories.items.${index}.order`);
+      }
+
+      return {
+        id: memory.id,
+        image: {
+          id: asset.id,
+          mimeType: asset.mimeType,
+          size: asset.size as number,
+        },
+        order: memory.order as number,
+        ...(caption === undefined ? {} : { caption }),
+        ...(alt === undefined ? {} : { alt }),
+      };
+    }
+
     return {
       image: assertMemoryImageDataUrl(memory.image, `memories.items.${index}.image`),
       ...(caption === undefined ? {} : { caption }),
       ...(alt === undefined ? {} : { alt }),
     };
   });
+
+  const structuredItems = items.filter((item): item is MemoryItem => 'id' in item);
+  if (new Set(structuredItems.map((item) => item.id)).size !== structuredItems.length
+    || new Set(structuredItems.map((item) => item.order)).size !== structuredItems.length) {
+    throw new Error('Los recuerdos deben tener identificadores y posiciones únicas');
+  }
 
   return {
     enabled: source.enabled,
@@ -291,6 +337,17 @@ export function normalizeGiftConfigVersion(gift: GiftConfig): GiftConfig {
 
 export function hasGiftMemories(gift: GiftConfig): boolean {
   return gift.memories?.enabled === true && gift.memories.items.length > 0;
+}
+
+export function isStructuredMemoryItem(item: CompatibleMemoryItem): item is MemoryItem {
+  return 'id' in item;
+}
+
+export function getOrderedMemories(memories: MemorySection): CompatibleMemoryItem[] {
+  return memories.items
+    .map((item, index) => ({ item, order: isStructuredMemoryItem(item) ? item.order : index }))
+    .sort((left, right) => left.order - right.order)
+    .map(({ item }) => item);
 }
 
 export function validateGiftPersonalization(gift: Pick<GiftConfig, 'intro' | 'letter'>): GiftPersonalizationErrors {

@@ -7,6 +7,10 @@ export const MEMORY_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as c
 
 export type MemoryImageType = (typeof MEMORY_IMAGE_TYPES)[number];
 
+export function createMemoryAssetId(): string {
+  return crypto.randomUUID().replaceAll('-', '');
+}
+
 interface MemoryImageFile {
   type: string;
   size: number;

@@ -10,6 +10,7 @@ import {
   AudioTooLargeError,
   getGiftAudioKey,
   getGiftBackgroundImageKey,
+  getGiftMemoryImageKey,
   ImageTooLargeError,
   parsePublishRequest,
   UnsupportedAudioError,
@@ -203,6 +204,7 @@ async function publishGift(
   const id = generateOpaqueGiftId();
   const audioKey = parsed.audio ? getGiftAudioKey(id) : null;
   const backgroundImageKey = parsed.backgroundImage ? getGiftBackgroundImageKey(id) : null;
+  const memoryImageKeys = parsed.memories.map(({ item }) => getGiftMemoryImageKey(id, item.id));
   const logger = options.logger ?? silentLogger;
   const gift = {
     ...parsed.giftFile.gift,
@@ -232,6 +234,12 @@ async function publishGift(
       if (!options.giftAssets) throw new Error('gift asset storage unavailable');
       await options.giftAssets.put(backgroundImageKey, parsed.backgroundImage.file.stream(), { httpMetadata: { contentType: parsed.backgroundImage.metadata.mimeType } });
       uploadedKeys.push(backgroundImageKey);
+    }
+    for (const [index, memory] of parsed.memories.entries()) {
+      if (!options.giftAssets) throw new Error('gift asset storage unavailable');
+      const key = memoryImageKeys[index];
+      await options.giftAssets.put(key, memory.file.stream(), { httpMetadata: { contentType: memory.item.image.mimeType } });
+      uploadedKeys.push(key);
     }
   } catch {
     await cleanUpUploadedAssets();
@@ -282,6 +290,27 @@ async function serveGiftBackgroundImage(options: PublishAppOptions, id: string):
       'Cache-Control': 'private, max-age=3600',
       'Content-Disposition': 'inline',
       'Content-Type': metadata.mimeType,
+      'X-Content-Type-Options': 'nosniff',
+    });
+    if (object.size) headers.set('Content-Length', String(object.size));
+    return new Response(object.body, { headers });
+  } catch {
+    return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+  }
+}
+
+async function serveGiftMemoryImage(options: PublishAppOptions, id: string, memoryId: string): Promise<Response> {
+  if (!GIFT_ID_PATTERN.test(id)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+  try {
+    const snapshot = await options.repository.getById(id);
+    const memory = snapshot?.giftFile.gift.memories?.items.find((item) => 'id' in item && item.id === memoryId);
+    if (!memory || !('id' in memory)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const object = await options.giftAssets?.get(getGiftMemoryImageKey(id, memory.id));
+    if (!object) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
+    const headers = new Headers({
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Disposition': 'inline',
+      'Content-Type': memory.image.mimeType,
       'X-Content-Type-Options': 'nosniff',
     });
     if (object.size) headers.set('Content-Length', String(object.size));
@@ -358,6 +387,13 @@ export function createPublishApp(options: PublishAppOptions) {
       const requestId = nextRequestId();
       if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
       return withRequestId(await serveGiftBackgroundImage(options, backgroundImageRoute[1]), requestId);
+    }
+
+    const memoryImageRoute = url.pathname.match(/^\/g\/([^/]+)\/memories\/([^/]+)$/u);
+    if (memoryImageRoute) {
+      const requestId = nextRequestId();
+      if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
+      return withRequestId(await serveGiftMemoryImage(options, memoryImageRoute[1], memoryImageRoute[2]), requestId);
     }
 
     if (giftRoute) {

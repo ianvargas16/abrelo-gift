@@ -1,24 +1,8 @@
 import {
-  assertMemoryImageDataUrl,
   assertMemoryImageFile,
   getMemoryImageDimensions,
   MEMORY_IMAGE_QUALITY,
 } from '../../models/memoryMedia';
-
-function readDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('No pude leer esa imagen.'));
-    reader.onload = () => {
-      try {
-        resolve(assertMemoryImageDataUrl(reader.result, 'memories.items.image'));
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.readAsDataURL(blob);
-  });
-}
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -52,7 +36,7 @@ function createOptimizedBlob(image: HTMLImageElement, type: string): Promise<Blo
   });
 }
 
-export async function readMemoryImageFile(file: File): Promise<string> {
+export async function readMemoryImageFile(file: File): Promise<File> {
   assertMemoryImageFile(file);
   const sourceUrl = URL.createObjectURL(file);
 
@@ -60,7 +44,10 @@ export async function readMemoryImageFile(file: File): Promise<string> {
     const image = await loadImage(sourceUrl);
     const optimizedBlob = await createOptimizedBlob(image, file.type);
     assertMemoryImageFile({ type: optimizedBlob.type, size: optimizedBlob.size });
-    return readDataUrl(optimizedBlob);
+    return new File([optimizedBlob], file.name, {
+      type: optimizedBlob.type,
+      lastModified: file.lastModified,
+    });
   } finally {
     URL.revokeObjectURL(sourceUrl);
   }

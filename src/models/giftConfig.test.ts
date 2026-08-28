@@ -269,6 +269,44 @@ describe('parseGiftFile', () => {
     expect(parseGiftFile(createGiftFile(giftWithMemories))).toEqual(giftWithMemories);
   });
 
+  it('round-trips ordered R2 memory references without binary data', () => {
+    const giftWithMemories = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        title: 'Nuestro recorrido',
+        items: [
+          {
+            id: 'memoryAsset000000000002',
+            image: { id: 'memoryAsset000000000002', mimeType: 'image/webp' as const, size: 2048 },
+            order: 1,
+            caption: 'Segundo momento',
+          },
+          {
+            id: 'memoryAsset000000000001',
+            image: { id: 'memoryAsset000000000001', mimeType: 'image/jpeg' as const, size: 1024 },
+            order: 0,
+          },
+        ],
+      },
+    };
+
+    const parsed = parseGiftFile(createGiftFile(giftWithMemories));
+    expect(parsed).toEqual(giftWithMemories);
+    expect(JSON.stringify(parsed)).not.toContain('data:image');
+  });
+
+  it('rejects duplicate structured memory ids and order values', () => {
+    const item = {
+      id: 'memoryAsset000000000001',
+      image: { id: 'memoryAsset000000000001', mimeType: 'image/jpeg' as const, size: 1024 },
+      order: 0,
+    };
+    const gift = { ...defaultGift, memories: { enabled: true, items: [item, { ...item }] } };
+
+    expect(() => parseGiftFile(createGiftFile(gift))).toThrow(/únicas/);
+  });
+
   it('keeps legacy gifts on the original Runtime path when memories are absent or empty', () => {
     expect(hasGiftMemories(defaultGift)).toBe(false);
     expect(hasGiftMemories({ ...defaultGift, memories: { enabled: true, items: [] } })).toBe(false);

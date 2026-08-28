@@ -1400,6 +1400,16 @@ textarea:focus-visible {
   object-fit: cover;
 }
 
+.memory-editor-photo-missing {
+  min-height: 8rem;
+  display: grid;
+  place-items: center;
+  padding: var(--space-md);
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .memory-editor-photo > span {
   position: absolute;
   right: var(--space-sm);

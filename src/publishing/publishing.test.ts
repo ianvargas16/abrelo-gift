@@ -73,6 +73,49 @@ describe('Creator publishing client', () => {
       .resolves.toEqual({ id: publishedId, url: publishedUrl });
   });
 
+  it('publishes memory files in explicit gift order while keeping GiftFile metadata-only', async () => {
+    const firstId = 'memoryAsset000000000001';
+    const secondId = 'memoryAsset000000000002';
+    const first = new File(['first'], 'first.jpg', { type: 'image/jpeg' });
+    const second = new File(['second'], 'second.jpg', { type: 'image/jpeg' });
+    const gift = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [
+          { id: secondId, image: { id: secondId, mimeType: 'image/jpeg' as const, size: second.size }, order: 1 },
+          { id: firstId, image: { id: firstId, mimeType: 'image/jpeg' as const, size: first.size }, order: 0 },
+        ],
+      },
+    };
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const form = init?.body as FormData;
+      expect(form.getAll('memory')).toEqual([first, second]);
+      expect(String(form.get('gift'))).not.toContain('base64');
+      return Response.json({ id: publishedId, url: publishedUrl }, { status: 201 });
+    });
+
+    await expect(publishGift(gift, {
+      fetcher,
+      memoryImageFiles: { [firstId]: first, [secondId]: second },
+    })).resolves.toEqual({ id: publishedId, url: publishedUrl });
+  });
+
+  it('does not publish unresolved memory references', async () => {
+    const id = 'memoryAsset000000000001';
+    const gift = {
+      ...defaultGift,
+      memories: {
+        enabled: true,
+        items: [{ id, image: { id, mimeType: 'image/jpeg' as const, size: 32 }, order: 0 }],
+      },
+    };
+    const fetcher = vi.fn();
+
+    await expect(publishGift(gift, { fetcher })).rejects.toBeInstanceOf(PublishGiftError);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid personalization before making a publication request', async () => {
     const fetcher = vi.fn();
     const invalidGift = {
