@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { defaultGift } from '../../config/defaultGift';
 import { Envelope } from './Envelope';
 import { Letter } from './Letter';
-import { getMemoryImageUrl, Memories } from './Memories';
+import { getMemoryImageUrl, MemoryStory } from './MemoryStory';
 import { VoucherTicket } from './VoucherTicket';
 import { WaxSeal } from './WaxSeal';
 
@@ -94,9 +94,9 @@ describe('Runtime empty-field presentation', () => {
     expect(markup).toContain('Volver a verlo');
   });
 
-  it('renders a keepsake scene only when Runtime receives configured memories', () => {
+  it('renders a story scene only when Runtime receives configured memories', () => {
     const markup = renderToStaticMarkup(
-      <Memories
+      <MemoryStory
         memories={{
           enabled: true,
           title: 'Unos momentos',
@@ -106,38 +106,80 @@ describe('Runtime empty-field presentation', () => {
           }],
         }}
         isRevealing={false}
-        onReveal={vi.fn()}
+        onComplete={vi.fn()}
       />,
     );
 
-    expect(markup).toContain('memory-keepsake');
-    expect(markup).toContain('memory-album-page');
+    expect(markup).toContain('memory-story');
+    expect(markup).toContain('memory-story-moment');
     expect(markup).toContain('Momento 01');
     expect(markup).toContain('Unos momentos');
     expect(markup).toContain('Aquí empieza la historia.');
-    expect(markup).toContain('Descubrir mi regalo');
+    expect(markup).toContain('Toca para cerrar esta historia');
   });
 
   it('uses a neutral moment title when an older memory has no caption', () => {
     const markup = renderToStaticMarkup(
-      <Memories
+      <MemoryStory
         memories={{
           enabled: true,
           items: [{ image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==' }],
         }}
         isRevealing={false}
-        onReveal={vi.fn()}
+        onComplete={vi.fn()}
       />,
     );
 
-    expect(markup).toContain('Un instante para guardar');
+    expect(markup).toContain('Un momento para recordar');
     expect(markup).toContain('Unos recuerdos para guardar');
+  });
+
+  it('starts with the first explicit memory order regardless of array position', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryStory
+        memories={{
+          enabled: true,
+          items: [
+            {
+              id: 'memoryAsset000000000002',
+              image: { id: 'memoryAsset000000000002', mimeType: 'image/webp', size: 2048 },
+              caption: 'Segundo momento',
+              order: 1,
+            },
+            {
+              id: 'memoryAsset000000000001',
+              image: { id: 'memoryAsset000000000001', mimeType: 'image/jpeg', size: 1024 },
+              caption: 'Primer momento',
+              order: 0,
+            },
+          ],
+        }}
+        imageUrls={{
+          memoryAsset000000000001: 'blob:first-memory',
+          memoryAsset000000000002: 'blob:second-memory',
+        }}
+        isRevealing={false}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain('src="blob:first-memory"');
+    expect(markup).toContain('Primer momento');
+    expect(markup).not.toContain('Segundo momento');
+  });
+
+  it('does not render an empty story surface', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryStory memories={{ enabled: true, items: [] }} isRevealing={false} onComplete={vi.fn()} />,
+    );
+
+    expect(markup).toBe('');
   });
 
   it('uses optional alt text, caption, then a neutral fallback for memory images', () => {
     const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLQ9wAAAABJRU5ErkJggg==';
     const renderMemory = (item: { image: string; caption?: string; alt?: string }) => renderToStaticMarkup(
-      <Memories memories={{ enabled: true, items: [item] }} isRevealing={false} onReveal={vi.fn()} />,
+      <MemoryStory memories={{ enabled: true, items: [item] }} isRevealing={false} onComplete={vi.fn()} />,
     );
 
     expect(renderMemory({ image, caption: 'Una mesa junto a la ventana.', alt: 'Dos copas sobre una mesa.' })).toContain('alt="Dos copas sobre una mesa."');

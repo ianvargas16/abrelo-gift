@@ -4,7 +4,7 @@ import { Envelope } from './runtime/Envelope';
 import { GiftReveal } from './runtime/GiftReveal';
 import { GiftAudioControl } from './runtime/GiftAudioControl';
 import { Letter } from './runtime/Letter';
-import { Memories } from './runtime/Memories';
+import { MemoryStory } from './runtime/MemoryStory';
 import { useGiftAudio } from './runtime/useGiftAudio';
 import {
   createSealHoldController,
@@ -315,7 +315,7 @@ export function EnvelopeExperience({ gift, backgroundImageUrl, memoryImageUrls }
               />
             </section>
           ) : (
-            <Memories memories={gift.memories!} imageUrls={memoryImageUrls} isRevealing={isMemoryRevealing} onReveal={revealGiftFromMemories} />
+            <MemoryStory memories={gift.memories!} imageUrls={memoryImageUrls} isRevealing={isMemoryRevealing} onComplete={revealGiftFromMemories} />
           )
         )}
       </div>
