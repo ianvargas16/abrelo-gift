@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { MAX_GIFT_AUDIO_BYTES, isGiftAudioMimeType } from '../../models/giftAudio';
-import type { GiftConfig, MemorySection } from '../../models/giftConfig';
+import { isStructuredMemoryItem, type GiftConfig, type MemorySection } from '../../models/giftConfig';
 import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
 import { readMemoryImageFile } from './readMemoryImageFile';
 import type { GiftProject } from '../../projects/giftProject';
@@ -18,6 +18,7 @@ import { ProjectSwitcher } from './ProjectSwitcher';
 import { getThemeCssVariables, resolveTheme } from '../../themes/themeRegistry';
 import { BackgroundImagePicker } from './BackgroundImagePicker';
 import { TemplatePicker } from './TemplatePicker';
+import { createMemoryItem, removeMemoryItem, reorderMemoryItems } from './memoryEditor';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -26,6 +27,9 @@ interface GiftEditorProps {
   storageError: string;
   backgroundImageFile: File | null;
   backgroundImagePreviewUrl: string;
+  memoryImageFiles?: Record<string, File>;
+  memoryImagePreviewUrls?: Record<string, string>;
+  onMemoryImageFilesChange?: (files: Record<string, File>) => void;
   onBackgroundImageChange: (file: File | null) => void;
   onChange: (gift: GiftConfig) => void;
   onPreview: () => void;
@@ -48,6 +52,9 @@ export function GiftEditor({
   storageError,
   backgroundImageFile,
   backgroundImagePreviewUrl,
+  memoryImageFiles = {},
+  memoryImagePreviewUrls = {},
+  onMemoryImageFilesChange = () => undefined,
   onBackgroundImageChange,
   onChange,
   onPreview,
@@ -120,11 +127,19 @@ export function GiftEditor({
     }
 
     try {
-      const images = await Promise.all(files.map(readMemoryImageFile));
+      const preparedFiles = await Promise.all(files.map(readMemoryImageFile));
+      const nextFiles = { ...memoryImageFiles };
+      const nextItems = preparedFiles.map((file, offset) => {
+        const item = createMemoryItem(file, memories.items.length + offset);
+        const { id } = item;
+        nextFiles[id] = file;
+        return item;
+      });
+      onMemoryImageFilesChange(nextFiles);
       setMemories({
         ...memories,
         enabled: true,
-        items: [...memories.items, ...images.map((image) => ({ image, caption: '' }))],
+        items: [...memories.items, ...nextItems],
       });
       setMemoryError('');
     } catch (error) {
@@ -133,10 +148,17 @@ export function GiftEditor({
   };
 
   const moveMemory = (index: number, direction: -1 | 1) => {
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= memories.items.length) return;
-    const items = [...memories.items];
-    [items[index], items[nextIndex]] = [items[nextIndex], items[index]];
+    setMemories({ ...memories, items: reorderMemoryItems(memories.items, index, direction) });
+  };
+
+  const removeMemory = (index: number) => {
+    const removed = memories.items[index];
+    const items = removeMemoryItem(memories.items, index);
+    if (removed && isStructuredMemoryItem(removed)) {
+      const nextFiles = { ...memoryImageFiles };
+      delete nextFiles[removed.id];
+      onMemoryImageFilesChange(nextFiles);
+    }
     setMemories({ ...memories, items });
   };
 
@@ -354,12 +376,15 @@ export function GiftEditor({
 
                     {memories.items.length > 0 && (
                       <div className="memory-editor-list">
-                        {memories.items.map((memory, index) => (
-                          <article className="memory-editor-item" key={`${memory.image.slice(0, 48)}-${index}`}>
-                            <div className="memory-editor-photo">
-                              <img src={memory.image} alt="" />
-                              <span>Momento {String(index + 1).padStart(2, '0')}</span>
-                            </div>
+                        {memories.items.map((memory, index) => {
+                          const structured = isStructuredMemoryItem(memory);
+                          const previewUrl = structured ? memoryImagePreviewUrls[memory.id] : memory.image;
+                          return (
+                            <article className="memory-editor-item" key={structured ? memory.id : `${memory.image.slice(0, 48)}-${index}`}>
+                              <div className="memory-editor-photo">
+                                {previewUrl ? <img src={previewUrl} alt="" /> : <div className="memory-editor-photo-missing">Imagen pendiente</div>}
+                                <span>Momento {String(index + 1).padStart(2, '0')}</span>
+                              </div>
                             <label className="field memory-caption-field">
                               <span>La historia de este momento</span>
                               <textarea
@@ -396,13 +421,14 @@ export function GiftEditor({
                               <button
                                 type="button"
                                 className="memory-remove-button"
-                                onClick={() => setMemories({ ...memories, items: memories.items.filter((_, itemIndex) => itemIndex !== index) })}
+                                onClick={() => removeMemory(index)}
                               >
                                 Quitar
                               </button>
                             </div>
-                          </article>
-                        ))}
+                            </article>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -547,6 +573,7 @@ export function GiftEditor({
           onPublicationChange={onPublicationChange}
           audioFile={audioFile}
           backgroundImageFile={backgroundImageFile}
+          memoryImageFiles={memoryImageFiles}
           hasPersonalizationDraftError={hasPersonalizationDraftError}
         />
 

@@ -11,6 +11,9 @@ interface CreatorViewProps {
   storageError: string;
   backgroundImageFile: File | null;
   backgroundImagePreviewUrl: string;
+  memoryImageFiles: Record<string, File>;
+  memoryImagePreviewUrls: Record<string, string>;
+  onMemoryImageFilesChange: (files: Record<string, File>) => void;
   onBackgroundImageChange: (file: File | null) => void;
   onChange: (gift: GiftConfig) => void;
   onPreview: () => void;

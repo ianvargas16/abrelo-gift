@@ -23,6 +23,7 @@ import { GiftBackground } from './runtime/GiftBackground';
 interface EnvelopeExperienceProps {
   gift: GiftConfig;
   backgroundImageUrl?: string;
+  memoryImageUrls?: Record<string, string>;
 }
 
 const HOLD_MS = 1350;
@@ -41,7 +42,7 @@ function usePrefersReducedMotion() {
   return reducedMotion;
 }
 
-export function EnvelopeExperience({ gift, backgroundImageUrl }: EnvelopeExperienceProps) {
+export function EnvelopeExperience({ gift, backgroundImageUrl, memoryImageUrls }: EnvelopeExperienceProps) {
   const [stage, setStage] = useState<RuntimeStage>('sealed');
   const [progress, setProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
@@ -314,7 +315,7 @@ export function EnvelopeExperience({ gift, backgroundImageUrl }: EnvelopeExperie
               />
             </section>
           ) : (
-            <Memories memories={gift.memories!} isRevealing={isMemoryRevealing} onReveal={revealGiftFromMemories} />
+            <Memories memories={gift.memories!} imageUrls={memoryImageUrls} isRevealing={isMemoryRevealing} onReveal={revealGiftFromMemories} />
           )
         )}
       </div>

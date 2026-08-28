@@ -10,6 +10,8 @@ import type { GiftConfig } from './models/giftConfig';
 import type { CreatorPublication } from './publishing/creatorPublication';
 import type { GiftTemplate } from './templates/giftTemplates';
 
+const EMPTY_MEMORY_IMAGE_FILES: Record<string, File> = {};
+
 export default function App() {
   const [repository] = useState(() => new ProjectRepository({ storage: window.localStorage }));
   const [initialProjects] = useState(() => repository.load(defaultGift));
@@ -17,10 +19,16 @@ export default function App() {
   const [storageError, setStorageError] = useState(initialProjects.warning ?? '');
   const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
   const [backgroundImagePreviewUrl, setBackgroundImagePreviewUrl] = useState('');
+  const [memoryImageFilesByProject, setMemoryImageFilesByProject] = useState<Record<string, Record<string, File>>>({});
+  const [memoryImagePreviewUrls, setMemoryImagePreviewUrls] = useState<Record<string, string>>({});
   const legacyMigrationPending = useRef(initialProjects.legacyMigrationPending);
   const [route, setRoute] = useState(() => getCurrentRoute(window.location.hash));
   const activeProject = repository.get(projectStore, projectStore.activeProjectId) ?? projectStore.projects[0];
   const gift = activeProject.gift;
+  const memoryImageFiles = memoryImageFilesByProject[activeProject.id] ?? EMPTY_MEMORY_IMAGE_FILES;
+  const setActiveMemoryImageFiles = (files: Record<string, File>) => {
+    setMemoryImageFilesByProject((current) => ({ ...current, [activeProject.id]: files }));
+  };
 
   useEffect(() => {
     if (!backgroundImageFile) {
@@ -32,6 +40,14 @@ export default function App() {
     setBackgroundImagePreviewUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [backgroundImageFile]);
+
+  useEffect(() => {
+    const urls = Object.fromEntries(
+      Object.entries(memoryImageFiles).map(([id, file]) => [id, URL.createObjectURL(file)]),
+    );
+    setMemoryImagePreviewUrls(urls);
+    return () => Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+  }, [memoryImageFiles]);
 
   useEffect(() => {
     setBackgroundImageFile(null);
@@ -84,11 +100,15 @@ export default function App() {
       storageError={storageError}
       backgroundImageFile={backgroundImageFile}
       backgroundImagePreviewUrl={backgroundImagePreviewUrl}
+      memoryImageFiles={memoryImageFiles}
+      memoryImagePreviewUrls={memoryImagePreviewUrls}
+      onMemoryImageFilesChange={setActiveMemoryImageFiles}
       onBackgroundImageChange={setBackgroundImageFile}
       onChange={(nextGift: GiftConfig) => setProjectStore((current) => repository.saveGift(current, current.activeProjectId, nextGift))}
       onPreview={() => navigateToRoute('preview')}
       onReset={() => {
         setBackgroundImageFile(null);
+        setActiveMemoryImageFiles({});
         setProjectStore((current) => repository.saveGift(current, current.activeProjectId, defaultGift));
       }}
       onExport={exportGift}
@@ -105,6 +125,7 @@ export default function App() {
     <PreviewView
       gift={gift}
       backgroundImagePreviewUrl={backgroundImagePreviewUrl}
+      memoryImageUrls={memoryImagePreviewUrls}
       onBackToCreator={() => navigateToRoute('creator')}
     />
   ) : (
