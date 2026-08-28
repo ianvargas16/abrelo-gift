@@ -103,6 +103,8 @@ describe('GiftEditor theme preview', () => {
     );
 
     expect(markup).toContain('Personaliza tu regalo');
+    expect(markup).toContain('Elige una ocasión');
+    expect(markup).toContain('Ver plantillas');
     expect(markup).toContain('value="Una tarde para recordar"');
     expect(markup).toContain('Primera línea.\nUna segunda línea.');
     expect(markup).toContain('Atardecer');

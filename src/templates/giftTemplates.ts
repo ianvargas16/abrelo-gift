@@ -1,33 +1,44 @@
-import type { GiftConfig } from '../models/giftConfig';
+import type { GiftConfig, ThemeId } from '../models/giftConfig';
 
-export type GiftTemplateId = 'birthday' | 'anniversary' | 'dinner' | 'movie-night' | 'blank';
+export type GiftTemplateId = 'birthday' | 'anniversary' | 'thank-you' | 'invitation' | 'motivation';
 
 export interface GiftTemplate {
   id: GiftTemplateId;
   name: string;
   description: string;
   marker: string;
+  theme: ThemeId;
   createGift: () => GiftConfig;
 }
 
-function createGift(config: Omit<GiftConfig, 'version'>): GiftConfig {
+interface GiftTemplateDefinition extends Omit<GiftTemplate, 'theme' | 'createGift'> {
+  initialGift: Omit<GiftConfig, 'version'>;
+}
+
+function cloneGift(gift: GiftConfig): GiftConfig {
+  return JSON.parse(JSON.stringify(gift)) as GiftConfig;
+}
+
+function defineGiftTemplate({ initialGift, ...metadata }: GiftTemplateDefinition): GiftTemplate {
+  const seed: GiftConfig = { version: 1, ...initialGift };
+
   return {
-    version: 1,
-    ...config,
+    ...metadata,
+    theme: seed.theme,
+    createGift: () => cloneGift(seed),
   };
 }
 
-export const giftTemplates: GiftTemplate[] = [
-  {
+export const giftTemplates: readonly GiftTemplate[] = [
+  defineGiftTemplate({
     id: 'birthday',
     name: 'Cumpleaños',
-    description: 'Un detalle para celebrar a alguien especial.',
+    description: 'Una celebración cercana para hacer sentir especial a alguien.',
     marker: '01',
-    createGift: () => createGift({
+    initialGift: {
       recipientName: '',
       senderName: '',
-      theme: 'rose',
-      atmosphere: 'celebration',
+      theme: 'sunset',
       intro: {
         eyebrow: 'HOY ES TU DIA',
         title: 'Hay algo para celebrar',
@@ -35,7 +46,7 @@ export const giftTemplates: GiftTemplate[] = [
       },
       letter: {
         title: 'Feliz cumpleaños',
-        message: 'Quería darte este detalle para que disfrutes el día a tu manera.',
+        message: 'Quería guardar estas palabras y acompañarlas con una sorpresa pensada para ti.',
       },
       gift: {
         type: 'voucher',
@@ -44,25 +55,24 @@ export const giftTemplates: GiftTemplate[] = [
         finePrint: 'Para disfrutar sin prisa',
         code: 'CELEBRA',
       },
-    }),
-  },
-  {
+    },
+  }),
+  defineGiftTemplate({
     id: 'anniversary',
     name: 'Aniversario',
-    description: 'Una pausa para recordar lo que comparten.',
+    description: 'Una pausa íntima para celebrar la historia que comparten.',
     marker: '02',
-    createGift: () => createGift({
+    initialGift: {
       recipientName: '',
       senderName: '',
       theme: 'rose',
-      atmosphere: 'romantic',
       intro: {
         eyebrow: 'PARA NOSOTROS',
         title: 'Un momento que quiero guardar',
         envelopeHint: 'Mantén presionado el sello',
       },
       letter: {
-        title: 'Otro recuerdo contigo',
+        title: 'Nuestra historia',
         message: 'Gracias por cada momento que hace que nuestra historia se sienta más nuestra.',
       },
       gift: {
@@ -72,98 +82,110 @@ export const giftTemplates: GiftTemplate[] = [
         finePrint: 'Canjeable cuando encontremos la noche perfecta',
         code: 'NOSOTROS',
       },
-    }),
-  },
-  {
-    id: 'dinner',
-    name: 'Cena o experiencia',
-    description: 'Invita a descubrir un lugar, sabor o plan.',
+    },
+  }),
+  defineGiftTemplate({
+    id: 'thank-you',
+    name: 'Gracias',
+    description: 'Un detalle sereno para reconocer algo que dejó huella.',
     marker: '03',
-    createGift: () => createGift({
+    initialGift: {
       recipientName: '',
       senderName: '',
       theme: 'sage',
-      atmosphere: 'soft',
       intro: {
-        eyebrow: 'UNA INVITACION',
-        title: 'Reservé algo para ti',
+        eyebrow: 'CON GRATITUD',
+        title: 'Esto es para darte las gracias',
+        envelopeHint: 'Mantén presionado el sello',
+      },
+      letter: {
+        title: 'Gracias por estar',
+        message: 'Quería detenerme un momento para agradecerte todo lo que aportas con tu forma de estar.',
+      },
+      gift: {
+        type: 'voucher',
+        title: 'Un detalle para ti',
+        description: 'Una pequeña forma de devolverte un poco de todo lo bueno.',
+        finePrint: 'Sin prisa y con mucho cariño',
+        code: 'GRACIAS',
+      },
+    },
+  }),
+  defineGiftTemplate({
+    id: 'invitation',
+    name: 'Invitación',
+    description: 'Una manera especial de proponer un plan y crear expectativa.',
+    marker: '04',
+    initialGift: {
+      recipientName: '',
+      senderName: '',
+      theme: 'midnight',
+      intro: {
+        eyebrow: 'INVITACION ESPECIAL',
+        title: 'Tengo un plan para ti',
         envelopeHint: 'Mantén presionado el sello',
       },
       letter: {
         title: 'Hagamos espacio para esto',
-        message: 'Quiero invitarte a salir de la rutina y disfrutar un plan que se sienta especial.',
+        message: 'Quiero invitarte a salir de la rutina y compartir un momento que se sienta especial.',
       },
       gift: {
         type: 'voucher',
         title: 'Una experiencia juntos',
-        description: 'Lugar, día y antojo quedan a tu elección.',
+        description: 'El lugar y el momento quedan a nuestra elección.',
         finePrint: 'Incluye buena conversación',
         code: 'PLANES',
       },
-    }),
-  },
-  {
-    id: 'movie-night',
-    name: 'Noche de película',
-    description: 'Una invitación tranquila para compartir pantalla.',
-    marker: '04',
-    createGift: () => createGift({
-      recipientName: '',
-      senderName: '',
-      theme: 'midnight',
-      atmosphere: 'soft',
-      intro: {
-        eyebrow: 'FUNCION ESPECIAL',
-        title: 'Esta noche hay plan',
-        envelopeHint: 'Mantén presionado el sello',
-      },
-      letter: {
-        title: 'Una noche para bajar el ritmo',
-        message: 'Escoge la película, prepara algo rico y deja que yo me encargue de la invitación.',
-      },
-      gift: {
-        type: 'voucher',
-        title: 'Una noche de película',
-        description: 'Pantalla, comida favorita y compañía incluida.',
-        finePrint: 'Canjeable cualquier noche sin planes',
-        code: 'CINE',
-      },
-    }),
-  },
-  {
-    id: 'blank',
-    name: 'Lienzo en blanco',
-    description: 'Empieza con una base serena y hazla tuya.',
+    },
+  }),
+  defineGiftTemplate({
+    id: 'motivation',
+    name: 'Ánimo',
+    description: 'Palabras cálidas para acompañar, impulsar y recordar que no está solo.',
     marker: '05',
-    createGift: () => createGift({
+    initialGift: {
       recipientName: '',
       senderName: '',
-      theme: 'sunset',
+      theme: 'sage',
       intro: {
-        eyebrow: '',
-        title: 'Hay algo para ti',
+        eyebrow: 'PARA ESTE MOMENTO',
+        title: 'Un recordatorio para ti',
         envelopeHint: 'Mantén presionado el sello',
       },
       letter: {
-        title: '',
-        message: '',
+        title: 'Sigue adelante',
+        message: 'No tienes que tener todo resuelto hoy. Confío en ti y quiero acompañarte en este momento.',
       },
       gift: {
         type: 'voucher',
-        title: '',
-        description: '',
-        finePrint: '',
-        code: '',
+        title: 'Una pausa cuando la necesites',
+        description: 'Tiempo, compañía y un respiro para volver a empezar.',
+        finePrint: 'Disponible siempre que haga falta',
+        code: 'CONTIGO',
       },
-    }),
-  },
+    },
+  }),
 ];
 
 export function getGiftTemplate(templateId: GiftTemplateId): GiftTemplate {
   const template = giftTemplates.find((candidate) => candidate.id === templateId);
-  if (!template) {
-    throw new Error('Template de regalo no encontrado');
-  }
-
+  if (!template) throw new Error('Template de regalo no encontrado');
   return template;
+}
+
+export function applyGiftTemplate(currentGift: GiftConfig, template: GiftTemplate): GiftConfig {
+  const nextGift = template.createGift();
+
+  return {
+    ...nextGift,
+    recipientName: currentGift.recipientName,
+    senderName: currentGift.senderName,
+    ...(currentGift.audio ? { audio: { ...currentGift.audio } } : {}),
+    ...(currentGift.backgroundImage ? { backgroundImage: { ...currentGift.backgroundImage } } : {}),
+    ...(currentGift.memories ? { memories: cloneGift(currentGift).memories } : {}),
+  };
+}
+
+export function templateWouldChangeGift(currentGift: GiftConfig, template: GiftTemplate): boolean {
+  return JSON.stringify(applyGiftTemplate(currentGift, template)) !== JSON.stringify(currentGift);
 }

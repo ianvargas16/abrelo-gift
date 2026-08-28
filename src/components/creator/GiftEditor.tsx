@@ -5,13 +5,19 @@ import { MAX_MEMORY_ITEMS } from '../../models/memoryMedia';
 import { readMemoryImageFile } from './readMemoryImageFile';
 import type { GiftProject } from '../../projects/giftProject';
 import type { CreatorPublication } from '../../publishing/creatorPublication';
-import type { GiftTemplate } from '../../templates/giftTemplates';
+import {
+  applyGiftTemplate,
+  giftTemplates,
+  templateWouldChangeGift,
+  type GiftTemplate,
+} from '../../templates/giftTemplates';
 import { CreationGuide } from './CreationGuide';
 import { GiftPersonalizationFields } from './GiftPersonalizationFields';
 import { PublishPanel } from './PublishPanel';
 import { ProjectSwitcher } from './ProjectSwitcher';
 import { getThemeCssVariables, resolveTheme } from '../../themes/themeRegistry';
 import { BackgroundImagePicker } from './BackgroundImagePicker';
+import { TemplatePicker } from './TemplatePicker';
 
 interface GiftEditorProps {
   gift: GiftConfig;
@@ -61,6 +67,8 @@ export function GiftEditor({
   const [audioError, setAudioError] = useState('');
   const [backgroundImageError, setBackgroundImageError] = useState('');
   const [hasPersonalizationDraftError, setHasPersonalizationDraftError] = useState(false);
+  const [isOccasionPickerOpen, setIsOccasionPickerOpen] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<GiftTemplate | null>(null);
   const setRoot = <K extends keyof GiftConfig>(key: K, value: GiftConfig[K]) => onChange({ ...gift, [key]: value });
   const setIntro = <K extends keyof GiftConfig['intro']>(key: K, value: GiftConfig['intro'][K]) => onChange({ ...gift, intro: { ...gift.intro, [key]: value } });
   const setLetter = <K extends keyof GiftConfig['letter']>(key: K, value: GiftConfig['letter'][K]) => onChange({ ...gift, letter: { ...gift.letter, [key]: value } });
@@ -80,7 +88,25 @@ export function GiftEditor({
 
   useEffect(() => {
     setBackgroundImageError('');
+    setIsOccasionPickerOpen(false);
+    setPendingTemplate(null);
   }, [project.id]);
+
+  const chooseTemplate = (template: GiftTemplate) => {
+    if (!templateWouldChangeGift(gift, template)) {
+      setIsOccasionPickerOpen(false);
+      return;
+    }
+
+    setPendingTemplate(template);
+  };
+
+  const applyPendingTemplate = () => {
+    if (!pendingTemplate) return;
+    onChange(applyGiftTemplate(gift, pendingTemplate));
+    setPendingTemplate(null);
+    setIsOccasionPickerOpen(false);
+  };
 
   const addMemoryImages = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
@@ -118,6 +144,21 @@ export function GiftEditor({
     <main className="studio-shell">
       <div className="studio-atmosphere studio-atmosphere-one" aria-hidden="true" />
       <div className="studio-atmosphere studio-atmosphere-two" aria-hidden="true" />
+
+      {isOccasionPickerOpen && (
+        <TemplatePicker
+          templates={giftTemplates}
+          mode="apply"
+          confirmationTemplate={pendingTemplate}
+          onChoose={chooseTemplate}
+          onConfirm={applyPendingTemplate}
+          onCancelConfirmation={() => setPendingTemplate(null)}
+          onClose={() => {
+            setPendingTemplate(null);
+            setIsOccasionPickerOpen(false);
+          }}
+        />
+      )}
 
       <section className="studio-frame">
         <header className="studio-header">
@@ -172,6 +213,17 @@ export function GiftEditor({
                     <h3>Personaliza tu regalo</h3>
                     <p>Define la voz y el tono que acompañarán toda la sorpresa.</p>
                   </div>
+                </div>
+
+                <div className="occasion-starter">
+                  <div className="occasion-starter-copy">
+                    <span className="field-label">Elige una ocasión</span>
+                    <strong>Empieza con una idea y luego hazla tuya.</strong>
+                    <p>Cumpleaños, aniversario, agradecimiento, invitación o unas palabras de ánimo.</p>
+                  </div>
+                  <button type="button" className="ghost-button" onClick={() => setIsOccasionPickerOpen(true)}>
+                    Ver plantillas
+                  </button>
                 </div>
 
                 <GiftPersonalizationFields
