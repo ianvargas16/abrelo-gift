@@ -520,17 +520,33 @@ describe('publish Worker', () => {
   });
 
   it('rejects unapproved CORS origins and accepts configured preflight requests', async () => {
-    const { app } = createTestContext();
+    const stableOrigin = 'https://abrelo-creator-staging.pages.dev';
+    const previewOrigin = 'https://467c3b0d.abrelo-creator-staging.pages.dev';
+    const { app } = createTestContext({
+      allowedOrigins: `${stableOrigin},${previewOrigin}`,
+    });
     const rejected = await app(publishRequest(createGiftFile(defaultGift), 'https://unapproved.example'));
-    const preflight = await app(new Request('https://api.example/api/gifts', {
+    const arbitraryPreview = await app(new Request('https://api.example/api/gifts', {
       method: 'OPTIONS',
-      headers: { Origin: 'http://localhost:1420' },
+      headers: { Origin: 'https://other-preview.abrelo-creator-staging.pages.dev' },
+    }));
+    const stablePreflight = await app(new Request('https://api.example/api/gifts', {
+      method: 'OPTIONS',
+      headers: { Origin: stableOrigin },
+    }));
+    const previewPreflight = await app(new Request('https://api.example/api/gifts', {
+      method: 'OPTIONS',
+      headers: { Origin: previewOrigin },
     }));
 
     expect(rejected.status).toBe(403);
     expect(rejected.headers.has('Access-Control-Allow-Origin')).toBe(false);
-    expect(preflight.status).toBe(204);
-    expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:1420');
+    expect(arbitraryPreview.status).toBe(403);
+    expect(arbitraryPreview.headers.has('Access-Control-Allow-Origin')).toBe(false);
+    expect(stablePreflight.status).toBe(204);
+    expect(stablePreflight.headers.get('Access-Control-Allow-Origin')).toBe(stableOrigin);
+    expect(previewPreflight.status).toBe(204);
+    expect(previewPreflight.headers.get('Access-Control-Allow-Origin')).toBe(previewOrigin);
   });
 
   it('logs persistence failures without passing gift content to the logger', async () => {

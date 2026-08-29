@@ -76,7 +76,7 @@ describe('Worker runtime configuration', () => {
     const staging = parseRuntimeConfig({
       ENVIRONMENT: 'staging',
       PUBLIC_BASE_URL: 'https://abrelo-staging.example.workers.dev',
-      ALLOWED_ORIGINS: 'https://creator-staging.example.com',
+      ALLOWED_ORIGINS: 'https://creator-staging.example.com,https://preview.creator-staging.example.com',
     });
     const production = parseRuntimeConfig({
       ENVIRONMENT: 'production',
@@ -85,6 +85,10 @@ describe('Worker runtime configuration', () => {
     });
 
     expect(staging.environment).toBe('staging');
+    expect(staging.allowedOrigins).toEqual([
+      'https://creator-staging.example.com',
+      'https://preview.creator-staging.example.com',
+    ]);
     expect(production.environment).toBe('production');
     expect(staging.publicBaseUrl).not.toBe(production.publicBaseUrl);
   });

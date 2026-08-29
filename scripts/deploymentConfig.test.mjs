@@ -80,6 +80,10 @@ describe('deployment configuration preflight', () => {
 
     expect(validateWranglerStructure(config)).toBe(true);
     expect(validateDeploymentTarget(config, 'staging')).toBe(true);
+    expect(config.env.staging.vars.ALLOWED_ORIGINS.split(',')).toEqual([
+      'https://abrelo-creator-staging.pages.dev',
+      'https://467c3b0d.abrelo-creator-staging.pages.dev',
+    ]);
     expect(() => validateDeploymentTarget(config, 'production')).toThrow(DeploymentConfigError);
   });
 
