@@ -8,7 +8,7 @@ interface RecipientRuntimeAppProps {
   bootstrap: RuntimeBootstrapResult;
 }
 
-export const RECIPIENT_PREPARATION_DURATION = 650;
+export const RECIPIENT_PREPARATION_DURATION = 420;
 
 export function getRecipientPreparationDuration(prefersReducedMotion: boolean): number {
   return prefersReducedMotion ? 0 : RECIPIENT_PREPARATION_DURATION;

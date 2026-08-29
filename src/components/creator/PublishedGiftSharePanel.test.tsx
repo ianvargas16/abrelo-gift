@@ -29,7 +29,13 @@ describe('PublishedGiftSharePanel', () => {
     expect(markup).toContain('Código QR del enlace publicado');
     expect(markup).toContain('Copiar enlace');
     expect(markup).toContain('Compartir');
-    expect(markup).toContain('Ver regalo');
+    expect(markup).toContain('Guardar código QR');
+    expect(markup).toContain('Ver regalo como destinatario');
+    expect(markup.indexOf('Compartir')).toBeLessThan(markup.indexOf('Copiar enlace'));
+    expect(markup.indexOf('Copiar enlace')).toBeLessThan(markup.indexOf('Código QR del enlace publicado'));
+    expect(markup.indexOf('Código QR del enlace publicado')).toBeLessThan(markup.indexOf('Ver regalo como destinatario'));
+    expect(markup).toContain('download="abrelo-regalo-qr.png"');
+    expect(markup).toContain('href="data:image/png;base64,qr"');
   });
 
   it('keeps a stable loading surface while the client-side QR is generated', () => {

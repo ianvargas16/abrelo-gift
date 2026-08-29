@@ -2,6 +2,7 @@ export const OPERATIONAL_ERROR_CATEGORIES = [
   'repository_read_failed',
   'runtime_shell_failed',
   'runtime_injection_failed',
+  'gift_asset_read_failed',
   'publish_persistence_failed',
   'gift_asset_cleanup_failed',
   'invalid_runtime_config',

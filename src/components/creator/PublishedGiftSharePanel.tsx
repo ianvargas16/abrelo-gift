@@ -41,15 +41,6 @@ export function PublishedGiftSharePanel({
       )}
 
       <div className="gift-share-body">
-        <figure className="publish-qr">
-          {qrDataUrl ? (
-            <img src={qrDataUrl} alt="Código QR del enlace publicado" width="180" height="180" />
-          ) : (
-            <span className="publish-qr-placeholder" role="status">Preparando QR…</span>
-          )}
-          <figcaption>Escanea para abrir el regalo</figcaption>
-        </figure>
-
         <div className="gift-share-details">
           <span className="gift-share-label">Enlace del regalo</span>
           <a className="publish-link" href={publication.gift.url} target="_blank" rel="noreferrer">
@@ -59,20 +50,29 @@ export function PublishedGiftSharePanel({
           <div className="publish-share-row">
             <button type="button" className="primary-button" onClick={onShare}>Compartir</button>
             <button type="button" className="ghost-button" onClick={onCopy}>{copyLabel}</button>
-            <a className="ghost-button publish-recipient-preview" href={publication.gift.url} target="_blank" rel="noreferrer">
-              Ver regalo
-            </a>
           </div>
 
           <span className="publish-copy-status" aria-live="polite">{statusMessage}</span>
+        </div>
 
+        <figure className="publish-qr">
+          {qrDataUrl ? (
+            <img src={qrDataUrl} alt="Código QR del enlace publicado" width="180" height="180" />
+          ) : (
+            <span className="publish-qr-placeholder" role="status">Preparando QR…</span>
+          )}
+          <figcaption>Escanea para abrir el regalo</figcaption>
           {qrDataUrl && (
             <a className="gift-share-download" href={qrDataUrl} download="abrelo-regalo-qr.png">
               Guardar código QR
             </a>
           )}
-        </div>
+        </figure>
       </div>
+
+      <a className="ghost-button publish-recipient-preview" href={publication.gift.url} target="_blank" rel="noreferrer">
+        Ver regalo como destinatario
+      </a>
 
       <label className="field publish-message-field">
         <span>Mensaje para acompañar el enlace</span>

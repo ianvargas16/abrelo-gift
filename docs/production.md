@@ -58,6 +58,12 @@ Choose the initial public origins. A confirmed `workers.dev` origin is acceptabl
 
 Set `ALLOWED_ORIGINS` to a comma-separated list of exact HTTPS Creator origins. It is a browser CORS policy, not authentication and not an abuse-control boundary. Wildcards, paths, queries, hashes, HTTP remote origins, and localhost are rejected outside development.
 
+### Temporary Pages preview authorization
+
+Cloudflare Pages creates deployment-specific origins such as `https://<deployment-id>.abrelo-creator-staging.pages.dev`. When a pull request needs end-to-end publishing QA, copy the exact HTTPS origin from that Pages deployment, append only that origin to `env.staging.vars.ALLOWED_ORIGINS`, run the staging configuration tests and preflight, and redeploy the staging Worker. Keep the stable staging Creator origin in the list.
+
+Never authorize `*.pages.dev`, reflect an unvalidated request origin, or add a preview origin to production. Remove or replace obsolete preview origins after QA so the committed staging allowlist remains deliberate and reviewable.
+
 Run preflight after configuration:
 
 ```bash
