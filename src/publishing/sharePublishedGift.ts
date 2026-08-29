@@ -9,7 +9,8 @@ interface ShareTarget {
 }
 
 export const DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE = 'Te preparé una sorpresa para abrir cuando tengas un momento.';
-export const DEFAULT_PUBLISHED_GIFT_SHARE_TITLE = 'Tienes un regalo especial';
+export const DEFAULT_PUBLISHED_GIFT_SHARE_TITLE = 'Tienes un regalo especial · Ábrelo';
+export type PublishedGiftShareResult = 'shared' | 'unavailable' | 'cancelled' | 'error';
 
 function fallbackCopy(text: string, targetDocument: Document | undefined): boolean {
   if (!targetDocument?.body || typeof targetDocument.execCommand !== 'function') {
@@ -60,27 +61,32 @@ export function getPublishedGiftShareMessage(message?: string): string {
   return message?.trim() || DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE;
 }
 
-export function getPublishedGiftShareTitle(title?: string): string {
-  return `${title?.trim() || DEFAULT_PUBLISHED_GIFT_SHARE_TITLE} · Ábrelo`;
+export function getPublishedGiftShareTitle(): string {
+  return DEFAULT_PUBLISHED_GIFT_SHARE_TITLE;
 }
 
 export async function sharePublishedGift(
   url: string,
   message?: string,
   target: ShareTarget | undefined = typeof navigator === 'undefined' ? undefined : navigator,
-  title?: string,
-): Promise<boolean> {
+): Promise<PublishedGiftShareResult> {
   if (!target?.share) {
-    return false;
+    return 'unavailable';
   }
 
-  await target.share({
-    title: getPublishedGiftShareTitle(title),
-    text: getPublishedGiftShareMessage(message),
-    url,
-  });
+  try {
+    await target.share({
+      title: getPublishedGiftShareTitle(),
+      text: getPublishedGiftShareMessage(message),
+      url,
+    });
+  } catch (error) {
+    return error instanceof DOMException && error.name === 'AbortError'
+      ? 'cancelled'
+      : 'error';
+  }
 
-  return true;
+  return 'shared';
 }
 
 export function getPublishedGiftQrPayload(url: string): string {

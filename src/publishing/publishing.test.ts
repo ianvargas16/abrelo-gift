@@ -207,6 +207,28 @@ describe('published gift sharing', () => {
     await expect(copyPublishedGiftUrl(publishedUrl, undefined, undefined)).resolves.toBe(false);
   });
 
+  it('uses the document copy fallback when Clipboard API permissions are denied', async () => {
+    const textarea = {
+      value: '',
+      style: {},
+      setAttribute: vi.fn(),
+      select: vi.fn(),
+      remove: vi.fn(),
+    };
+    const targetDocument = {
+      body: { appendChild: vi.fn() },
+      createElement: vi.fn(() => textarea),
+      execCommand: vi.fn(() => true),
+    } as unknown as Document;
+    const clipboard = { writeText: vi.fn(async () => { throw new Error('Permission denied'); }) };
+
+    await expect(copyPublishedGiftUrl(publishedUrl, clipboard, targetDocument)).resolves.toBe(true);
+    expect(textarea.value).toBe(publishedUrl);
+    expect(textarea.select).toHaveBeenCalledOnce();
+    expect(targetDocument.execCommand).toHaveBeenCalledWith('copy');
+    expect(textarea.remove).toHaveBeenCalledOnce();
+  });
+
   it('uses the thoughtful default or a Creator-only custom Web Share message and remains optional', async () => {
     const share = vi.fn(async () => undefined);
 
@@ -214,14 +236,28 @@ describe('published gift sharing', () => {
     expect(isWebShareAvailable({})).toBe(false);
     expect(getPublishedGiftShareMessage()).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
     expect(getPublishedGiftShareMessage('   ')).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
-    expect(getPublishedGiftShareTitle('')).toBe('Tienes un regalo especial · Ábrelo');
-    await expect(sharePublishedGift(publishedUrl, undefined, {})).resolves.toBe(false);
-    await expect(sharePublishedGift(publishedUrl, 'Ábrelo cuando quieras.', { share }, 'Una noche especial')).resolves.toBe(true);
+    expect(getPublishedGiftShareTitle()).toBe('Tienes un regalo especial · Ábrelo');
+    await expect(sharePublishedGift(publishedUrl, undefined, {})).resolves.toBe('unavailable');
+    await expect(sharePublishedGift(publishedUrl, 'Ábrelo cuando quieras.', { share })).resolves.toBe('shared');
     expect(share).toHaveBeenCalledWith({
-      title: 'Una noche especial · Ábrelo',
+      title: 'Tienes un regalo especial · Ábrelo',
       text: 'Ábrelo cuando quieras.',
       url: publishedUrl,
     });
+  });
+
+  it('distinguishes user cancellation from a Web Share failure', async () => {
+    const cancelledShare = vi.fn(async () => {
+      throw new DOMException('Cancelled', 'AbortError');
+    });
+    const failedShare = vi.fn(async () => {
+      throw new Error('Share unavailable');
+    });
+
+    await expect(sharePublishedGift(publishedUrl, undefined, { share: cancelledShare }))
+      .resolves.toBe('cancelled');
+    await expect(sharePublishedGift(publishedUrl, undefined, { share: failedShare }))
+      .resolves.toBe('error');
   });
 
   it('encodes only the opaque public URL in the QR', async () => {

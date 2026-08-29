@@ -1901,7 +1901,7 @@ textarea:focus-visible {
 
 .gift-share-body {
   display: grid;
-  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem);
   align-items: center;
   gap: clamp(var(--space-md), 5vw, var(--space-xl));
   padding-block: var(--space-md);
@@ -1928,6 +1928,7 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  justify-self: start;
   text-decoration: none;
 }
 
@@ -1977,7 +1978,7 @@ textarea:focus-visible {
 }
 
 .gift-share-download {
-  justify-self: start;
+  justify-self: center;
   color: var(--color-accent-strong);
   font-size: 0.78rem;
   font-weight: 700;

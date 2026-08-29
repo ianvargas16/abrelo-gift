@@ -28,7 +28,7 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'manual'>('idle');
-  const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'fallback'>('idle');
+  const [shareStatus, setShareStatus] = useState<'idle' | 'shared' | 'fallback' | 'cancelled' | 'error'>('idle');
   const [qrDataUrl, setQrDataUrl] = useState('');
   const publishingLock = useRef(false);
   const hasUnpublishedChanges = checkUnpublishedChanges(publication, gift);
@@ -115,19 +115,20 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
       return;
     }
 
-    try {
-      const shared = await sharePublishedGift(publication.gift.url, publication.shareMessage, undefined, gift.intro.title);
+    const result = await sharePublishedGift(publication.gift.url, publication.shareMessage);
 
-      if (shared) {
-        setShareStatus('shared');
-        return;
-      }
+    if (result === 'shared') {
+      setShareStatus('shared');
+      return;
+    }
 
+    if (result === 'unavailable') {
       await handleCopy();
       setShareStatus('fallback');
-    } catch {
-      // Dismissing the native share sheet is not an application error.
+      return;
     }
+
+    setShareStatus(result);
   };
 
   const handleShareMessageChange = (shareMessage: string) => {
@@ -144,7 +145,11 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
       ? 'Listo para compartir.'
       : shareStatus === 'fallback'
         ? 'Tu dispositivo no permite compartir aquí. Copiamos el enlace.'
-        : '';
+        : shareStatus === 'cancelled'
+          ? 'No se compartió. Puedes intentarlo de nuevo o copiar el enlace.'
+          : shareStatus === 'error'
+            ? 'No pudimos abrir el menú para compartir. Puedes copiar el enlace.'
+            : '';
 
   return (
     <section className="studio-publish-panel" aria-labelledby="publish-title">
