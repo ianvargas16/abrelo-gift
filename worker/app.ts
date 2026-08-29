@@ -25,6 +25,7 @@ interface RuntimeAssets {
 }
 interface GiftAssets {
   put(key: string, value: ReadableStream | ArrayBuffer | Blob, options?: R2PutOptions): Promise<R2Object>;
+  head(key: string): Promise<R2Object | null>;
   get(key: string): Promise<R2ObjectBody | null>;
   delete(key: string): Promise<void>;
 }
@@ -98,6 +99,7 @@ async function renderRecipientPage(
 ): Promise<Response> {
   const logger = options.logger ?? silentLogger;
   let giftFile = null;
+  let backgroundImageAvailable = false;
   let status: 200 | 404 | 503 = 404;
 
   if (GIFT_ID_PATTERN.test(id)) {
@@ -105,6 +107,16 @@ async function renderRecipientPage(
       const snapshot = await options.repository.getById(id);
       giftFile = snapshot?.giftFile ?? null;
       status = snapshot ? 200 : 404;
+
+      if (giftFile?.gift.backgroundImage) {
+        try {
+          backgroundImageAvailable = Boolean(
+            await options.giftAssets?.head(getGiftBackgroundImageKey(id)),
+          );
+        } catch {
+          logger.error('gift_asset_read_failed', requestId);
+        }
+      }
     } catch {
       status = 503;
       logger.error('repository_read_failed', requestId);
@@ -151,6 +163,7 @@ async function renderRecipientPage(
         injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile),
         createPublicGiftUrl(options.runtimeConfig, id),
         giftFile,
+        backgroundImageAvailable,
       );
     } catch {
       status = 503;
@@ -168,7 +181,7 @@ async function renderRecipientPage(
     headers.set(name, value);
   }
 
-  return new Response(body, {
+  return new Response(request.method === 'HEAD' ? null : body, {
     status,
     headers,
   });
@@ -279,13 +292,19 @@ async function serveGiftAudio(options: PublishAppOptions, id: string): Promise<R
   } catch { return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS }); }
 }
 
-async function serveGiftBackgroundImage(options: PublishAppOptions, id: string): Promise<Response> {
+async function serveGiftBackgroundImage(
+  options: PublishAppOptions,
+  id: string,
+  method: 'GET' | 'HEAD',
+): Promise<Response> {
   if (!GIFT_ID_PATTERN.test(id)) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
   try {
     const snapshot = await options.repository.getById(id);
     const metadata = snapshot?.giftFile.gift.backgroundImage;
     if (!metadata) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
-    const object = await options.giftAssets?.get(getGiftBackgroundImageKey(id));
+    const object = method === 'HEAD'
+      ? await options.giftAssets?.head(getGiftBackgroundImageKey(id))
+      : await options.giftAssets?.get(getGiftBackgroundImageKey(id));
     if (!object) return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
     const headers = new Headers({
       'Cache-Control': 'private, max-age=3600',
@@ -294,7 +313,7 @@ async function serveGiftBackgroundImage(options: PublishAppOptions, id: string):
       'X-Content-Type-Options': 'nosniff',
     });
     if (object.size) headers.set('Content-Length', String(object.size));
-    return new Response(object.body, { headers });
+    return new Response(method === 'HEAD' ? null : (object as R2ObjectBody).body, { headers });
   } catch {
     return new Response('No encontrado.', { status: 404, headers: SECURITY_HEADERS });
   }
@@ -386,8 +405,8 @@ export function createPublishApp(options: PublishAppOptions) {
     const backgroundImageRoute = url.pathname.match(/^\/g\/([^/]+)\/cover$/u);
     if (backgroundImageRoute) {
       const requestId = nextRequestId();
-      if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
-      return withRequestId(await serveGiftBackgroundImage(options, backgroundImageRoute[1]), requestId);
+      if (request.method !== 'GET' && request.method !== 'HEAD') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET, HEAD' } }), requestId);
+      return withRequestId(await serveGiftBackgroundImage(options, backgroundImageRoute[1], request.method), requestId);
     }
 
     const memoryImageRoute = url.pathname.match(/^\/g\/([^/]+)\/memories\/([^/]+)$/u);
@@ -400,10 +419,10 @@ export function createPublishApp(options: PublishAppOptions) {
     if (giftRoute) {
       const requestId = nextRequestId();
 
-      if (request.method !== 'GET') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
         return withRequestId(new Response('Método no permitido.', {
           status: 405,
-          headers: { ...SECURITY_HEADERS, Allow: 'GET' },
+          headers: { ...SECURITY_HEADERS, Allow: 'GET, HEAD' },
         }), requestId);
       }
 

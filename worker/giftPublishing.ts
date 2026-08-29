@@ -68,25 +68,33 @@ function escapeHtmlAttribute(value: string): string {
   return value.replace(/[&"'<>]/gu, (character) => HTML_ATTRIBUTE_ESCAPES[character]);
 }
 
-export function getPublicGiftMetadata(giftFile: GiftFile, publicUrl: string): PublicGiftMetadata {
-  const title = giftFile.gift.intro.title.trim() || DEFAULT_PUBLIC_GIFT_TITLE;
-  const imageUrl = giftFile.gift.backgroundImage
+export function getPublicGiftMetadata(
+  giftFile: GiftFile,
+  publicUrl: string,
+  backgroundImageAvailable = Boolean(giftFile.gift.backgroundImage),
+): PublicGiftMetadata {
+  const imageUrl = backgroundImageAvailable
     ? `${publicUrl}/cover`
     : new URL('/icon.png', publicUrl).toString();
 
   return {
-    title,
+    title: `${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo`,
     description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
     imageUrl,
   };
 }
 
-export function injectPublicMetadataIntoRuntimeHtml(runtimeHtml: string, publicUrl: string, giftFile: GiftFile): string {
+export function injectPublicMetadataIntoRuntimeHtml(
+  runtimeHtml: string,
+  publicUrl: string,
+  giftFile: GiftFile,
+  backgroundImageAvailable = Boolean(giftFile.gift.backgroundImage),
+): string {
   if (!runtimeHtml.includes(RUNTIME_METADATA_PLACEHOLDER)) {
     throw new Error('Runtime metadata placeholder is missing');
   }
 
-  const publicMetadata = getPublicGiftMetadata(giftFile, publicUrl);
+  const publicMetadata = getPublicGiftMetadata(giftFile, publicUrl, backgroundImageAvailable);
   const escapedUrl = escapeHtmlAttribute(publicUrl);
   const escapedTitle = escapeHtmlAttribute(publicMetadata.title);
   const escapedDescription = escapeHtmlAttribute(publicMetadata.description);
@@ -106,7 +114,7 @@ export function injectPublicMetadataIntoRuntimeHtml(runtimeHtml: string, publicU
 
   return runtimeHtml
     .replace(RUNTIME_METADATA_PLACEHOLDER, metadata)
-    .replace(/<title>[\s\S]*?<\/title>/u, `<title>${escapedTitle} · Ábrelo</title>`);
+    .replace(/<title>[\s\S]*?<\/title>/u, `<title>${escapedTitle}</title>`);
 }
 
 export async function readGiftRequestBody(request: Request): Promise<string> {

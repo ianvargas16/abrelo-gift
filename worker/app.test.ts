@@ -7,6 +7,7 @@ import { MAX_MULTIPART_BYTES } from './giftAssetPublishing';
 import { MAX_GIFT_IMAGE_BYTES, type GiftImageMimeType } from '../src/models/giftMedia';
 import {
   DEFAULT_PUBLIC_GIFT_DESCRIPTION,
+  DEFAULT_PUBLIC_GIFT_TITLE,
   GIFT_ID_PATTERN,
   getPublicGiftMetadata,
   injectPublicMetadataIntoRuntimeHtml,
@@ -65,6 +66,12 @@ class MemoryGiftAssets {
     } as R2ObjectBody;
   }
 
+  async head(key: string): Promise<R2Object | null> {
+    const object = this.objects.get(key);
+    if (!object) return null;
+    return { size: object.body.byteLength } as R2Object;
+  }
+
   async delete(key: string): Promise<void> {
     this.deleteCalls += 1;
     if (this.failDelete) throw new Error('R2 delete unavailable');
@@ -87,7 +94,12 @@ function createTestContext(overrides: TestContextOverrides = {}) {
     repository,
     giftAssets,
     assets: {
-      async fetch() {
+      async fetch(request) {
+        if (new URL(request.url).pathname === '/icon.png') {
+          return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+            headers: { 'Content-Type': 'image/png' },
+          });
+        }
         return new Response(runtimeHtml, { headers: { 'Content-Type': 'text/html' } });
       },
     },
@@ -297,12 +309,25 @@ describe('publish Worker', () => {
     const head = html.slice(0, html.indexOf('</head>'));
     expect(head).toContain(`<link rel="canonical" href="${result.url}" />`);
     expect(head).toContain(`<meta property="og:url" content="${result.url}" />`);
-    expect(head).toContain(`<meta property="og:title" content="${gift.intro.title}" />`);
+    expect(head).toContain(`<meta property="og:title" content="${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo" />`);
     expect(head).toContain(`<meta property="og:description" content="${DEFAULT_PUBLIC_GIFT_DESCRIPTION}" />`);
     expect(head).toContain('<meta name="twitter:card" content="summary_large_image" />');
     expect(head).toContain('<meta property="og:image" content="https://gifts.example/icon.png" />');
     expect(head).not.toContain('Contenido publicado');
     expect(head).not.toContain(gift.letter.message);
+  });
+
+  it('supports side-effect-free HEAD checks for public gift pages', async () => {
+    const { app, repository } = createTestContext();
+    const { result } = await publish(app);
+    const createCalls = (repository as MemoryPublishedGiftRepository).createCalls;
+    const response = await app(new Request(result.url, { method: 'HEAD' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('text/html; charset=utf-8');
+    expect(response.headers.get('Allow')).toBeNull();
+    expect(await response.text()).toBe('');
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(createCalls);
   });
 
   it('keeps an earlier published URL immutable after another publication', async () => {
@@ -431,7 +456,7 @@ describe('publish Worker', () => {
     }));
 
     expect(response.status).toBe(405);
-    expect(response.headers.get('Allow')).toBe('GET');
+    expect(response.headers.get('Allow')).toBe('GET, HEAD');
   });
 
   it('safely injects script-looking text and preserves the original GiftConfig', () => {
@@ -448,22 +473,53 @@ describe('publish Worker', () => {
     expect(parseGiftFile(JSON.parse(payload!)).letter.message).toBe(maliciousText);
   });
 
-  it('injects personalized, recipient-safe social metadata and a fallback image', () => {
+  it('injects generic recipient-safe social metadata and a fallback image', () => {
     const publicUrl = `https://gifts.example/g/${'A'.repeat(22)}`;
     const giftFile = createGiftFile(defaultGift);
     const html = injectPublicMetadataIntoRuntimeHtml(runtimeHtml, publicUrl, giftFile);
 
     expect(html).toContain(`<link rel="canonical" href="${publicUrl}" />`);
     expect(html).toContain(`<meta property="og:url" content="${publicUrl}" />`);
-    expect(html).toContain(`<meta property="og:title" content="${defaultGift.intro.title}" />`);
+    expect(html).toContain(`<meta property="og:title" content="${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo" />`);
     expect(html).toContain('<meta property="og:image" content="https://gifts.example/icon.png" />');
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
-    expect(html).toContain(`<meta name="twitter:title" content="${defaultGift.intro.title}" />`);
+    expect(html).toContain(`<meta name="twitter:title" content="${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo" />`);
     expect(html).toContain('<meta name="twitter:image" content="https://gifts.example/icon.png" />');
     expect(html).not.toContain('recipientName');
     expect(html).not.toContain('shareMessage');
     expect(html).not.toContain(defaultGift.recipientName);
     expect(html).not.toContain(defaultGift.letter.message);
+  });
+
+  it('keeps surprise details, memories, and Creator-only metadata out of public metadata', () => {
+    const privateCaption = 'El lugar secreto de nuestro primer viaje';
+    const privateTitle = 'Sorpresa: nos vamos a París';
+    const giftFile = createGiftFile({
+      ...defaultGift,
+      recipientName: 'Destinatario privado',
+      intro: { ...defaultGift.intro, title: privateTitle },
+      letter: { ...defaultGift.letter, message: 'Contenido privado de la carta' },
+      memories: {
+        enabled: true,
+        items: [{
+          image: 'data:image/png;base64,iVBORw0KGgo=',
+          caption: privateCaption,
+        }],
+      },
+    });
+    const html = injectPublicMetadataIntoRuntimeHtml(
+      runtimeHtml,
+      `https://gifts.example/g/${'A'.repeat(22)}`,
+      giftFile,
+    );
+    const head = html.slice(0, html.indexOf('</head>'));
+
+    expect(head).toContain(`${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo`);
+    expect(head).not.toContain(privateTitle);
+    expect(head).not.toContain(privateCaption);
+    expect(head).not.toContain('Contenido privado de la carta');
+    expect(head).not.toContain('Destinatario privado');
+    expect(head).not.toMatch(/shareMessage|project|R2|gifts\//u);
   });
 
   it('uses the public background route for social previews without exposing storage keys', () => {
@@ -474,7 +530,7 @@ describe('publish Worker', () => {
     });
 
     expect(getPublicGiftMetadata(giftFile, publicUrl)).toEqual({
-      title: defaultGift.intro.title,
+      title: `${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo`,
       description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
       imageUrl: `${publicUrl}/cover`,
     });
@@ -490,7 +546,7 @@ describe('publish Worker', () => {
     });
 
     expect(getPublicGiftMetadata(legacyGift, publicUrl)).toMatchObject({
-      title: 'Tienes un regalo especial',
+      title: `${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo`,
       description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
       imageUrl: 'https://gifts.example/icon.png',
     });
@@ -508,7 +564,7 @@ describe('publish Worker', () => {
 
     expect(html).toContain('note=&lt;untrusted&gt;&amp;label=&quot;gift&quot;');
     expect(html).not.toContain('note=<untrusted>');
-    expect(html).toContain('Una sorpresa &lt;especial&gt; &amp; personal');
+    expect(html).toContain(`${DEFAULT_PUBLIC_GIFT_TITLE} · Ábrelo`);
     expect(html).not.toContain('Una sorpresa <especial>');
   });
 
@@ -925,6 +981,62 @@ describe('publish Worker', () => {
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
     expect((await response.arrayBuffer()).byteLength).toBe(48);
     expect(response.url).not.toContain('gifts/');
+  });
+
+  it('supports HEAD for background images without returning bytes', async () => {
+    const { app } = createTestContext();
+    const published = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['coverImage', createImageFile(48, 'image/png')],
+    ]));
+    const { url } = await published.json() as { url: string };
+    const response = await app(new Request(`${url}/cover`, { method: 'HEAD' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
+    expect(response.headers.get('Content-Length')).toBe('48');
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    expect((await response.arrayBuffer()).byteLength).toBe(0);
+  });
+
+  it('returns 404 for HEAD when the gift or its background image is absent', async () => {
+    const { app } = createTestContext();
+    const published = await publish(app);
+
+    const unknown = await app(new Request(`https://gifts.example/g/${'A'.repeat(22)}/cover`, { method: 'HEAD' }));
+    const absent = await app(new Request(`${published.result.url}/cover`, { method: 'HEAD' }));
+
+    expect(unknown.status).toBe(404);
+    expect(absent.status).toBe(404);
+  });
+
+  it('falls back to the public icon when background metadata exists but the R2 object is missing', async () => {
+    const id = 'M'.repeat(22);
+    const giftFile = createGiftFile({
+      ...defaultGift,
+      backgroundImage: { mimeType: 'image/png', size: 48 },
+    });
+    const repository: PublishedGiftRepository = {
+      async create() {},
+      async getById(requestedId) {
+        return requestedId === id
+          ? { id, giftFile, createdAt: '2026-08-20T12:00:00.000Z' }
+          : null;
+      },
+    };
+    const { app } = createTestContext({ repository });
+
+    const page = await app(new Request(`https://gifts.example/g/${id}`));
+    const html = await page.text();
+    const cover = await app(new Request(`https://gifts.example/g/${id}/cover`));
+    const fallback = await app(new Request('https://gifts.example/icon.png'));
+
+    expect(page.status).toBe(200);
+    expect(html).toContain('<meta property="og:image" content="https://gifts.example/icon.png" />');
+    expect(html).not.toContain(`<meta property="og:image" content="https://gifts.example/g/${id}/cover" />`);
+    expect(cover.status).toBe(404);
+    expect(fallback.status).toBe(200);
+    expect(fallback.headers.get('Content-Type')).toBe('image/png');
   });
 
   it('serves a Milestone 28 stored image as a background without republishing', async () => {
