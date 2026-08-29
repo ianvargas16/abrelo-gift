@@ -52,7 +52,7 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "PUBLIC_BASE_URL": "https://abrelo-publish-staging.ianvargas16.workers.dev",
-        "ALLOWED_ORIGINS": "https://abrelo-creator-staging.pages.dev,https://33dee5dd.abrelo-creator-staging.pages.dev"
+        "ALLOWED_ORIGINS": "https://abrelo-creator-staging.pages.dev"
       }
     },
     "production": {
