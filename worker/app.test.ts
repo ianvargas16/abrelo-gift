@@ -577,7 +577,7 @@ describe('publish Worker', () => {
 
   it('rejects unapproved CORS origins and accepts configured preflight requests', async () => {
     const stableOrigin = 'https://abrelo-creator-staging.pages.dev';
-    const previewOrigin = 'https://467c3b0d.abrelo-creator-staging.pages.dev';
+    const previewOrigin = 'https://33dee5dd.abrelo-creator-staging.pages.dev';
     const { app } = createTestContext({
       allowedOrigins: `${stableOrigin},${previewOrigin}`,
     });
