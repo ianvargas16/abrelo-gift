@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    publicDir: 'src-tauri/icons',
     clearScreen: false,
     server: {
       host: "0.0.0.0",
