@@ -17,6 +17,7 @@ import {
   createPublishedGiftQrDataUrl,
   DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE,
   getPublishedGiftShareMessage,
+  getPublishedGiftShareTitle,
   getPublishedGiftQrPayload,
   isWebShareAvailable,
   sharePublishedGift,
@@ -213,10 +214,11 @@ describe('published gift sharing', () => {
     expect(isWebShareAvailable({})).toBe(false);
     expect(getPublishedGiftShareMessage()).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
     expect(getPublishedGiftShareMessage('   ')).toBe(DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE);
+    expect(getPublishedGiftShareTitle('')).toBe('Tienes un regalo especial · Ábrelo');
     await expect(sharePublishedGift(publishedUrl, undefined, {})).resolves.toBe(false);
-    await expect(sharePublishedGift(publishedUrl, 'Ábrelo cuando quieras.', { share })).resolves.toBe(true);
+    await expect(sharePublishedGift(publishedUrl, 'Ábrelo cuando quieras.', { share }, 'Una noche especial')).resolves.toBe(true);
     expect(share).toHaveBeenCalledWith({
-      title: 'Ábrelo — Tienes un regalo',
+      title: 'Una noche especial · Ábrelo',
       text: 'Ábrelo cuando quieras.',
       url: publishedUrl,
     });

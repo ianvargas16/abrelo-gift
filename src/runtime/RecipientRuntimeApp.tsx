@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { RuntimeView } from '../views/RuntimeView';
+import type { GiftConfig } from '../models/giftConfig';
 import type { RuntimeBootstrapResult } from './runtimeBootstrap';
 import { getThemeCssVariables, resolveTheme, type ThemeDefinition } from '../themes/themeRegistry';
 
@@ -7,7 +8,7 @@ interface RecipientRuntimeAppProps {
   bootstrap: RuntimeBootstrapResult;
 }
 
-export const RECIPIENT_PREPARATION_DURATION = 320;
+export const RECIPIENT_PREPARATION_DURATION = 650;
 
 export function getRecipientPreparationDuration(prefersReducedMotion: boolean): number {
   return prefersReducedMotion ? 0 : RECIPIENT_PREPARATION_DURATION;
@@ -21,7 +22,17 @@ export function getRecipientDisplayState(
   return isPreparing ? 'loading' : 'ready';
 }
 
-function RuntimePreparation({ theme }: { theme: ThemeDefinition }) {
+export function getRecipientEntryCopy(gift: GiftConfig): { eyebrow: string; title: string; note: string } {
+  const recipientName = gift.recipientName.trim();
+  return {
+    eyebrow: recipientName ? `${recipientName}, tienes un regalo` : 'Tienes un regalo',
+    title: gift.intro.title.trim() || 'Una sorpresa preparada para ti',
+    note: 'Está lista para abrirse.',
+  };
+}
+
+function RuntimePreparation({ theme, gift }: { theme: ThemeDefinition; gift: GiftConfig }) {
+  const copy = getRecipientEntryCopy(gift);
   return (
     <div
       className={`runtime-preparation ${theme.className}`}
@@ -33,7 +44,9 @@ function RuntimePreparation({ theme }: { theme: ThemeDefinition }) {
     >
       <div className="runtime-preparation-card">
         <span className="runtime-preparation-mark" aria-hidden="true">✦</span>
-        <p>Preparando algo para ti</p>
+        <span className="runtime-preparation-eyebrow">{copy.eyebrow}</span>
+        <h1>{copy.title}</h1>
+        <p>{copy.note}</p>
       </div>
     </div>
   );
@@ -59,7 +72,9 @@ export function RecipientRuntimeApp({ bootstrap }: RecipientRuntimeAppProps) {
   const retry = () => window.location.reload();
   const displayState = getRecipientDisplayState(bootstrap, isPreparing);
 
-  if (displayState === 'loading') return <RuntimePreparation theme={theme} />;
+  if (displayState === 'loading' && bootstrap.status === 'ready') {
+    return <RuntimePreparation theme={theme} gift={bootstrap.gift} />;
+  }
 
   return (
     <div data-recipient-state={displayState}>

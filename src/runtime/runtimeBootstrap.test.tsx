@@ -6,6 +6,7 @@ import { resolveTheme } from '../themes/themeRegistry';
 import { RuntimeView } from '../views/RuntimeView';
 import {
   getRecipientDisplayState,
+  getRecipientEntryCopy,
   getRecipientPreparationDuration,
   RECIPIENT_PREPARATION_DURATION,
   RecipientRuntimeApp,
@@ -132,7 +133,9 @@ describe('recipient Runtime bootstrap', () => {
       <RecipientRuntimeApp bootstrap={{ status: 'ready', gift: defaultGift }} />,
     );
 
-    expect(markup).toContain('Preparando algo para ti');
+    expect(markup).toContain('Sofía, tienes un regalo');
+    expect(markup).toContain(defaultGift.intro.title);
+    expect(markup).toContain('Está lista para abrirse');
     expect(markup).toContain('role="status"');
     expect(markup).not.toContain('state-sealed');
   });
@@ -172,6 +175,18 @@ describe('recipient Runtime bootstrap', () => {
     expect(getRecipientPreparationDuration(true)).toBe(0);
   });
 
+  it('uses safe entry copy when optional recipient presentation is empty', () => {
+    expect(getRecipientEntryCopy({
+      ...defaultGift,
+      recipientName: '',
+      intro: { ...defaultGift.intro, title: '' },
+    })).toEqual({
+      eyebrow: 'Tienes un regalo',
+      title: 'Una sorpresa preparada para ti',
+      note: 'Está lista para abrirse.',
+    });
+  });
+
   it('resolves loading, ready, and error presentation states explicitly', () => {
     const ready = { status: 'ready' as const, gift: defaultGift };
     const error = { status: 'error' as const, reason: 'missing' as const };
@@ -188,7 +203,7 @@ describe('recipient Runtime bootstrap', () => {
 
     expect(markup).toContain('Este regalo ya no está disponible');
     expect(markup).toContain('data-recipient-state="error"');
-    expect(markup).not.toContain('Preparando algo para ti');
+    expect(markup).not.toContain('tienes un regalo');
     expect(markup).toContain('Volver a intentar');
     expect(markup).not.toMatch(/Creator|GiftConfig|JSON|schema|versión/i);
     expect(markup).not.toMatch(/vencido|eliminado|nunca existió/i);

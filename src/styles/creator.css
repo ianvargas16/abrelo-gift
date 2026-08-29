@@ -1795,7 +1795,7 @@ textarea:focus-visible {
 
 .publish-intro,
 .publish-flow,
-.publish-result {
+.gift-share-panel {
   position: relative;
   z-index: 1;
 }
@@ -1814,32 +1814,48 @@ textarea:focus-visible {
 }
 
 .publish-flow,
-.publish-result {
+.gift-share-panel {
   display: grid;
   gap: var(--space-md);
 }
 
-.publish-result {
-  padding: var(--space-md);
+.gift-share-panel {
+  padding: clamp(var(--space-md), 4vw, var(--space-xl));
   border: 1px solid color-mix(in srgb, var(--color-success) 24%, var(--color-border));
-  border-radius: var(--radius-medium);
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: var(--shadow-subtle-ui);
+  border-radius: var(--radius-large);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(252, 246, 239, 0.7)),
+    var(--color-paper);
+  box-shadow: var(--shadow-floating-surface);
 }
 
-.publish-result-copy {
+.gift-share-header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: var(--space-sm);
 }
 
-.publish-result-copy h3 {
+.gift-share-header > div {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.gift-share-header h3 {
   margin: 0;
   font-family: var(--font-editorial);
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  font-size: clamp(1.55rem, 4vw, 2.35rem);
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.gift-share-header p:last-child {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .publish-success-mark {
@@ -1854,7 +1870,6 @@ textarea:focus-visible {
 
 .publish-link {
   display: block;
-  margin-top: 0.4rem;
   color: var(--color-accent-strong);
   font-size: 0.86rem;
   line-height: 1.5;
@@ -1884,6 +1899,31 @@ textarea:focus-visible {
   gap: var(--space-sm);
 }
 
+.gift-share-body {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(var(--space-md), 5vw, var(--space-xl));
+  padding-block: var(--space-md);
+  border-block: 1px solid var(--color-border);
+}
+
+.gift-share-details {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: var(--space-sm);
+}
+
+.gift-share-label {
+  color: var(--color-ink-muted);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .publish-recipient-preview {
   display: inline-flex;
   align-items: center;
@@ -1897,8 +1937,6 @@ textarea:focus-visible {
 
 .publish-message-field {
   gap: var(--space-xs);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-border);
 }
 
 .publish-message-field small {
@@ -1909,40 +1947,41 @@ textarea:focus-visible {
 
 .publish-qr {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-md);
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-border);
+  justify-items: center;
+  gap: var(--space-xs);
+  margin: 0;
   color: var(--color-ink-muted);
-  font-size: 0.78rem;
-}
-
-.publish-qr > div {
-  display: grid;
-  gap: var(--space-sm);
-}
-
-.publish-qr-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.publish-qr-actions .ghost-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.78rem;
-  text-decoration: none;
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .publish-qr img {
-  width: 7.5rem;
-  height: 7.5rem;
+  width: min(100%, 11rem);
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0.35rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
+  border-radius: var(--radius-medium);
   background: var(--color-paper);
+}
+
+.publish-qr-placeholder {
+  width: min(100%, 11rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: var(--space-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-paper) 82%, white);
+}
+
+.gift-share-download {
+  justify-self: start;
+  color: var(--color-accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-underline-offset: 0.2em;
 }
 
 .publish-button {
@@ -2216,12 +2255,17 @@ textarea:focus-visible {
   }
 
   .publish-share-row .ghost-button,
-  .publish-qr-actions .ghost-button {
+  .publish-share-row .primary-button {
     width: 100%;
   }
 
-  .publish-qr {
+  .gift-share-body {
     grid-template-columns: 1fr;
+  }
+
+  .publish-qr img,
+  .publish-qr-placeholder {
+    width: min(10rem, 62vw);
   }
 
   .studio-footer {

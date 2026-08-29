@@ -4,6 +4,8 @@ export const GIFT_ID_BYTES = 16;
 export const GIFT_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 // D1 stores the serialized GiftFile in one row, whose maximum string/BLOB value is 2 MB.
 export const MAX_GIFT_FILE_BYTES = 1024 * 1024;
+export const DEFAULT_PUBLIC_GIFT_TITLE = 'Tienes un regalo especial';
+export const DEFAULT_PUBLIC_GIFT_DESCRIPTION = 'Alguien preparó una sorpresa para ti.';
 
 const RUNTIME_GIFT_PLACEHOLDER = '<script id="abrelo-gift-data" type="application/json"></script>';
 const RUNTIME_METADATA_PLACEHOLDER = '<!-- abrelo:public-metadata -->';
@@ -56,14 +58,55 @@ export function injectGiftFileIntoRuntimeHtml(runtimeHtml: string, giftFile: Gif
   );
 }
 
-export function injectPublicMetadataIntoRuntimeHtml(runtimeHtml: string, publicUrl: string): string {
+export interface PublicGiftMetadata {
+  title: string;
+  description: string;
+  imageUrl: string;
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value.replace(/[&"'<>]/gu, (character) => HTML_ATTRIBUTE_ESCAPES[character]);
+}
+
+export function getPublicGiftMetadata(giftFile: GiftFile, publicUrl: string): PublicGiftMetadata {
+  const title = giftFile.gift.intro.title.trim() || DEFAULT_PUBLIC_GIFT_TITLE;
+  const imageUrl = giftFile.gift.backgroundImage
+    ? `${publicUrl}/cover`
+    : new URL('/icon.png', publicUrl).toString();
+
+  return {
+    title,
+    description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
+    imageUrl,
+  };
+}
+
+export function injectPublicMetadataIntoRuntimeHtml(runtimeHtml: string, publicUrl: string, giftFile: GiftFile): string {
   if (!runtimeHtml.includes(RUNTIME_METADATA_PLACEHOLDER)) {
     throw new Error('Runtime metadata placeholder is missing');
   }
 
-  const escapedUrl = publicUrl.replace(/[&"'<>]/gu, (character) => HTML_ATTRIBUTE_ESCAPES[character]);
-  const metadata = `<link rel="canonical" href="${escapedUrl}" />\n    <meta property="og:url" content="${escapedUrl}" />\n    <meta name="twitter:card" content="summary" />`;
-  return runtimeHtml.replace(RUNTIME_METADATA_PLACEHOLDER, metadata);
+  const publicMetadata = getPublicGiftMetadata(giftFile, publicUrl);
+  const escapedUrl = escapeHtmlAttribute(publicUrl);
+  const escapedTitle = escapeHtmlAttribute(publicMetadata.title);
+  const escapedDescription = escapeHtmlAttribute(publicMetadata.description);
+  const escapedImageUrl = escapeHtmlAttribute(publicMetadata.imageUrl);
+  const metadata = `<link rel="canonical" href="${escapedUrl}" />
+    <meta name="description" content="${escapedDescription}" />
+    <meta property="og:title" content="${escapedTitle}" />
+    <meta property="og:description" content="${escapedDescription}" />
+    <meta property="og:image" content="${escapedImageUrl}" />
+    <meta property="og:url" content="${escapedUrl}" />
+    <meta property="og:site_name" content="Ábrelo" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapedTitle}" />
+    <meta name="twitter:description" content="${escapedDescription}" />
+    <meta name="twitter:image" content="${escapedImageUrl}" />`;
+
+  return runtimeHtml
+    .replace(RUNTIME_METADATA_PLACEHOLDER, metadata)
+    .replace(/<title>[\s\S]*?<\/title>/u, `<title>${escapedTitle} · Ábrelo</title>`);
 }
 
 export async function readGiftRequestBody(request: Request): Promise<string> {

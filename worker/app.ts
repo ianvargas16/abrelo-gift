@@ -150,6 +150,7 @@ async function renderRecipientPage(
       body = injectPublicMetadataIntoRuntimeHtml(
         injectGiftFileIntoRuntimeHtml(runtimeHtml, giftFile),
         createPublicGiftUrl(options.runtimeConfig, id),
+        giftFile,
       );
     } catch {
       status = 503;

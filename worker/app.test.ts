@@ -6,7 +6,9 @@ import { MAX_GIFT_AUDIO_BYTES, type GiftAudioMimeType } from '../src/models/gift
 import { MAX_MULTIPART_BYTES } from './giftAssetPublishing';
 import { MAX_GIFT_IMAGE_BYTES, type GiftImageMimeType } from '../src/models/giftMedia';
 import {
+  DEFAULT_PUBLIC_GIFT_DESCRIPTION,
   GIFT_ID_PATTERN,
+  getPublicGiftMetadata,
   injectPublicMetadataIntoRuntimeHtml,
   MAX_GIFT_FILE_BYTES,
   injectGiftFileIntoRuntimeHtml,
@@ -280,7 +282,7 @@ describe('publish Worker', () => {
     expect(second.result.id).toHaveLength(22);
   });
 
-  it('serves existing published snapshots through the recipient Runtime shell with generic social metadata', async () => {
+  it('serves existing published snapshots with recipient-safe social metadata', async () => {
     const { app } = createTestContext();
     const gift = { ...defaultGift, recipientName: 'Contenido publicado' };
     const { result } = await publish(app, gift);
@@ -295,8 +297,12 @@ describe('publish Worker', () => {
     const head = html.slice(0, html.indexOf('</head>'));
     expect(head).toContain(`<link rel="canonical" href="${result.url}" />`);
     expect(head).toContain(`<meta property="og:url" content="${result.url}" />`);
-    expect(head).toContain('<meta name="twitter:card" content="summary" />');
+    expect(head).toContain(`<meta property="og:title" content="${gift.intro.title}" />`);
+    expect(head).toContain(`<meta property="og:description" content="${DEFAULT_PUBLIC_GIFT_DESCRIPTION}" />`);
+    expect(head).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(head).toContain('<meta property="og:image" content="https://gifts.example/icon.png" />');
     expect(head).not.toContain('Contenido publicado');
+    expect(head).not.toContain(gift.letter.message);
   });
 
   it('keeps an earlier published URL immutable after another publication', async () => {
@@ -442,24 +448,68 @@ describe('publish Worker', () => {
     expect(parseGiftFile(JSON.parse(payload!)).letter.message).toBe(maliciousText);
   });
 
-  it('injects only the public URL into social metadata', () => {
+  it('injects personalized, recipient-safe social metadata and a fallback image', () => {
     const publicUrl = `https://gifts.example/g/${'A'.repeat(22)}`;
-    const html = injectPublicMetadataIntoRuntimeHtml(runtimeHtml, publicUrl);
+    const giftFile = createGiftFile(defaultGift);
+    const html = injectPublicMetadataIntoRuntimeHtml(runtimeHtml, publicUrl, giftFile);
 
     expect(html).toContain(`<link rel="canonical" href="${publicUrl}" />`);
     expect(html).toContain(`<meta property="og:url" content="${publicUrl}" />`);
+    expect(html).toContain(`<meta property="og:title" content="${defaultGift.intro.title}" />`);
+    expect(html).toContain('<meta property="og:image" content="https://gifts.example/icon.png" />');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(html).toContain(`<meta name="twitter:title" content="${defaultGift.intro.title}" />`);
+    expect(html).toContain('<meta name="twitter:image" content="https://gifts.example/icon.png" />');
     expect(html).not.toContain('recipientName');
     expect(html).not.toContain('shareMessage');
+    expect(html).not.toContain(defaultGift.recipientName);
+    expect(html).not.toContain(defaultGift.letter.message);
+  });
+
+  it('uses the public background route for social previews without exposing storage keys', () => {
+    const publicUrl = `https://gifts.example/g/${'A'.repeat(22)}`;
+    const giftFile = createGiftFile({
+      ...defaultGift,
+      backgroundImage: { mimeType: 'image/webp', size: 2048 },
+    });
+
+    expect(getPublicGiftMetadata(giftFile, publicUrl)).toEqual({
+      title: defaultGift.intro.title,
+      description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
+      imageUrl: `${publicUrl}/cover`,
+    });
+    expect(JSON.stringify(getPublicGiftMetadata(giftFile, publicUrl))).not.toContain('gifts/');
+    expect(JSON.stringify(getPublicGiftMetadata(giftFile, publicUrl))).not.toContain('R2');
+  });
+
+  it('uses safe defaults for legacy gifts without personalization metadata', () => {
+    const publicUrl = `https://gifts.example/g/${'A'.repeat(22)}`;
+    const legacyGift = createGiftFile({
+      ...defaultGift,
+      intro: { ...defaultGift.intro, title: '' },
+    });
+
+    expect(getPublicGiftMetadata(legacyGift, publicUrl)).toMatchObject({
+      title: 'Tienes un regalo especial',
+      description: DEFAULT_PUBLIC_GIFT_DESCRIPTION,
+      imageUrl: 'https://gifts.example/icon.png',
+    });
   });
 
   it('escapes public metadata attributes before inserting them into the Runtime shell', () => {
     const html = injectPublicMetadataIntoRuntimeHtml(
       runtimeHtml,
       'https://gifts.example/g/example?note=<untrusted>&label="gift"',
+      createGiftFile({
+        ...defaultGift,
+        intro: { ...defaultGift.intro, title: 'Una sorpresa <especial> & personal' },
+      }),
     );
 
     expect(html).toContain('note=&lt;untrusted&gt;&amp;label=&quot;gift&quot;');
     expect(html).not.toContain('note=<untrusted>');
+    expect(html).toContain('Una sorpresa &lt;especial&gt; &amp; personal');
+    expect(html).not.toContain('Una sorpresa <especial>');
   });
 
   it('returns the public URL from server configuration', async () => {
@@ -470,17 +520,33 @@ describe('publish Worker', () => {
   });
 
   it('rejects unapproved CORS origins and accepts configured preflight requests', async () => {
-    const { app } = createTestContext();
+    const stableOrigin = 'https://abrelo-creator-staging.pages.dev';
+    const previewOrigin = 'https://467c3b0d.abrelo-creator-staging.pages.dev';
+    const { app } = createTestContext({
+      allowedOrigins: `${stableOrigin},${previewOrigin}`,
+    });
     const rejected = await app(publishRequest(createGiftFile(defaultGift), 'https://unapproved.example'));
-    const preflight = await app(new Request('https://api.example/api/gifts', {
+    const arbitraryPreview = await app(new Request('https://api.example/api/gifts', {
       method: 'OPTIONS',
-      headers: { Origin: 'http://localhost:1420' },
+      headers: { Origin: 'https://other-preview.abrelo-creator-staging.pages.dev' },
+    }));
+    const stablePreflight = await app(new Request('https://api.example/api/gifts', {
+      method: 'OPTIONS',
+      headers: { Origin: stableOrigin },
+    }));
+    const previewPreflight = await app(new Request('https://api.example/api/gifts', {
+      method: 'OPTIONS',
+      headers: { Origin: previewOrigin },
     }));
 
     expect(rejected.status).toBe(403);
     expect(rejected.headers.has('Access-Control-Allow-Origin')).toBe(false);
-    expect(preflight.status).toBe(204);
-    expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:1420');
+    expect(arbitraryPreview.status).toBe(403);
+    expect(arbitraryPreview.headers.has('Access-Control-Allow-Origin')).toBe(false);
+    expect(stablePreflight.status).toBe(204);
+    expect(stablePreflight.headers.get('Access-Control-Allow-Origin')).toBe(stableOrigin);
+    expect(previewPreflight.status).toBe(204);
+    expect(previewPreflight.headers.get('Access-Control-Allow-Origin')).toBe(previewOrigin);
   });
 
   it('logs persistence failures without passing gift content to the logger', async () => {

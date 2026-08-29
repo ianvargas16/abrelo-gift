@@ -234,13 +234,16 @@
 }
 
 .runtime-preparation-card {
+  width: min(100%, 30rem);
   display: grid;
   justify-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-lg) var(--space-xl);
+  gap: 0.7rem;
+  padding: clamp(var(--space-xl), 9vw, var(--space-3xl)) clamp(var(--space-lg), 8vw, var(--space-2xl));
   border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-large);
   background: color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
   box-shadow: var(--shadow-subtle-ui);
+  text-align: center;
   animation: runtime-preparation-breathe 1.8s var(--ease-standard) infinite;
 }
 
@@ -259,13 +262,31 @@
   font-size: 1.15rem;
 }
 
-.runtime-preparation p {
-  margin: 0;
+.runtime-preparation-eyebrow {
+  color: var(--color-accent);
   font-family: var(--font-label);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.runtime-preparation h1 {
+  max-width: 12ch;
+  margin: var(--space-xs) 0;
+  color: var(--color-page-ink);
+  font-family: var(--font-editorial);
+  font-size: clamp(2rem, 10vw, 3.6rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.runtime-preparation p {
+  margin: 0;
+  color: var(--color-page-ink-muted);
+  font-size: 0.88rem;
 }
 
 .ambient,
