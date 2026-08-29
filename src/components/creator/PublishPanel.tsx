@@ -12,6 +12,7 @@ import {
   getPublishedGiftShareMessage,
   sharePublishedGift,
 } from '../../publishing/sharePublishedGift';
+import { PublishedGiftSharePanel } from './PublishedGiftSharePanel';
 
 interface PublishPanelProps {
   gift: GiftConfig;
@@ -115,7 +116,7 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
     }
 
     try {
-      const shared = await sharePublishedGift(publication.gift.url, publication.shareMessage);
+      const shared = await sharePublishedGift(publication.gift.url, publication.shareMessage, undefined, gift.intro.title);
 
       if (shared) {
         setShareStatus('shared');
@@ -137,6 +138,14 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
     onPublicationChange({ ...publication, shareMessage });
   };
 
+  const statusMessage = copyStatus === 'manual'
+    ? 'Selecciona el enlace y cópialo manualmente.'
+    : shareStatus === 'shared'
+      ? 'Listo para compartir.'
+      : shareStatus === 'fallback'
+        ? 'Tu dispositivo no permite compartir aquí. Copiamos el enlace.'
+        : '';
+
   return (
     <section className="studio-publish-panel" aria-labelledby="publish-title">
       <div className="publish-intro">
@@ -147,63 +156,17 @@ export function PublishPanel({ gift, publication, onPublicationChange, audioFile
 
       <div className="publish-flow">
         {publication && (
-          <div className="publish-result" aria-live="polite">
-            <div className="publish-result-copy">
-              <span className="publish-success-mark" aria-hidden="true">✦</span>
-              <div>
-                <p className="section-kicker">Publicado</p>
-                <h3>Tu sorpresa está lista para salir.</h3>
-                <a className="publish-link" href={publication.gift.url} target="_blank" rel="noreferrer">
-                  {publication.gift.url}
-                </a>
-              </div>
-            </div>
-
-            {hasUnpublishedChanges && (
-              <p className="publish-snapshot-note">
-                Este enlace conserva la versión publicada. Publica otra vez para compartir tus cambios.
-              </p>
-            )}
-
-            <div className="publish-share-row">
-              <button type="button" className="ghost-button" onClick={handleCopy}>
-                {copyStatus === 'copied' ? 'Enlace copiado' : 'Copiar enlace'}
-              </button>
-              <button type="button" className="ghost-button" onClick={handleShare}>Compartir sorpresa</button>
-              <a className="ghost-button publish-recipient-preview" href={publication.gift.url} target="_blank" rel="noreferrer">
-                Ver como destinatario
-              </a>
-              <span className="publish-copy-status" aria-live="polite">
-                {copyStatus === 'manual' ? 'Selecciona el enlace y cópialo manualmente.' : ''}
-                {shareStatus === 'shared' ? 'Listo para compartir.' : ''}
-                {shareStatus === 'fallback' ? 'Tu dispositivo no permite compartir aquí. Copiamos el enlace.' : ''}
-              </span>
-            </div>
-
-            <label className="field publish-message-field">
-              <span>Mensaje para acompañar el enlace</span>
-              <textarea
-                value={publication.shareMessage ?? ''}
-                placeholder={getPublishedGiftShareMessage()}
-                onChange={(event) => handleShareMessageChange(event.target.value)}
-                rows={3}
-              />
-              <small>Solo se usa al compartir desde este estudio.</small>
-            </label>
-
-            {qrDataUrl && (
-              <div className="publish-qr">
-                <img src={qrDataUrl} alt="Código QR del enlace publicado" width="160" height="160" />
-                <div>
-                  <span>Escanea para abrir el regalo</span>
-                  <div className="publish-qr-actions">
-                    <a className="ghost-button" href={qrDataUrl} download="abrelo-regalo-qr.png">Guardar QR</a>
-                    <button type="button" className="ghost-button" onClick={handleCopy}>Copiar enlace del QR</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <PublishedGiftSharePanel
+            publication={publication}
+            qrDataUrl={qrDataUrl}
+            hasUnpublishedChanges={hasUnpublishedChanges}
+            copyLabel={copyStatus === 'copied' ? 'Enlace copiado' : 'Copiar enlace'}
+            statusMessage={statusMessage}
+            onCopy={handleCopy}
+            onShare={handleShare}
+            onShareMessageChange={handleShareMessageChange}
+            shareMessagePlaceholder={getPublishedGiftShareMessage()}
+          />
         )}
 
         {hasInvalidPersonalization && (

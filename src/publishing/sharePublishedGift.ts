@@ -9,6 +9,7 @@ interface ShareTarget {
 }
 
 export const DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE = 'Te preparé una sorpresa para abrir cuando tengas un momento.';
+export const DEFAULT_PUBLISHED_GIFT_SHARE_TITLE = 'Tienes un regalo especial';
 
 function fallbackCopy(text: string, targetDocument: Document | undefined): boolean {
   if (!targetDocument?.body || typeof targetDocument.execCommand !== 'function') {
@@ -59,17 +60,22 @@ export function getPublishedGiftShareMessage(message?: string): string {
   return message?.trim() || DEFAULT_PUBLISHED_GIFT_SHARE_MESSAGE;
 }
 
+export function getPublishedGiftShareTitle(title?: string): string {
+  return `${title?.trim() || DEFAULT_PUBLISHED_GIFT_SHARE_TITLE} · Ábrelo`;
+}
+
 export async function sharePublishedGift(
   url: string,
   message?: string,
   target: ShareTarget | undefined = typeof navigator === 'undefined' ? undefined : navigator,
+  title?: string,
 ): Promise<boolean> {
   if (!target?.share) {
     return false;
   }
 
   await target.share({
-    title: 'Ábrelo — Tienes un regalo',
+    title: getPublishedGiftShareTitle(title),
     text: getPublishedGiftShareMessage(message),
     url,
   });
