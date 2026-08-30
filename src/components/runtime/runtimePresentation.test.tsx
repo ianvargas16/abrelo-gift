@@ -205,4 +205,20 @@ describe('Runtime seal presentation', () => {
     expect(markup).toContain('aria-pressed="true"');
     expect(markup).toContain('--hold-progress:0.48');
   });
+
+  it('uses the physical flap and card as semantic keyboard-accessible controls', () => {
+    const unsealedMarkup = renderToStaticMarkup(
+      <Envelope recipientName="Sofía" state="unsealed" isShaking={false} onOpen={vi.fn()} onExtract={vi.fn()} />,
+    );
+    const openedMarkup = renderToStaticMarkup(
+      <Envelope recipientName="Sofía" state="opened" isShaking={false} onOpen={vi.fn()} onExtract={vi.fn()} />,
+    );
+
+    expect(unsealedMarkup).toContain('aria-label="Desliza la solapa hacia arriba para abrir el sobre. También puedes presionar Enter o Espacio."');
+    expect(unsealedMarkup).toContain('flap-drag-cue');
+    expect(openedMarkup).toContain('aria-label="Tira de la carta hacia arriba para sacarla. También puedes presionar Enter o Espacio."');
+    expect(openedMarkup).toContain('card-pull-cue');
+    expect(openedMarkup).not.toContain('Abrir el sobre');
+    expect(openedMarkup).not.toContain('Sacar la carta');
+  });
 });

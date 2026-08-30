@@ -75,6 +75,102 @@ export function createPointerOwnership() {
   };
 }
 
+export type DirectedDragOutcome = 'ignored' | 'returned' | 'completed';
+
+interface DirectedDragControllerOptions {
+  threshold: number;
+  onProgress: (progress: number) => void;
+  onActiveChange: (active: boolean) => void;
+  onComplete: () => void;
+}
+
+export interface DirectedDragController {
+  start: (pointerId: number, clientY: number, travelDistance: number) => boolean;
+  move: (pointerId: number, clientY: number) => boolean;
+  finish: (pointerId: number) => DirectedDragOutcome;
+  cancel: (pointerId: number) => DirectedDragOutcome;
+  completeFromFallback: () => boolean;
+  reset: () => void;
+  owns: (pointerId: number) => boolean;
+}
+
+export function getDirectedDragProgress(startY: number, currentY: number, travelDistance: number) {
+  if (!Number.isFinite(travelDistance) || travelDistance <= 0) return 0;
+  return Math.min(1, Math.max(0, (startY - currentY) / travelDistance));
+}
+
+export function createDirectedDragController(options: DirectedDragControllerOptions): DirectedDragController {
+  let activePointerId: number | null = null;
+  let startY = 0;
+  let travelDistance = 1;
+  let progress = 0;
+  let completed = false;
+
+  const returnToRest = () => {
+    activePointerId = null;
+    progress = 0;
+    options.onActiveChange(false);
+    options.onProgress(0);
+    return 'returned' as const;
+  };
+
+  const complete = () => {
+    if (completed) return false;
+    completed = true;
+    activePointerId = null;
+    progress = 1;
+    options.onActiveChange(false);
+    options.onProgress(1);
+    options.onComplete();
+    return true;
+  };
+
+  return {
+    start(pointerId, clientY, nextTravelDistance) {
+      if (completed || activePointerId !== null || !Number.isFinite(nextTravelDistance) || nextTravelDistance <= 0) return false;
+      activePointerId = pointerId;
+      startY = clientY;
+      travelDistance = nextTravelDistance;
+      progress = 0;
+      options.onProgress(0);
+      options.onActiveChange(true);
+      return true;
+    },
+    move(pointerId, clientY) {
+      if (activePointerId !== pointerId || completed) return false;
+      progress = getDirectedDragProgress(startY, clientY, travelDistance);
+      options.onProgress(progress);
+      return true;
+    },
+    finish(pointerId) {
+      if (activePointerId !== pointerId || completed) return 'ignored';
+      if (progress >= options.threshold) {
+        complete();
+        return 'completed';
+      }
+      return returnToRest();
+    },
+    cancel(pointerId) {
+      if (activePointerId !== pointerId || completed) return 'ignored';
+      return returnToRest();
+    },
+    completeFromFallback() {
+      if (activePointerId !== null || completed) return false;
+      return complete();
+    },
+    reset() {
+      activePointerId = null;
+      progress = 0;
+      completed = false;
+      options.onActiveChange(false);
+      options.onProgress(0);
+    },
+    owns(pointerId) {
+      return activePointerId === pointerId;
+    },
+  };
+}
+
 interface SealHoldControllerOptions {
   durationMs: number;
   now: () => number;

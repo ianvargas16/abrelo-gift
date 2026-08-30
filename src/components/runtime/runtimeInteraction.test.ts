@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { isSealActivationKey } from './WaxSeal';
 import {
+  createDirectedDragController,
   createPointerOwnership,
   createSealHoldController,
+  getDirectedDragProgress,
   getRuntimePhase,
   getRuntimeTransitionDelay,
   isEligibleHoldPointer,
@@ -10,6 +12,15 @@ import {
   shouldShowGiftAudioControl,
   transitionRuntimeStage,
 } from './runtimeInteraction';
+
+function createDragHarness(threshold = 0.6) {
+  const onProgress = vi.fn();
+  const onActiveChange = vi.fn();
+  const onComplete = vi.fn();
+  const controller = createDirectedDragController({ threshold, onProgress, onActiveChange, onComplete });
+
+  return { controller, onProgress, onActiveChange, onComplete };
+}
 
 function createHoldHarness() {
   let now = 0;
@@ -157,6 +168,74 @@ describe('seal pointer ownership', () => {
     expect(isEligibleHoldPointer({ pointerId: 3, pointerType: 'pen', button: 0, isPrimary: false })).toBe(false);
     expect(isEligibleHoldPointer({ pointerId: 4, pointerType: 'mouse', button: 1, isPrimary: true })).toBe(false);
     expect(isEligibleHoldPointer({ pointerId: 5, pointerType: 'mouse', button: 2, isPrimary: true })).toBe(false);
+  });
+});
+
+describe('directed physical drag interaction', () => {
+  it('normalizes upward movement and clamps resistance to its directed path', () => {
+    expect(getDirectedDragProgress(300, 280, 100)).toBe(0.2);
+    expect(getDirectedDragProgress(300, 340, 100)).toBe(0);
+    expect(getDirectedDragProgress(300, 120, 100)).toBe(1);
+    expect(getDirectedDragProgress(300, 200, 0)).toBe(0);
+  });
+
+  it('returns the flap softly when released below its threshold', () => {
+    const harness = createDragHarness();
+
+    expect(harness.controller.start(1, 300, 100)).toBe(true);
+    expect(harness.controller.move(1, 255)).toBe(true);
+    expect(harness.controller.finish(1)).toBe('returned');
+    expect(harness.onProgress).toHaveBeenLastCalledWith(0);
+    expect(harness.onComplete).not.toHaveBeenCalled();
+  });
+
+  it('completes the flap once when released beyond its threshold', () => {
+    const harness = createDragHarness();
+
+    harness.controller.start(7, 300, 100);
+    harness.controller.move(7, 235);
+    expect(harness.controller.finish(7)).toBe('completed');
+    expect(harness.onProgress).toHaveBeenLastCalledWith(1);
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+    expect(harness.controller.finish(7)).toBe('ignored');
+    expect(harness.controller.completeFromFallback()).toBe(false);
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('returns a short card pull and allows the next deliberate pull to complete', () => {
+    const harness = createDragHarness(0.62);
+
+    harness.controller.start(9, 420, 120);
+    harness.controller.move(9, 360);
+    expect(harness.controller.finish(9)).toBe('returned');
+    expect(harness.onComplete).not.toHaveBeenCalled();
+
+    expect(harness.controller.start(10, 420, 120)).toBe(true);
+    harness.controller.move(10, 330);
+    expect(harness.controller.finish(10)).toBe('completed');
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('restores the card after cancellation and ignores non-owner pointers', () => {
+    const harness = createDragHarness(0.62);
+
+    expect(harness.controller.start(3, 420, 120)).toBe(true);
+    expect(harness.controller.start(4, 420, 120)).toBe(false);
+    expect(harness.controller.move(4, 320)).toBe(false);
+    expect(harness.controller.cancel(4)).toBe('ignored');
+    expect(harness.controller.cancel(3)).toBe('returned');
+    expect(harness.onProgress).toHaveBeenLastCalledWith(0);
+    expect(harness.onComplete).not.toHaveBeenCalled();
+  });
+
+  it('supports an accessible fallback and can reset for a replay', () => {
+    const harness = createDragHarness();
+
+    expect(harness.controller.completeFromFallback()).toBe(true);
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+    harness.controller.reset();
+    expect(harness.controller.completeFromFallback()).toBe(true);
+    expect(harness.onComplete).toHaveBeenCalledTimes(2);
   });
 });
 
