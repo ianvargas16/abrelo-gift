@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { createDirectedDragController, isEligibleHoldPointer, type DirectedDragController } from './runtimeInteraction';
 
 interface DirectedDragSurfaceProps {
@@ -25,16 +25,32 @@ export function DirectedDragSurface({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const completeRef = useRef(onComplete);
   const travelDistanceRef = useRef(1);
-  const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
+  const rotationDegreesRef = useRef(rotationDegrees);
   const [isDragging, setIsDragging] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
   const controllerRef = useRef<DirectedDragController | null>(null);
   completeRef.current = onComplete;
+  rotationDegreesRef.current = rotationDegrees;
+
+  const applyProgress = (progress: number) => {
+    progressRef.current = progress;
+    const element = buttonRef.current;
+    if (!element) return;
+    element.style.setProperty('--drag-progress', String(progress));
+    element.style.setProperty('--drag-offset', `${progress * travelDistanceRef.current}px`);
+    element.style.setProperty('--drag-rotation', `${progress * rotationDegreesRef.current}deg`);
+  };
+
+  const prepareRelease = (element: HTMLButtonElement, settling: boolean) => {
+    element.classList.remove('is-dragging');
+    element.classList.toggle('is-settling', settling);
+  };
 
   if (controllerRef.current === null) {
     controllerRef.current = createDirectedDragController({
       threshold,
-      onProgress: setProgress,
+      onProgress: applyProgress,
       onActiveChange: setIsDragging,
       onComplete: () => completeRef.current(),
     });
@@ -44,11 +60,13 @@ export function DirectedDragSurface({
     if (disabled) {
       controllerRef.current?.reset();
       setIsSettling(false);
+      buttonRef.current?.classList.remove('is-dragging', 'is-settling');
     }
   }, [disabled]);
 
   useEffect(() => {
     const interruptDrag = () => {
+      if (buttonRef.current) prepareRelease(buttonRef.current, true);
       controllerRef.current?.reset();
       setIsSettling(true);
     };
@@ -71,14 +89,18 @@ export function DirectedDragSurface({
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (disabled || !isEligibleHoldPointer(event)) return;
     setIsSettling(false);
+    event.currentTarget.classList.remove('is-settling');
     const travelDistance = Math.max(72, event.currentTarget.getBoundingClientRect().height * distanceRatio);
-    if (!controllerRef.current?.start(event.pointerId, event.clientY, travelDistance)) return;
     travelDistanceRef.current = travelDistance;
+    if (!controllerRef.current?.start(event.pointerId, event.clientY, travelDistance)) return;
+    event.currentTarget.classList.add('is-dragging');
 
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
+      prepareRelease(event.currentTarget, true);
       controllerRef.current.cancel(event.pointerId);
+      setIsSettling(true);
     }
   };
 
@@ -90,32 +112,33 @@ export function DirectedDragSurface({
 
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     if (!controllerRef.current?.owns(event.pointerId)) return;
+    const shouldReturn = progressRef.current < threshold;
+    prepareRelease(event.currentTarget, shouldReturn);
     setIsSettling(controllerRef.current.finish(event.pointerId) === 'returned');
     releasePointerCapture(event.currentTarget, event.pointerId);
   };
 
   const handlePointerCancel = (event: PointerEvent<HTMLButtonElement>) => {
     if (!controllerRef.current?.owns(event.pointerId)) return;
+    prepareRelease(event.currentTarget, true);
     setIsSettling(controllerRef.current.cancel(event.pointerId) === 'returned');
     releasePointerCapture(event.currentTarget, event.pointerId);
   };
 
   const handleLostPointerCapture = (event: PointerEvent<HTMLButtonElement>) => {
-    if (controllerRef.current?.cancel(event.pointerId) === 'returned') setIsSettling(true);
+    if (!controllerRef.current?.owns(event.pointerId)) return;
+    prepareRelease(event.currentTarget, true);
+    if (controllerRef.current.cancel(event.pointerId) === 'returned') setIsSettling(true);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === 'Escape') {
       event.preventDefault();
+      prepareRelease(event.currentTarget, true);
       controllerRef.current?.reset();
+      setIsSettling(true);
     }
   };
-
-  const style = {
-    '--drag-progress': progress,
-    '--drag-offset': `${progress * travelDistanceRef.current}px`,
-    '--drag-rotation': `${progress * rotationDegrees}deg`,
-  } as CSSProperties;
 
   return (
     <button
@@ -131,9 +154,11 @@ export function DirectedDragSurface({
       onLostPointerCapture={handleLostPointerCapture}
       onKeyDown={handleKeyDown}
       onClick={(event) => {
-        if (event.detail === 0 && !disabled) controllerRef.current?.completeFromFallback();
+        if (event.detail === 0 && !disabled) {
+          prepareRelease(event.currentTarget, false);
+          controllerRef.current?.completeFromFallback();
+        }
       }}
-      style={style}
     >
       {children}
     </button>

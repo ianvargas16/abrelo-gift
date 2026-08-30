@@ -237,6 +237,21 @@ describe('directed physical drag interaction', () => {
     expect(harness.controller.completeFromFallback()).toBe(true);
     expect(harness.onComplete).toHaveBeenCalledTimes(2);
   });
+
+  it('restores stable state after an interrupted drag and permits a fresh attempt', () => {
+    const harness = createDragHarness(0.62);
+
+    harness.controller.start(12, 420, 120);
+    harness.controller.move(12, 350);
+    harness.controller.reset();
+    expect(harness.onProgress).toHaveBeenLastCalledWith(0);
+    expect(harness.onComplete).not.toHaveBeenCalled();
+
+    expect(harness.controller.start(13, 420, 120)).toBe(true);
+    harness.controller.move(13, 330);
+    expect(harness.controller.finish(13)).toBe('completed');
+    expect(harness.onComplete).toHaveBeenCalledOnce();
+  });
 });
 
 describe('Runtime stage transitions', () => {
