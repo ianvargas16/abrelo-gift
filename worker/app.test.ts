@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultGift } from '../src/config/defaultGift';
 import { createGiftFile, GIFT_FILE_SCHEMA, parseGiftFile } from '../src/models/giftConfig';
-import { createPublishApp } from './app';
+import { createPublishApp, type RequestRateLimiter } from './app';
 import { MAX_GIFT_AUDIO_BYTES, type GiftAudioMimeType } from '../src/models/giftAudio';
 import { MAX_MULTIPART_BYTES } from './giftAssetPublishing';
 import { MAX_GIFT_IMAGE_BYTES, type GiftImageMimeType } from '../src/models/giftMedia';
@@ -79,11 +79,27 @@ class MemoryGiftAssets {
   }
 }
 
+class MemoryRateLimiter implements RequestRateLimiter {
+  readonly keys: string[] = [];
+
+  constructor(
+    private readonly outcome: { success: boolean } | Error = { success: true },
+  ) {}
+
+  async limit({ key }: { key: string }): Promise<{ success: boolean }> {
+    this.keys.push(key);
+    if (this.outcome instanceof Error) throw this.outcome;
+    return this.outcome;
+  }
+}
+
 type TestContextOverrides = {
   publicBaseUrl?: string;
   allowedOrigins?: string;
   repository?: PublishedGiftRepository;
   giftAssets?: MemoryGiftAssets;
+  publicationRateLimiter?: RequestRateLimiter;
+  audioRateLimiter?: RequestRateLimiter;
   logger?: OperationalLogger;
 };
 
@@ -93,6 +109,8 @@ function createTestContext(overrides: TestContextOverrides = {}) {
   const app = createPublishApp({
     repository,
     giftAssets,
+    publicationRateLimiter: overrides.publicationRateLimiter,
+    audioRateLimiter: overrides.audioRateLimiter,
     assets: {
       async fetch(request) {
         if (new URL(request.url).pathname === '/icon.png') {
@@ -188,6 +206,42 @@ function multipartPublishRequest(
 }
 
 describe('publish Worker', () => {
+  it('blocks rate-limited publications before parsing or storage writes', async () => {
+    const publicationRateLimiter = new MemoryRateLimiter({ success: false });
+    const { app, repository, giftAssets } = createTestContext({ publicationRateLimiter });
+    const request = publishRequest(createGiftFile(defaultGift));
+    request.headers.set('CF-Connecting-IP', '203.0.113.10');
+    const response = await app(request);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('60');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:1420');
+    expect(await response.json()).toEqual({
+      error: 'Demasiadas solicitudes. Inténtalo de nuevo más tarde.',
+    });
+    expect(publicationRateLimiter.keys).toEqual(['publish:203.0.113.10']);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
+  it('fails publication closed when the native rate limit check is unavailable', async () => {
+    const events: Array<{ category: OperationalErrorCategory; requestId: string }> = [];
+    const { app, repository, giftAssets } = createTestContext({
+      publicationRateLimiter: new MemoryRateLimiter(new Error('rate limit unavailable')),
+      logger: {
+        error(category, requestId) {
+          events.push({ category, requestId });
+        },
+      },
+    });
+    const response = await app(publishRequest(createGiftFile(defaultGift)));
+
+    expect(response.status).toBe(503);
+    expect(events).toEqual([{ category: 'rate_limit_check_failed', requestId: 'request-test' }]);
+    expect(giftAssets.putCalls).toBe(0);
+    expect((repository as MemoryPublishedGiftRepository).createCalls).toBe(0);
+  });
+
   it('publishes ordered memory assets and serves them through Worker routes', async () => {
     const { app, repository, giftAssets } = createTestContext();
     const gift = giftWithStructuredMemories();
@@ -859,6 +913,47 @@ describe('publish Worker', () => {
 
     expect(unknown.status).toBe(404);
     expect(silent.status).toBe(404);
+  });
+
+  it('rate-limits repeated audio reads without affecting the gift page', async () => {
+    const audioRateLimiter = new MemoryRateLimiter({ success: false });
+    const { app } = createTestContext({ audioRateLimiter });
+    const published = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+    const { url } = await published.json() as { url: string };
+    const giftPage = await app(new Request(url));
+    const audioRequest = new Request(`${url}/audio`, {
+      headers: { 'CF-Connecting-IP': '203.0.113.20' },
+    });
+    const audio = await app(audioRequest);
+
+    expect(giftPage.status).toBe(200);
+    expect(audio.status).toBe(429);
+    expect(audio.headers.get('Retry-After')).toBe('60');
+    expect(audioRateLimiter.keys).toEqual(['audio:203.0.113.20']);
+  });
+
+  it('keeps recipient audio available if the native rate limit check fails', async () => {
+    const events: Array<{ category: OperationalErrorCategory; requestId: string }> = [];
+    const { app } = createTestContext({
+      audioRateLimiter: new MemoryRateLimiter(new Error('rate limit unavailable')),
+      logger: {
+        error(category, requestId) {
+          events.push({ category, requestId });
+        },
+      },
+    });
+    const published = await app(multipartPublishRequest([
+      ['gift', JSON.stringify(createGiftFile(defaultGift))],
+      ['audio', createAudioFile(32)],
+    ]));
+    const { url } = await published.json() as { url: string };
+    const audio = await app(new Request(`${url}/audio`));
+
+    expect(audio.status).toBe(200);
+    expect(events).toEqual([{ category: 'rate_limit_check_failed', requestId: 'request-test' }]);
   });
 
   it('streams audio through safe headers without exposing the private R2 key', async () => {

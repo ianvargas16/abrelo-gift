@@ -28,12 +28,28 @@ function assetsBucket(name) {
   }];
 }
 
+function rateLimits(prefix) {
+  return [
+    {
+      name: 'PUBLISH_RATE_LIMITER',
+      namespace_id: `${prefix}01`,
+      simple: { limit: 10, period: 60 },
+    },
+    {
+      name: 'AUDIO_RATE_LIMITER',
+      namespace_id: `${prefix}02`,
+      simple: { limit: 120, period: 60 },
+    },
+  ];
+}
+
 function createReadyConfig() {
   return {
     name: 'abrelo-publish-development',
     assets: assets(),
     d1_databases: database('abrelo-published-gifts', 'local'),
     r2_buckets: assetsBucket('abrelo-gift-assets-development'),
+    ratelimits: rateLimits('3790'),
     vars: {
       ENVIRONMENT: 'development',
       PUBLIC_BASE_URL: 'http://127.0.0.1:8787',
@@ -45,6 +61,7 @@ function createReadyConfig() {
         assets: assets(),
         d1_databases: database('abrelo-published-gifts-staging', '11111111-1111-4111-8111-111111111111'),
         r2_buckets: assetsBucket('abrelo-gift-assets-staging'),
+        ratelimits: rateLimits('3700'),
         vars: {
           ENVIRONMENT: 'staging',
           PUBLIC_BASE_URL: 'https://abrelo-staging.example.workers.dev',
@@ -56,6 +73,7 @@ function createReadyConfig() {
         assets: assets(),
         d1_databases: database('abrelo-published-gifts-production', '22222222-2222-4222-8222-222222222222'),
         r2_buckets: assetsBucket('abrelo-gift-assets-production'),
+        ratelimits: rateLimits('3710'),
         vars: {
           ENVIRONMENT: 'production',
           PUBLIC_BASE_URL: 'https://gifts.example.com',
@@ -137,6 +155,23 @@ describe('deployment configuration preflight', () => {
     config.env.production.r2_buckets[0].bucket_name = 'abrelo-gift-assets-staging';
 
     expect(() => validateWranglerStructure(config)).toThrow(/must not share an R2 bucket name/u);
+  });
+
+  it('rejects missing or weakened production rate limiting', () => {
+    const missing = createReadyConfig();
+    delete missing.env.production.ratelimits;
+    const weakened = createReadyConfig();
+    weakened.env.production.ratelimits[0].simple.limit = 1000;
+
+    expect(() => validateWranglerStructure(missing)).toThrow(/non-inheritable ratelimits/u);
+    expect(() => validateWranglerStructure(weakened)).toThrow(/10 requests per 60 seconds/u);
+  });
+
+  it('rejects shared staging and production rate limit namespaces', () => {
+    const config = createReadyConfig();
+    config.env.production.ratelimits[0].namespace_id = config.env.staging.ratelimits[0].namespace_id;
+
+    expect(() => validateWranglerStructure(config)).toThrow(/must not share rate limit namespace IDs/u);
   });
 
   it('rejects any staging reference inside production configuration', () => {

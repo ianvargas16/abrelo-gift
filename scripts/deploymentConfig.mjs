@@ -5,6 +5,10 @@ import { normalizeRuntimeConfig, parseRuntimeConfig } from '../worker/runtimeCon
 export const defaultWranglerConfigPath = fileURLToPath(new URL('../wrangler.jsonc', import.meta.url));
 const remoteEnvironments = ['staging', 'production'];
 const d1DatabaseIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+const expectedRateLimits = new Map([
+  ['PUBLISH_RATE_LIMITER', { limit: 10, period: 60 }],
+  ['AUDIO_RATE_LIMITER', { limit: 120, period: 60 }],
+]);
 
 export class DeploymentConfigError extends Error {
   constructor(issues) {
@@ -60,7 +64,7 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
   }
 
   if (environment !== 'development') {
-    for (const key of ['vars', 'd1_databases', 'r2_buckets', 'assets']) {
+    for (const key of ['vars', 'd1_databases', 'r2_buckets', 'ratelimits', 'assets']) {
       if (!Object.hasOwn(target, key)) {
         issues.push(`${environment} must explicitly configure non-inheritable ${key}`);
       }
@@ -129,6 +133,30 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
   }
 
   const assets = target.assets;
+  const rateLimits = target.ratelimits;
+
+  if (!Array.isArray(rateLimits) || rateLimits.length !== expectedRateLimits.size) {
+    issues.push(`${environment} must configure exactly two native rate limit bindings`);
+  } else {
+    const namespaceIds = new Set();
+    for (const [name, expected] of expectedRateLimits) {
+      const binding = rateLimits.find((candidate) => candidate?.name === name);
+      if (!binding) {
+        issues.push(`${environment} must configure ${name}`);
+        continue;
+      }
+      if (!/^\d+$/u.test(binding.namespace_id) || Number(binding.namespace_id) <= 0) {
+        issues.push(`${environment} ${name} namespace_id must be a positive integer string`);
+      }
+      namespaceIds.add(binding.namespace_id);
+      if (binding.simple?.limit !== expected.limit || binding.simple?.period !== expected.period) {
+        issues.push(`${environment} ${name} must use ${expected.limit} requests per ${expected.period} seconds`);
+      }
+    }
+    if (namespaceIds.size !== expectedRateLimits.size) {
+      issues.push(`${environment} rate limit bindings must use distinct namespace IDs`);
+    }
+  }
 
   if (
     assets?.directory !== './dist-runtime'
@@ -188,6 +216,12 @@ export function validateWranglerStructure(config) {
 
   if (staging?.bucket?.bucket_name === production?.bucket?.bucket_name) {
     issues.push('staging and production must not share an R2 bucket name');
+  }
+
+  const stagingRateLimitIds = new Set((staging?.target?.ratelimits ?? []).map((binding) => binding.namespace_id));
+  const productionRateLimitIds = new Set((production?.target?.ratelimits ?? []).map((binding) => binding.namespace_id));
+  if ([...stagingRateLimitIds].some((id) => productionRateLimitIds.has(id))) {
+    issues.push('staging and production must not share rate limit namespace IDs');
   }
 
   if (staging?.runtimeConfig?.publicBaseUrl === production?.runtimeConfig?.publicBaseUrl) {

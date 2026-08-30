@@ -5,6 +5,7 @@ export const OPERATIONAL_ERROR_CATEGORIES = [
   'gift_asset_read_failed',
   'publish_persistence_failed',
   'gift_asset_cleanup_failed',
+  'rate_limit_check_failed',
   'invalid_runtime_config',
 ] as const;
 
