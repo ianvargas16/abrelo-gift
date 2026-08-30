@@ -271,15 +271,13 @@ textarea:focus-visible {
 }
 
 .creator-dialog-heading {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 1;
   display: flex;
   align-items: start;
   justify-content: space-between;
   gap: var(--space-md);
   padding-bottom: var(--space-sm);
-  background: transparent;
 }
 
 .creator-dialog-heading > div {
