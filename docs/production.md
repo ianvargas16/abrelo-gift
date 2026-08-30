@@ -2,6 +2,8 @@
 
 This runbook covers safe operation of the anonymous Ábrelo publishing service. It does not provision accounts, authentication, analytics, expiration, or deletion.
 
+The final V1 release evidence and current launch decision are recorded in [v1-launch-qa.md](v1-launch-qa.md).
+
 ## Architecture
 
 ```text
