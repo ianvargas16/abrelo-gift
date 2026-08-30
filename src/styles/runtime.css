@@ -605,7 +605,7 @@
 }
 
 .envelope-address span,
-.letter-peek span {
+.letter-peek > span:not(.card-pull-cue) {
   color: var(--color-paper-ink);
   font-family: var(--font-editorial);
   font-size: clamp(1.2rem, 4.5vw, 1.9rem);
@@ -684,7 +684,7 @@
 }
 
 .flap-drag-cue,
-.card-pull-cue {
+.letter-peek .card-pull-cue {
   position: absolute;
   left: 50%;
   z-index: 2;
@@ -705,7 +705,7 @@
 }
 
 .flap-drag-cue i,
-.card-pull-cue i {
+.letter-peek .card-pull-cue i {
   display: block;
   width: 2.6rem;
   height: 0.18rem;
@@ -717,7 +717,7 @@
   top: 0.8rem;
 }
 
-.card-pull-cue {
+.letter-peek .card-pull-cue {
   top: 0.48rem;
   display: flex;
   align-items: center;
@@ -727,7 +727,7 @@
   white-space: nowrap;
 }
 
-.card-pull-cue i {
+.letter-peek .card-pull-cue i {
   width: 1.2rem;
   height: 0.13rem;
 }
