@@ -152,6 +152,10 @@ function inspectEnvironment(config, environment, { requireProvisionedResources }
     if (usesReservedPlaceholderOrigin(target.vars?.ALLOWED_ORIGINS)) {
       issues.push(`${environment} ALLOWED_ORIGINS still contains a reserved placeholder origin`);
     }
+
+    if (isPlaceholder(bucket?.bucket_name)) {
+      issues.push(`${environment} R2 bucket_name is missing or still a placeholder`);
+    }
   }
 
   return { issues, target, database, bucket, runtimeConfig };
@@ -195,6 +199,17 @@ export function validateWranglerStructure(config) {
 
   if (JSON.stringify(stagingAllowedOrigins) === JSON.stringify(productionAllowedOrigins)) {
     issues.push('staging and production must not share the same ALLOWED_ORIGINS set');
+  }
+
+  const stagingConfiguration = JSON.stringify(staging?.target ?? {}).toLowerCase();
+  const productionConfiguration = JSON.stringify(production?.target ?? {}).toLowerCase();
+
+  if (stagingConfiguration.includes('production')) {
+    issues.push('staging configuration must not reference production resources or origins');
+  }
+
+  if (productionConfiguration.includes('staging')) {
+    issues.push('production configuration must not reference staging resources or origins');
   }
 
   if (issues.length > 0) {

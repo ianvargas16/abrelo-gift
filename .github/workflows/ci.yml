@@ -53,5 +53,14 @@ jobs:
       - name: Validate deployment configuration structure
         run: npm run validate:deploy:config
 
+      - name: Validate staging deployment target
+        run: npm run validate:deploy:staging
+
+      - name: Validate production deployment target
+        run: npm run validate:deploy:production
+
+      - name: Build production Creator bundle
+        run: npm run build:creator:production
+
       - name: Build publish Worker
         run: npm run build:worker
