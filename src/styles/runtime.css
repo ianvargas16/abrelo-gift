@@ -631,7 +631,15 @@
 
 .envelope-flap.is-dragging,
 .letter-peek.is-dragging {
-  transition-duration: 0ms;
+  transition-duration: 42ms, 42ms;
+  transition-timing-function: cubic-bezier(0.2, 0.72, 0.28, 1), var(--ease-standard);
+}
+
+.envelope-flap.is-settling,
+.letter-peek.is-settling {
+  transition-duration: 460ms, var(--motion-standard);
+  transition-timing-function: var(--ease-spring), var(--ease-standard);
+  transition-delay: 0ms;
 }
 
 .envelope.state-opened .envelope-flap,
@@ -646,7 +654,7 @@
   top: 7%;
   width: 88%;
   height: 82%;
-  padding: 1.5rem 1.25rem 0;
+  padding: 2.25rem 1.25rem 0;
   border-radius: 0.95rem;
   display: grid;
   align-content: start;
@@ -661,7 +669,7 @@
 }
 
 .envelope.state-opened .letter-peek {
-  transform: translateY(calc(-4.5rem - var(--drag-offset, 0px))) rotate(var(--drag-rotation, 0deg));
+  transform: translateY(calc(-3.2rem - var(--drag-offset, 0px))) rotate(var(--drag-rotation, 0deg));
   transition-delay: 110ms, 0ms;
 }
 
@@ -707,7 +715,15 @@
 }
 
 .card-pull-cue {
-  top: 0.45rem;
+  top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.card-pull-cue i {
+  width: 1.65rem;
 }
 
 .envelope.state-unsealed .flap-drag-cue,

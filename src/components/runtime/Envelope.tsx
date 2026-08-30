@@ -61,7 +61,7 @@ export function Envelope({
         threshold={0.62}
         onComplete={onExtract}
       >
-        <span className="card-pull-cue" aria-hidden="true"><i /> Tira de la carta</span>
+        <span className="card-pull-cue" aria-hidden="true"><i /> Tira</span>
         {label && <small>Para</small>}
         <span>{label || 'Para ti'}</span>
       </DirectedDragSurface>

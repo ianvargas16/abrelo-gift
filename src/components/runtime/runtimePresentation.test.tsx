@@ -218,6 +218,8 @@ describe('Runtime seal presentation', () => {
     expect(unsealedMarkup).toContain('flap-drag-cue');
     expect(openedMarkup).toContain('aria-label="Tira de la carta hacia arriba para sacarla. También puedes presionar Enter o Espacio."');
     expect(openedMarkup).toContain('card-pull-cue');
+    expect(openedMarkup).toContain('<i></i> Tira</span>');
+    expect(openedMarkup).not.toContain('Tira de la carta</span>');
     expect(openedMarkup).not.toContain('Abrir el sobre');
     expect(openedMarkup).not.toContain('Sacar la carta');
   });

@@ -27,6 +27,7 @@ export function DirectedDragSurface({
   const travelDistanceRef = useRef(1);
   const [progress, setProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
   const controllerRef = useRef<DirectedDragController | null>(null);
   completeRef.current = onComplete;
 
@@ -40,11 +41,17 @@ export function DirectedDragSurface({
   }
 
   useEffect(() => {
-    if (disabled) controllerRef.current?.reset();
+    if (disabled) {
+      controllerRef.current?.reset();
+      setIsSettling(false);
+    }
   }, [disabled]);
 
   useEffect(() => {
-    const interruptDrag = () => controllerRef.current?.reset();
+    const interruptDrag = () => {
+      controllerRef.current?.reset();
+      setIsSettling(true);
+    };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') interruptDrag();
     };
@@ -63,6 +70,7 @@ export function DirectedDragSurface({
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (disabled || !isEligibleHoldPointer(event)) return;
+    setIsSettling(false);
     const travelDistance = Math.max(72, event.currentTarget.getBoundingClientRect().height * distanceRatio);
     if (!controllerRef.current?.start(event.pointerId, event.clientY, travelDistance)) return;
     travelDistanceRef.current = travelDistance;
@@ -82,18 +90,18 @@ export function DirectedDragSurface({
 
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     if (!controllerRef.current?.owns(event.pointerId)) return;
-    controllerRef.current.finish(event.pointerId);
+    setIsSettling(controllerRef.current.finish(event.pointerId) === 'returned');
     releasePointerCapture(event.currentTarget, event.pointerId);
   };
 
   const handlePointerCancel = (event: PointerEvent<HTMLButtonElement>) => {
     if (!controllerRef.current?.owns(event.pointerId)) return;
-    controllerRef.current.cancel(event.pointerId);
+    setIsSettling(controllerRef.current.cancel(event.pointerId) === 'returned');
     releasePointerCapture(event.currentTarget, event.pointerId);
   };
 
   const handleLostPointerCapture = (event: PointerEvent<HTMLButtonElement>) => {
-    controllerRef.current?.cancel(event.pointerId);
+    if (controllerRef.current?.cancel(event.pointerId) === 'returned') setIsSettling(true);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -113,7 +121,7 @@ export function DirectedDragSurface({
     <button
       ref={buttonRef}
       type="button"
-      className={`${className} physical-drag-surface ${isDragging ? 'is-dragging' : ''}`}
+      className={`${className} physical-drag-surface ${isDragging ? 'is-dragging' : ''} ${isSettling ? 'is-settling' : ''}`}
       disabled={disabled}
       aria-label={ariaLabel}
       onPointerDown={handlePointerDown}

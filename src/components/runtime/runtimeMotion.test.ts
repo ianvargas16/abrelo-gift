@@ -23,3 +23,10 @@ describe('Runtime reduced motion presentation', () => {
     expect(reducedMotionRules).not.toMatch(/\.physical-drag-surface\s*\{[^}]*display:\s*none/su);
   });
 });
+
+describe('Runtime physical drag presentation', () => {
+  it('keeps the card cue compact and gives cancelled drags a soft return', () => {
+    expect(runtimeCss).toMatch(/\.card-pull-cue\s*\{[^}]*white-space:\s*nowrap/su);
+    expect(runtimeCss).toMatch(/\.letter-peek\.is-settling\s*\{[^}]*var\(--ease-spring\)/su);
+  });
+});
