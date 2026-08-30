@@ -41,9 +41,16 @@ export function CreatorDialog({
           }
         }}
       >
+        <button
+          type="button"
+          className="icon-button creator-dialog-close"
+          aria-label={closeLabel}
+          onClick={onClose}
+        >
+          ×
+        </button>
         <div className="creator-dialog-heading">
           <div>{heading}</div>
-          <button type="button" className="icon-button" aria-label={closeLabel} onClick={onClose}>×</button>
         </div>
         {children}
       </section>

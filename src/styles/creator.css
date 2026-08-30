@@ -246,6 +246,7 @@ textarea:focus-visible {
 }
 
 .template-dialog {
+  --dialog-layout-gap: var(--space-lg);
   width: min(100%, 39rem);
   max-height: min(
     48rem,
@@ -259,7 +260,7 @@ textarea:focus-visible {
   overflow: auto;
   overscroll-behavior: contain;
   display: grid;
-  gap: var(--space-lg);
+  gap: var(--dialog-layout-gap);
   padding: clamp(1.25rem, 4vw, 2rem);
   border: 1px solid rgba(73, 57, 54, 0.12);
   border-radius: var(--radius-large);
@@ -271,15 +272,11 @@ textarea:focus-visible {
 }
 
 .creator-dialog-heading {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 1;
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: var(--space-md);
+  display: block;
   padding-bottom: var(--space-sm);
-  background: transparent;
+  padding-right: calc(2.75rem + var(--space-sm));
 }
 
 .creator-dialog-heading > div {
@@ -461,6 +458,7 @@ textarea:focus-visible {
 }
 
 .project-dialog {
+  --dialog-layout-gap: var(--space-md);
   width: min(100%, 34rem);
   max-height: min(
     48rem,
@@ -474,7 +472,7 @@ textarea:focus-visible {
   overflow: auto;
   overscroll-behavior: contain;
   display: grid;
-  gap: var(--space-md);
+  gap: var(--dialog-layout-gap);
   padding: clamp(1.2rem, 4vw, 1.8rem);
   border: 1px solid rgba(73, 57, 54, 0.12);
   border-radius: var(--radius-large);
@@ -503,6 +501,14 @@ textarea:focus-visible {
   color: var(--color-ink);
   font-size: 1.6rem;
   line-height: 1;
+}
+
+.creator-dialog-close {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  justify-self: end;
+  margin-bottom: calc(-2.75rem - var(--dialog-layout-gap, var(--space-md)));
 }
 
 .project-list {
