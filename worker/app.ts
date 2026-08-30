@@ -30,10 +30,16 @@ interface GiftAssets {
   delete(key: string): Promise<void>;
 }
 
+export interface RequestRateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface PublishAppOptions {
   repository: PublishedGiftRepository;
   assets: RuntimeAssets;
   giftAssets?: GiftAssets;
+  publicationRateLimiter?: RequestRateLimiter;
+  audioRateLimiter?: RequestRateLimiter;
   runtimeConfig: RuntimeConfig;
   logger?: OperationalLogger;
   requestIdFactory?: () => string;
@@ -41,6 +47,8 @@ export interface PublishAppOptions {
 }
 
 const API_ERROR_MESSAGE = 'No pudimos publicar el regalo.';
+const RATE_LIMIT_ERROR_MESSAGE = 'Demasiadas solicitudes. Inténtalo de nuevo más tarde.';
+const RATE_LIMIT_RETRY_SECONDS = '60';
 const SECURITY_HEADERS: Record<string, string> = {
   'Cache-Control': 'private, no-store',
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
@@ -73,6 +81,31 @@ const silentLogger: OperationalLogger = {
 function withRequestId(response: Response, requestId: string): Response {
   response.headers.set('X-Request-Id', requestId);
   return response;
+}
+
+function getRateLimitKey(request: Request, scope: 'publish' | 'audio'): string {
+  const clientAddress = request.headers.get('CF-Connecting-IP')?.trim() || 'unknown';
+  return `${scope}:${clientAddress}`;
+}
+
+function publishRateLimitResponse(allowedOrigin: string | null): Response {
+  const response = jsonResponse(
+    { error: RATE_LIMIT_ERROR_MESSAGE },
+    429,
+    allowedOrigin ?? undefined,
+  );
+  response.headers.set('Retry-After', RATE_LIMIT_RETRY_SECONDS);
+  return response;
+}
+
+function mediaRateLimitResponse(): Response {
+  return new Response('Demasiadas solicitudes.', {
+    status: 429,
+    headers: {
+      ...SECURITY_HEADERS,
+      'Retry-After': RATE_LIMIT_RETRY_SECONDS,
+    },
+  });
 }
 
 function getAllowedOrigin(request: Request, configuredOrigins: ReadonlySet<string>): string | null | false {
@@ -355,6 +388,7 @@ export function createInvalidRuntimeConfigResponse(request: Request, requestId: 
 export function createPublishApp(options: PublishAppOptions) {
   const allowedOrigins = new Set(options.runtimeConfig.allowedOrigins);
   const nextRequestId = options.requestIdFactory ?? createRequestId;
+  const logger = options.logger ?? silentLogger;
 
   return async function handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -389,6 +423,23 @@ export function createPublishApp(options: PublishAppOptions) {
         return withRequestId(response, requestId);
       }
 
+      if (options.publicationRateLimiter) {
+        try {
+          const outcome = await options.publicationRateLimiter.limit({
+            key: getRateLimitKey(request, 'publish'),
+          });
+          if (!outcome.success) {
+            return withRequestId(publishRateLimitResponse(allowedOrigin), requestId);
+          }
+        } catch {
+          logger.error('rate_limit_check_failed', requestId);
+          return withRequestId(
+            jsonResponse({ error: 'Servicio no disponible.' }, 503, allowedOrigin ?? undefined),
+            requestId,
+          );
+        }
+      }
+
       return withRequestId(await publishGift(request, options, allowedOrigin, requestId), requestId);
     }
 
@@ -398,6 +449,19 @@ export function createPublishApp(options: PublishAppOptions) {
     if (audioRoute) {
       const requestId = nextRequestId();
       if (request.method !== 'GET') return withRequestId(new Response('Método no permitido.', { status: 405, headers: { ...SECURITY_HEADERS, Allow: 'GET' } }), requestId);
+      if (options.audioRateLimiter) {
+        try {
+          const outcome = await options.audioRateLimiter.limit({
+            key: getRateLimitKey(request, 'audio'),
+          });
+          if (!outcome.success) {
+            return withRequestId(mediaRateLimitResponse(), requestId);
+          }
+        } catch {
+          // Recipient playback remains available if the edge counter is temporarily unavailable.
+          logger.error('rate_limit_check_failed', requestId);
+        }
+      }
       return withRequestId(await serveGiftAudio(options, audioRoute[1]), requestId);
     }
 

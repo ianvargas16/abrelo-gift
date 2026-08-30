@@ -30,9 +30,9 @@ The Creator runs as a React/Vite application. The Worker owns the publish API, r
 | staging | Cloudflare Pages | dedicated `workers.dev` Worker | `abrelo-published-gifts-staging` | `abrelo-gift-assets-staging` |
 | production | `abrelo-creator-production.pages.dev` | `abrelo-publish-production.ianvargas16.workers.dev` | `abrelo-published-gifts-production` | `abrelo-gift-assets-production` |
 
-Every remote environment declares its own `vars`, static asset binding, D1 database, and `GIFT_ASSETS` R2 binding. These bindings are intentionally repeated because Wrangler does not inherit them into named environments. Staging and production must never share a Worker name, D1 database, R2 bucket, recipient URL, or Creator origin allowlist.
+Every remote environment declares its own `vars`, static asset binding, D1 database, `GIFT_ASSETS` R2 binding, and native rate-limit namespaces. These bindings are intentionally repeated because Wrangler does not inherit them into named environments. Staging and production must never share a Worker name, D1 database, R2 bucket, rate-limit namespace, recipient URL, or Creator origin allowlist.
 
-Production is independently provisioned and uses exact production-only origins and bindings. The current `pages.dev` and `workers.dev` endpoints support controlled launch verification. A final custom product domain and its zone-level WAF policy remain a deliberate release gate; no unconfirmed domain is encoded in the application.
+Production is independently provisioned and uses exact production-only origins and bindings. The current `pages.dev` and `workers.dev` endpoints are the V1 launch endpoints. Native Worker rate limiting protects the anonymous write and audio-read surfaces without requiring a custom zone. A final product domain and its zone-level WAF policy remain future defense in depth; no unconfirmed domain is encoded in the application.
 
 ## Storage responsibilities
 
@@ -112,6 +112,6 @@ The production Creator bundle is built from the validated Worker origin and reje
 
 The MVP assumes low-volume Cloudflare free-tier or pay-as-you-go usage. D1 holds small JSON snapshots; R2 holds optional binary media and therefore needs monitoring for storage, operation, and egress costs before broad launch. Asset lifecycle, quotas, deletion, and retention policy are deferred.
 
-Keep R2 private, use opaque IDs, retain exact CORS allowlists, do not provide list/search endpoints, and preserve recipient `noindex`, no-referrer, CSP, and no-store headers. CORS is not authentication or an abuse boundary; anonymous publishing still requires WAF/rate limiting before broad exposure.
+Keep R2 private, use opaque IDs, retain exact CORS allowlists, do not provide list/search endpoints, and preserve recipient `noindex`, no-referrer, CSP, and no-store headers. CORS is not authentication or an abuse boundary. Anonymous publication and repeated audio reads use isolated Cloudflare Workers Rate Limiting bindings; a custom-domain WAF can supplement them later.
 
 Accounts and authentication are intentionally deferred. If introduced later, they should authorize Creator publication and media lifecycle actions at the Worker boundary without exposing R2 directly or changing the recipient's anonymous open flow.

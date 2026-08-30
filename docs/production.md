@@ -2,6 +2,8 @@
 
 This runbook covers safe operation of the anonymous Ábrelo publishing service. It does not provision accounts, authentication, analytics, expiration, or deletion.
 
+The final V1 release evidence and current launch decision are recorded in [v1-launch-qa.md](v1-launch-qa.md).
+
 ## Architecture
 
 ```text
@@ -162,25 +164,24 @@ Worker-handled API and gift routes return `X-Request-Id`. Operational failures e
 {"level":"error","event":"repository_read_failed","requestId":"..."}
 ```
 
-Supported categories are `repository_read_failed`, `runtime_shell_failed`, `runtime_injection_failed`, `gift_asset_read_failed`, `publish_persistence_failed`, `gift_asset_cleanup_failed`, and `invalid_runtime_config`.
+Supported categories are `repository_read_failed`, `runtime_shell_failed`, `runtime_injection_failed`, `gift_asset_read_failed`, `publish_persistence_failed`, `gift_asset_cleanup_failed`, `rate_limit_check_failed`, and `invalid_runtime_config`.
 
 Never add GiftFile JSON, request bodies, names, messages, full gift URLs, credentials, or stack traces to these events. Use request ID, Worker environment/deployment metadata, HTTP status, and Cloudflare timestamps for correlation.
 
-## Abuse controls required before broad launch
+## Native abuse controls
 
-Anonymous publishing requires a Cloudflare WAF/rate-limiting rule before broad exposure. CORS does not stop scripts, command-line clients, or direct HTTP abuse.
+Anonymous publishing uses Cloudflare Workers Rate Limiting bindings because the V1 Worker remains on `workers.dev`, outside a customer zone where zone WAF rules could be attached. CORS still does not stop scripts, command-line clients, or direct HTTP abuse.
 
-Before broad public launch, attach the Worker to an approved custom domain in an active Cloudflare zone and create a native rate-limiting rule matching exactly:
+Each environment declares two isolated native namespaces in `wrangler.jsonc`:
 
-- path: `/api/gifts`
-- method: `POST` when the account plan exposes method matching; the exact path still isolates publishing when it does not
-- characteristic: source IP while publishing remains anonymous
-- initial threshold: 10 requests per 10 minutes per IP
-- initial action: monitor first, then use a managed challenge or temporary block after observing legitimate traffic
+- `PUBLISH_RATE_LIMITER`: 10 `POST /api/gifts` attempts per 60 seconds per `CF-Connecting-IP`;
+- `AUDIO_RATE_LIMITER`: 120 `GET /g/<id>/audio` attempts per 60 seconds per `CF-Connecting-IP`.
 
-Add a second rule for abusive repeated media reads under `/g/*/audio`, with a separately observed threshold that does not interrupt normal playback. Public release remains blocked until these edge controls are configured and verified. Monitor request-body size near the multipart limit and investigate bursts of failed uploads. Do not use D1 as a per-request upload rate limiter: that turns abuse protection into a database cost-amplification path. If an R2 cleanup failure is logged after a failed D1 write, reconcile the possible private orphan through controlled operations; do not expose or list asset keys publicly.
+Publication checks run before request parsing and before any D1 or R2 write. A rejected publication returns `429` with `Retry-After: 60`; a counter failure returns `503` and fails closed. Audio throttling does not affect the gift page, cover, memories, or other recipient routes. Audio counter failures are logged with only the request ID and fail open so a temporary control-plane problem does not break a recipient's gift.
 
-Monitor rejection rates and shared-network behavior before tightening. IP limits can affect families, schools, offices, and carrier NAT users. When accounts exist, replace coarse anonymous characteristics with authenticated user-based limits. Keep the bounded JSON and multipart limits, strict GiftFile validation, method restrictions, exact CORS, generic errors, and no-list behavior enabled.
+Cloudflare's Worker rate limiter is intentionally lightweight and eventually consistent; it is not an exact accounting system. Monitor rejection rates, R2 operations, D1 writes, and shared-network behavior before tightening. IP limits can affect families, schools, offices, and carrier NAT users. When a custom domain is adopted, add reviewed zone-level WAF rules as defense in depth rather than removing these application-bound native controls. When accounts exist, replace coarse anonymous characteristics with authenticated user-based limits.
+
+Do not use D1 as a per-request upload rate limiter: that turns abuse protection into a database cost-amplification path. Keep the bounded JSON and multipart limits, strict GiftFile validation, method restrictions, exact CORS, generic errors, and no-list behavior enabled. If an R2 cleanup failure is logged after a failed D1 write, reconcile the possible private orphan through controlled operations; do not expose or list asset keys publicly.
 
 ## Production data safety
 
@@ -221,7 +222,7 @@ Do not write destructive down migrations under incident pressure. Stop deploymen
 ## Known limitations
 
 - The final custom domain is not selected; controlled production currently uses dedicated `pages.dev` and `workers.dev` origins.
-- Native edge rate limiting/WAF cannot be completed against the final zone until that domain is selected. Broad public launch remains blocked.
+- Native Worker rate limiting protects anonymous publication and repeated audio reads. A future custom domain can add zone-level WAF as defense in depth.
 - The production Creator Pages project uses guarded direct uploads rather than Git integration; staging retains Git-integrated previews.
 - There is no authentication, moderation, expiration, deletion, project history, or production data lifecycle UI.
 - The automated smoke script verifies safe public reads only; controlled publication QA remains manual and leaves immutable records.

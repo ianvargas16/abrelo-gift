@@ -7,6 +7,8 @@ interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   GIFT_ASSETS: R2Bucket;
+  PUBLISH_RATE_LIMITER: RateLimit;
+  AUDIO_RATE_LIMITER: RateLimit;
   ENVIRONMENT: string;
   PUBLIC_BASE_URL: string;
   ALLOWED_ORIGINS: string;
@@ -27,6 +29,8 @@ function getPublishApp(env: Env): ReturnType<typeof createPublishApp> {
     repository: new D1PublishedGiftRepository(env.DB),
     assets: env.ASSETS,
     giftAssets: env.GIFT_ASSETS,
+    publicationRateLimiter: env.PUBLISH_RATE_LIMITER,
+    audioRateLimiter: env.AUDIO_RATE_LIMITER,
     runtimeConfig,
     logger,
   });

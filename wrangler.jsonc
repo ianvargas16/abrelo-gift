@@ -22,6 +22,18 @@
       "bucket_name": "abrelo-gift-assets-development"
     }
   ],
+  "ratelimits": [
+    {
+      "name": "PUBLISH_RATE_LIMITER",
+      "namespace_id": "379001",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    {
+      "name": "AUDIO_RATE_LIMITER",
+      "namespace_id": "379002",
+      "simple": { "limit": 120, "period": 60 }
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "development",
     "PUBLIC_BASE_URL": "http://127.0.0.1:8787",
@@ -49,6 +61,18 @@
           "bucket_name": "abrelo-gift-assets-staging"
         }
       ],
+      "ratelimits": [
+        {
+          "name": "PUBLISH_RATE_LIMITER",
+          "namespace_id": "370001",
+          "simple": { "limit": 10, "period": 60 }
+        },
+        {
+          "name": "AUDIO_RATE_LIMITER",
+          "namespace_id": "370002",
+          "simple": { "limit": 120, "period": 60 }
+        }
+      ],
       "vars": {
         "ENVIRONMENT": "staging",
         "PUBLIC_BASE_URL": "https://abrelo-publish-staging.ianvargas16.workers.dev",
@@ -74,6 +98,18 @@
         {
           "binding": "GIFT_ASSETS",
           "bucket_name": "abrelo-gift-assets-production"
+        }
+      ],
+      "ratelimits": [
+        {
+          "name": "PUBLISH_RATE_LIMITER",
+          "namespace_id": "371001",
+          "simple": { "limit": 10, "period": 60 }
+        },
+        {
+          "name": "AUDIO_RATE_LIMITER",
+          "namespace_id": "371002",
+          "simple": { "limit": 120, "period": 60 }
         }
       ],
       "vars": {
