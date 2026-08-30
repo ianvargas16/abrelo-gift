@@ -270,6 +270,8 @@ export function EnvelopeExperience({ gift, backgroundImageUrl, memoryImageUrls }
               isShaking={failedAttempt}
               isInteracting={isHolding}
               isOpening={isEnvelopeOpening}
+              onOpen={openEnvelope}
+              onExtract={extractLetter}
               seal={stage === 'sealed' || stage === 'unsealed' ? (
                 <WaxSeal
                   progress={stage === 'unsealed' ? 1 : progress}
@@ -282,7 +284,7 @@ export function EnvelopeExperience({ gift, backgroundImageUrl, memoryImageUrls }
               ) : undefined}
             />
 
-            <div className={`interaction-copy ${isExtracting ? 'is-extracting' : ''}`} aria-live="polite">
+            <div className={`interaction-copy ${stage !== 'sealed' ? 'is-gesture-guide' : ''} ${isExtracting ? 'is-extracting' : ''}`} aria-live="polite">
               {stage === 'sealed' && <>
                 <strong>{sealHint}</strong>
                 <div
@@ -298,8 +300,8 @@ export function EnvelopeExperience({ gift, backgroundImageUrl, memoryImageUrls }
                 </div>
                 <span>{failedAttempt ? 'Casi… no lo sueltes todavía.' : isHolding ? 'Sigue presionando…' : 'El sello necesita una presión continua y tranquila.'}</span>
               </>}
-              {stage === 'unsealed' && <><strong>{isSealReleasing ? 'El sello se está soltando.' : 'El sello cedió.'}</strong><button onClick={openEnvelope} disabled={isSealReleasing}>{isSealReleasing ? 'Un instante…' : 'Abrir el sobre'}</button></>}
-              {stage === 'opened' && <><strong>{isEnvelopeOpening ? 'El sobre se está abriendo.' : 'Ahora sí.'}</strong><button onClick={extractLetter} disabled={isEnvelopeOpening || isExtracting}>{isEnvelopeOpening ? 'Abriendo el sobre…' : isExtracting ? 'Sacando la carta…' : 'Sacar la carta'}</button></>}
+              {stage === 'unsealed' && <><strong>{isSealReleasing ? 'El sello se está soltando.' : 'El sello cedió.'}</strong><span>{isSealReleasing ? 'Un instante…' : 'Desliza la solapa hacia arriba.'}</span></>}
+              {stage === 'opened' && <><strong>{isEnvelopeOpening ? 'El sobre se está abriendo.' : 'La carta te espera.'}</strong><span>{isEnvelopeOpening ? 'Deja que el papel se acomode…' : isExtracting ? 'La carta está saliendo…' : 'Tira de la parte visible para sacarla.'}</span></>}
             </div>
           </section>
         ) : (

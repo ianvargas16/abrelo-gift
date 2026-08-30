@@ -495,6 +495,30 @@
   position: absolute;
 }
 
+.physical-drag-surface {
+  margin: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+.physical-drag-surface:not(:disabled) {
+  cursor: grab;
+}
+
+.physical-drag-surface.is-dragging {
+  cursor: grabbing;
+}
+
+.physical-drag-surface:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .envelope-back {
   inset: 0;
   overflow: hidden;
@@ -588,6 +612,7 @@
 .envelope-flap {
   inset: 0 0 auto;
   height: 62%;
+  padding: 0;
   background: linear-gradient(160deg, color-mix(in srgb, var(--color-paper) 88%, white), var(--color-paper-secondary));
   clip-path: polygon(0.95rem 0, calc(100% - 0.95rem) 0, 50% 100%);
   transform-origin: top center;
@@ -597,6 +622,24 @@
     filter var(--runtime-envelope-open-duration, var(--motion-paper)) var(--ease-standard),
     z-index var(--motion-fast) linear;
   backface-visibility: hidden;
+}
+
+.envelope.state-unsealed .envelope-flap {
+  transform: rotateX(var(--drag-rotation, 0deg));
+  filter: brightness(0.99);
+}
+
+.envelope-flap.is-dragging,
+.letter-peek.is-dragging {
+  transition-duration: 42ms, 42ms;
+  transition-timing-function: cubic-bezier(0.2, 0.72, 0.28, 1), var(--ease-standard);
+}
+
+.envelope-flap.is-settling,
+.letter-peek.is-settling {
+  transition-duration: 460ms, var(--motion-standard);
+  transition-timing-function: var(--ease-spring), var(--ease-standard);
+  transition-delay: 0ms;
 }
 
 .envelope.state-opened .envelope-flap,
@@ -611,7 +654,7 @@
   top: 7%;
   width: 88%;
   height: 82%;
-  padding: 1.5rem 1.25rem 0;
+  padding: 2.25rem 1.25rem 0;
   border-radius: 0.95rem;
   display: grid;
   align-content: start;
@@ -626,7 +669,7 @@
 }
 
 .envelope.state-opened .letter-peek {
-  transform: translateY(-4.5rem);
+  transform: translateY(calc(-3.2rem - var(--drag-offset, 0px))) rotate(var(--drag-rotation, 0deg));
   transition-delay: 110ms, 0ms;
 }
 
@@ -635,6 +678,62 @@
   transform: translateY(-10.5rem) scale(1.03) rotate(0.45deg);
   transition-duration: var(--runtime-card-extraction-duration, var(--motion-paper));
   transition-timing-function: var(--ease-deliberate);
+}
+
+.flap-drag-cue,
+.card-pull-cue {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  color: var(--color-paper-ink-muted);
+  font-family: var(--font-label);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity var(--motion-standard) var(--ease-standard);
+  pointer-events: none;
+}
+
+.flap-drag-cue i,
+.card-pull-cue i {
+  display: block;
+  width: 2.6rem;
+  height: 0.18rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-paper-ink-muted) 34%, transparent);
+}
+
+.flap-drag-cue {
+  top: 0.8rem;
+}
+
+.card-pull-cue {
+  top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.card-pull-cue i {
+  width: 1.65rem;
+}
+
+.envelope.state-unsealed .flap-drag-cue,
+.envelope.state-opened .card-pull-cue {
+  opacity: 0.76;
+}
+
+.physical-drag-surface.is-dragging .flap-drag-cue,
+.physical-drag-surface.is-dragging .card-pull-cue {
+  opacity: 1;
 }
 
 .wax-seal {
@@ -807,6 +906,14 @@
 .interaction-copy.is-extracting {
   opacity: 0;
   transform: translateY(0.75rem);
+}
+
+.interaction-copy.is-gesture-guide {
+  width: min(100%, 20rem);
+  padding-block: 0.55rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .interaction-copy strong {

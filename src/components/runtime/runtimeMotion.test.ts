@@ -13,4 +13,20 @@ describe('Runtime reduced motion presentation', () => {
     expect(reducedMotionRules).toMatch(/animation:\s*none/u);
     expect(reducedMotionRules).toMatch(/transition:\s*none/u);
   });
+
+  it('simplifies physical envelope drag settling without disabling the controls', () => {
+    const reducedMotionRules = runtimeCss.slice(runtimeCss.indexOf('@media (prefers-reduced-motion: reduce)'));
+
+    expect(reducedMotionRules).toContain('.envelope-flap');
+    expect(reducedMotionRules).toContain('.letter-peek');
+    expect(reducedMotionRules).toMatch(/transition:\s*none/u);
+    expect(reducedMotionRules).not.toMatch(/\.physical-drag-surface\s*\{[^}]*display:\s*none/su);
+  });
+});
+
+describe('Runtime physical drag presentation', () => {
+  it('keeps the card cue compact and gives cancelled drags a soft return', () => {
+    expect(runtimeCss).toMatch(/\.card-pull-cue\s*\{[^}]*white-space:\s*nowrap/su);
+    expect(runtimeCss).toMatch(/\.letter-peek\.is-settling\s*\{[^}]*var\(--ease-spring\)/su);
+  });
 });
