@@ -25,8 +25,9 @@ describe('Runtime reduced motion presentation', () => {
 });
 
 describe('Runtime physical drag presentation', () => {
-  it('keeps live dragging direct and gives cancelled drags a soft return', () => {
+  it('keeps CSS out of the live tracking loop and gives cancelled drags a soft return', () => {
     expect(runtimeCss).toMatch(/\.letter-peek\.is-dragging\s*\{[^}]*transition-duration:\s*0ms/su);
+    expect(runtimeCss).toMatch(/\.letter-peek\.is-dragging\s*\{[^}]*transition-delay:\s*0ms/su);
     expect(runtimeCss).toMatch(/\.card-pull-cue\s*\{[^}]*white-space:\s*nowrap/su);
     expect(runtimeCss).toMatch(/\.card-pull-cue\s*\{[^}]*font-size:\s*0\.48rem/su);
     expect(runtimeCss).toMatch(/\.letter-peek\.is-settling\s*\{[^}]*var\(--ease-spring\)/su);

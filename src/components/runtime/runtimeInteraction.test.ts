@@ -5,6 +5,7 @@ import {
   createPointerOwnership,
   createSealHoldController,
   getDirectedDragProgress,
+  getSmoothedDragProgress,
   getRuntimePhase,
   getRuntimeTransitionDelay,
   isEligibleHoldPointer,
@@ -172,6 +173,17 @@ describe('seal pointer ownership', () => {
 });
 
 describe('directed physical drag interaction', () => {
+  it('follows drag input smoothly without changing the logical target', () => {
+    const firstFrame = getSmoothedDragProgress(0, 1, 1000 / 60);
+    const highRefreshFrame = getSmoothedDragProgress(0, 1, 1000 / 120);
+
+    expect(firstFrame).toBeGreaterThan(0.4);
+    expect(firstFrame).toBeLessThan(1);
+    expect(highRefreshFrame).toBeGreaterThan(0);
+    expect(highRefreshFrame).toBeLessThan(firstFrame);
+    expect(getSmoothedDragProgress(0.9995, 1, 1000 / 60)).toBe(1);
+  });
+
   it('normalizes upward movement and clamps resistance to its directed path', () => {
     expect(getDirectedDragProgress(300, 280, 100)).toBe(0.2);
     expect(getDirectedDragProgress(300, 340, 100)).toBe(0);

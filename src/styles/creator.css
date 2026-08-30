@@ -256,9 +256,10 @@ textarea:focus-visible {
     )
   );
   min-width: 0;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-lg);
   padding: clamp(1.25rem, 4vw, 2rem);
   border: 1px solid rgba(73, 57, 54, 0.12);
@@ -282,6 +283,19 @@ textarea:focus-visible {
 
 .creator-dialog-heading > div {
   min-width: 0;
+}
+
+.creator-dialog-body {
+  min-width: 0;
+  min-height: 0;
+}
+
+.template-dialog > .creator-dialog-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-inline-end: var(--space-xs);
 }
 
 .template-dialog .creator-dialog-heading h2 {
@@ -481,6 +495,11 @@ textarea:focus-visible {
     color-mix(in srgb, var(--color-surface-elevated) 94%, white);
   color: var(--color-ink);
   box-shadow: var(--shadow-strong-reveal);
+}
+
+.project-dialog > .creator-dialog-body {
+  display: grid;
+  gap: var(--space-md);
 }
 
 .project-dialog .creator-dialog-heading h2 {
@@ -2131,7 +2150,7 @@ textarea:focus-visible {
   .template-dialog-backdrop {
     --template-dialog-top-inset: max(4rem, calc(env(safe-area-inset-top) + var(--space-lg)));
     align-items: start;
-    overflow-y: auto;
+    overflow: hidden;
     padding-top: var(--template-dialog-top-inset);
   }
 

@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { createDirectedDragController, isEligibleHoldPointer, type DirectedDragController } from './runtimeInteraction';
+import {
+  createDirectedDragController,
+  getSmoothedDragProgress,
+  isEligibleHoldPointer,
+  type DirectedDragController,
+} from './runtimeInteraction';
 
 interface DirectedDragSurfaceProps {
   ariaLabel: string;
@@ -26,6 +31,11 @@ export function DirectedDragSurface({
   const completeRef = useRef(onComplete);
   const travelDistanceRef = useRef(1);
   const progressRef = useRef(0);
+  const visualProgressRef = useRef(0);
+  const targetProgressRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const previousFrameTimeRef = useRef<number | null>(null);
+  const reducedMotionRef = useRef(false);
   const rotationDegreesRef = useRef(rotationDegrees);
   const [isDragging, setIsDragging] = useState(false);
   const [isSettling, setIsSettling] = useState(false);
@@ -33,13 +43,44 @@ export function DirectedDragSurface({
   completeRef.current = onComplete;
   rotationDegreesRef.current = rotationDegrees;
 
-  const applyProgress = (progress: number) => {
-    progressRef.current = progress;
+  const renderProgress = (progress: number) => {
+    visualProgressRef.current = progress;
     const element = buttonRef.current;
     if (!element) return;
     element.style.setProperty('--drag-progress', String(progress));
     element.style.setProperty('--drag-offset', `${progress * travelDistanceRef.current}px`);
     element.style.setProperty('--drag-rotation', `${progress * rotationDegreesRef.current}deg`);
+  };
+
+  const stopFollowing = () => {
+    if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = null;
+    previousFrameTimeRef.current = null;
+  };
+
+  const followProgress = (timestamp: number) => {
+    const elapsed = previousFrameTimeRef.current === null ? 1000 / 60 : timestamp - previousFrameTimeRef.current;
+    previousFrameTimeRef.current = timestamp;
+    const next = getSmoothedDragProgress(visualProgressRef.current, targetProgressRef.current, elapsed);
+    renderProgress(next);
+
+    if (next === targetProgressRef.current) {
+      stopFollowing();
+      return;
+    }
+    animationFrameRef.current = requestAnimationFrame(followProgress);
+  };
+
+  const applyProgress = (progress: number) => {
+    progressRef.current = progress;
+    targetProgressRef.current = progress;
+    const isActive = buttonRef.current?.classList.contains('is-dragging') ?? false;
+    if (reducedMotionRef.current || !isActive) {
+      stopFollowing();
+      renderProgress(progress);
+      return;
+    }
+    if (animationFrameRef.current === null) animationFrameRef.current = requestAnimationFrame(followProgress);
   };
 
   const prepareRelease = (element: HTMLButtonElement, settling: boolean) => {
@@ -55,6 +96,23 @@ export function DirectedDragSurface({
       onComplete: () => completeRef.current(),
     });
   }
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateReducedMotion = () => {
+      reducedMotionRef.current = media.matches;
+      if (media.matches) {
+        stopFollowing();
+        renderProgress(targetProgressRef.current);
+      }
+    };
+    updateReducedMotion();
+    media.addEventListener('change', updateReducedMotion);
+    return () => {
+      media.removeEventListener('change', updateReducedMotion);
+      stopFollowing();
+    };
+  }, []);
 
   useEffect(() => {
     if (disabled) {
@@ -107,7 +165,9 @@ export function DirectedDragSurface({
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     if (!controllerRef.current?.owns(event.pointerId)) return;
     event.preventDefault();
-    controllerRef.current.move(event.pointerId, event.clientY);
+    const samples = event.nativeEvent.getCoalescedEvents?.();
+    const latestSample = samples?.[samples.length - 1];
+    controllerRef.current.move(event.pointerId, latestSample?.clientY ?? event.clientY);
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {

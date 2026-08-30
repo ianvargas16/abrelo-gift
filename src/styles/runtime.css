@@ -632,9 +632,10 @@
   filter: brightness(0.99);
 }
 
-.envelope-flap.is-dragging,
-.letter-peek.is-dragging {
+.envelope.state-unsealed .envelope-flap.is-dragging,
+.envelope.state-opened .letter-peek.is-dragging {
   transition-duration: 0ms;
+  transition-delay: 0ms;
 }
 
 .envelope-flap.is-settling,
