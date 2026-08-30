@@ -75,15 +75,21 @@ describe('deployment configuration preflight', () => {
     expect(validateDeploymentTarget(config, 'production')).toBe(true);
   });
 
-  it('accepts provisioned repository staging while production remains blocked', async () => {
+  it('accepts fully provisioned and isolated repository environments', async () => {
     const config = await loadWranglerConfig();
 
     expect(validateWranglerStructure(config)).toBe(true);
     expect(validateDeploymentTarget(config, 'staging')).toBe(true);
+    expect(validateDeploymentTarget(config, 'production')).toBe(true);
     expect(config.env.staging.vars.ALLOWED_ORIGINS.split(',')).toEqual([
       'https://abrelo-creator-staging.pages.dev',
     ]);
-    expect(() => validateDeploymentTarget(config, 'production')).toThrow(DeploymentConfigError);
+    expect(config.env.production.vars.PUBLIC_BASE_URL).toBe(
+      'https://abrelo-publish-production.ianvargas16.workers.dev',
+    );
+    expect(config.env.production.vars.ALLOWED_ORIGINS).toBe(
+      'https://abrelo-creator-production.pages.dev',
+    );
   });
 
   it('rejects unresolved staging resources in a synthetic configuration', () => {
@@ -93,6 +99,16 @@ describe('deployment configuration preflight', () => {
     config.env.staging.vars.ALLOWED_ORIGINS = 'https://creator-staging.example.invalid';
 
     expect(() => validateDeploymentTarget(config, 'staging')).toThrow(DeploymentConfigError);
+  });
+
+  it('rejects unresolved production resources in a synthetic configuration', () => {
+    const config = createReadyConfig();
+    config.env.production.d1_databases[0].database_id = 'REPLACE_WITH_PRODUCTION_D1_DATABASE_ID';
+    config.env.production.r2_buckets[0].bucket_name = 'REPLACE_WITH_PRODUCTION_R2_BUCKET';
+    config.env.production.vars.PUBLIC_BASE_URL = 'https://production.example.invalid';
+    config.env.production.vars.ALLOWED_ORIGINS = 'https://creator-production.example.invalid';
+
+    expect(() => validateDeploymentTarget(config, 'production')).toThrow(DeploymentConfigError);
   });
 
   it('rejects an inherited or missing remote binding', () => {
@@ -121,6 +137,20 @@ describe('deployment configuration preflight', () => {
     config.env.production.r2_buckets[0].bucket_name = 'abrelo-gift-assets-staging';
 
     expect(() => validateWranglerStructure(config)).toThrow(/must not share an R2 bucket name/u);
+  });
+
+  it('rejects any staging reference inside production configuration', () => {
+    const config = createReadyConfig();
+    config.env.production.vars.ALLOWED_ORIGINS = 'https://creator-staging.example.com';
+
+    expect(() => validateWranglerStructure(config)).toThrow(/must not reference staging/u);
+  });
+
+  it('rejects any production reference inside staging configuration', () => {
+    const config = createReadyConfig();
+    config.env.staging.r2_buckets[0].bucket_name = 'abrelo-gift-assets-production-copy';
+
+    expect(() => validateWranglerStructure(config)).toThrow(/must not reference production/u);
   });
 
   it('rejects reuse of the same normalized remote Creator origins', () => {
