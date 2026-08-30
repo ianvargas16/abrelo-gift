@@ -28,11 +28,11 @@ The Creator runs as a React/Vite application. The Worker owns the publish API, r
 | --- | --- | --- | --- | --- |
 | development | `localhost:1420` | `localhost:8787` | local simulator | local/dev binding `abrelo-gift-assets-development` |
 | staging | Cloudflare Pages | dedicated `workers.dev` Worker | `abrelo-published-gifts-staging` | `abrelo-gift-assets-staging` |
-| production | custom domain when provisioned | dedicated Worker | `abrelo-published-gifts-production` | `abrelo-gift-assets-production` |
+| production | `abrelo-creator-production.pages.dev` | `abrelo-publish-production.ianvargas16.workers.dev` | `abrelo-published-gifts-production` | `abrelo-gift-assets-production` |
 
 Every remote environment declares its own `vars`, static asset binding, D1 database, and `GIFT_ASSETS` R2 binding. These bindings are intentionally repeated because Wrangler does not inherit them into named environments. Staging and production must never share a Worker name, D1 database, R2 bucket, recipient URL, or Creator origin allowlist.
 
-Production remains intentionally unresolved in `wrangler.jsonc`: its D1 ID and public origins are placeholders. Do not provision or substitute production values in source control.
+Production is independently provisioned and uses exact production-only origins and bindings. The current `pages.dev` and `workers.dev` endpoints support controlled launch verification. A final custom product domain and its zone-level WAF policy remain a deliberate release gate; no unconfirmed domain is encoded in the application.
 
 ## Storage responsibilities
 
@@ -97,7 +97,16 @@ npm run db:migrate:staging
 npm run deploy:staging
 ```
 
-Production follows the same flow only after independent resources, the custom domain, exact Creator origins, and an operator review are ready. Its preflight must fail until then.
+Production uses explicit confirmation and a production-specific Creator build:
+
+```bash
+npm run validate:deploy:production
+npm run db:migrate:production -- --confirm-production
+npm run deploy:production -- --confirm-production
+npm run deploy:creator:production -- --confirm-production
+```
+
+The production Creator bundle is built from the validated Worker origin and rejected if staging or local API references remain. The production Pages project is deployed independently from the Git-integrated staging project.
 
 ## Cost and security baseline
 
