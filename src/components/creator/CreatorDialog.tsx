@@ -45,7 +45,9 @@ export function CreatorDialog({
           <div>{heading}</div>
           <button type="button" className="icon-button" aria-label={closeLabel} onClick={onClose}>×</button>
         </div>
-        {children}
+        <div className="creator-dialog-body">
+          {children}
+        </div>
       </section>
     </div>,
     document.body,

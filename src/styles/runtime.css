@@ -496,6 +496,9 @@
 }
 
 .physical-drag-surface {
+  --drag-progress: 0;
+  --drag-offset: 0px;
+  --drag-rotation: 0deg;
   margin: 0;
   border: 0;
   color: inherit;
@@ -602,7 +605,7 @@
 }
 
 .envelope-address span,
-.letter-peek span {
+.letter-peek > span:not(.card-pull-cue) {
   color: var(--color-paper-ink);
   font-family: var(--font-editorial);
   font-size: clamp(1.2rem, 4.5vw, 1.9rem);
@@ -629,10 +632,10 @@
   filter: brightness(0.99);
 }
 
-.envelope-flap.is-dragging,
-.letter-peek.is-dragging {
-  transition-duration: 42ms, 42ms;
-  transition-timing-function: cubic-bezier(0.2, 0.72, 0.28, 1), var(--ease-standard);
+.envelope.state-unsealed .envelope-flap.is-dragging,
+.envelope.state-opened .letter-peek.is-dragging {
+  transition-duration: 0ms;
+  transition-delay: 0ms;
 }
 
 .envelope-flap.is-settling,
@@ -654,7 +657,7 @@
   top: 7%;
   width: 88%;
   height: 82%;
-  padding: 2.25rem 1.25rem 0;
+  padding: 1.85rem 1.25rem 0;
   border-radius: 0.95rem;
   display: grid;
   align-content: start;
@@ -681,7 +684,7 @@
 }
 
 .flap-drag-cue,
-.card-pull-cue {
+.letter-peek .card-pull-cue {
   position: absolute;
   left: 50%;
   z-index: 2;
@@ -702,7 +705,7 @@
 }
 
 .flap-drag-cue i,
-.card-pull-cue i {
+.letter-peek .card-pull-cue i {
   display: block;
   width: 2.6rem;
   height: 0.18rem;
@@ -714,21 +717,27 @@
   top: 0.8rem;
 }
 
-.card-pull-cue {
-  top: 0.6rem;
+.letter-peek .card-pull-cue {
+  top: 0.48rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.28rem;
+  font-size: 0.48rem;
+  letter-spacing: 0.075em;
   white-space: nowrap;
 }
 
-.card-pull-cue i {
-  width: 1.65rem;
+.letter-peek .card-pull-cue i {
+  width: 1.2rem;
+  height: 0.13rem;
 }
 
-.envelope.state-unsealed .flap-drag-cue,
-.envelope.state-opened .card-pull-cue {
+.envelope.state-unsealed .flap-drag-cue {
   opacity: 0.76;
+}
+
+.envelope.state-opened .card-pull-cue {
+  opacity: 0.5;
 }
 
 .physical-drag-surface.is-dragging .flap-drag-cue,

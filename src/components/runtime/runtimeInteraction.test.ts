@@ -5,6 +5,7 @@ import {
   createPointerOwnership,
   createSealHoldController,
   getDirectedDragProgress,
+  getSmoothedDragProgress,
   getRuntimePhase,
   getRuntimeTransitionDelay,
   isEligibleHoldPointer,
@@ -172,6 +173,17 @@ describe('seal pointer ownership', () => {
 });
 
 describe('directed physical drag interaction', () => {
+  it('follows drag input smoothly without changing the logical target', () => {
+    const firstFrame = getSmoothedDragProgress(0, 1, 1000 / 60);
+    const highRefreshFrame = getSmoothedDragProgress(0, 1, 1000 / 120);
+
+    expect(firstFrame).toBeGreaterThan(0.4);
+    expect(firstFrame).toBeLessThan(1);
+    expect(highRefreshFrame).toBeGreaterThan(0);
+    expect(highRefreshFrame).toBeLessThan(firstFrame);
+    expect(getSmoothedDragProgress(0.9995, 1, 1000 / 60)).toBe(1);
+  });
+
   it('normalizes upward movement and clamps resistance to its directed path', () => {
     expect(getDirectedDragProgress(300, 280, 100)).toBe(0.2);
     expect(getDirectedDragProgress(300, 340, 100)).toBe(0);
@@ -236,6 +248,21 @@ describe('directed physical drag interaction', () => {
     harness.controller.reset();
     expect(harness.controller.completeFromFallback()).toBe(true);
     expect(harness.onComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it('restores stable state after an interrupted drag and permits a fresh attempt', () => {
+    const harness = createDragHarness(0.62);
+
+    harness.controller.start(12, 420, 120);
+    harness.controller.move(12, 350);
+    harness.controller.reset();
+    expect(harness.onProgress).toHaveBeenLastCalledWith(0);
+    expect(harness.onComplete).not.toHaveBeenCalled();
+
+    expect(harness.controller.start(13, 420, 120)).toBe(true);
+    harness.controller.move(13, 330);
+    expect(harness.controller.finish(13)).toBe('completed');
+    expect(harness.onComplete).toHaveBeenCalledOnce();
   });
 });
 

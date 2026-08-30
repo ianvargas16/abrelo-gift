@@ -99,6 +99,15 @@ export function getDirectedDragProgress(startY: number, currentY: number, travel
   return Math.min(1, Math.max(0, (startY - currentY) / travelDistance));
 }
 
+export function getSmoothedDragProgress(current: number, target: number, elapsedMs: number) {
+  if (!Number.isFinite(current) || !Number.isFinite(target)) return target;
+  if (Math.abs(target - current) < 0.001) return target;
+
+  const frameRatio = Math.min(2.5, Math.max(0.25, elapsedMs / (1000 / 60)));
+  const followStrength = 1 - Math.pow(0.55, frameRatio);
+  return current + ((target - current) * followStrength);
+}
+
 export function createDirectedDragController(options: DirectedDragControllerOptions): DirectedDragController {
   let activePointerId: number | null = null;
   let startY = 0;
